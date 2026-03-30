@@ -24,7 +24,7 @@
     ]
   },
   "listings": [
-    { "id": "purchases", "name": "Purchases" },
+    { "id": "purchases", "name": "All Purchases" },
     { "id": "MNG", "name": "Manga" },
     { "id": "WBT", "name": "Webtoon" },
     { "id": "CG", "name": "CG / Illustration" },
