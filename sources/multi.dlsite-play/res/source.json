@@ -1,21 +1,37 @@
 {
-	"info": {
-		"id": "multi.dlsite-play",
-		"name": "DLsite Play",
-		"version": 5,
-		"url": "https://play.dlsite.com/login/",
-		"contentRating": 2,
-		"languages": ["ja", "en", "zh-Hans", "zh-Hant", "ko", "es", "ar", "de", "fr", "id", "it", "pt", "sv", "th", "vi"]
-	},
-	"listings": [
-		{ "id": "purchases", "name": "Purchases" },
-		{ "id": "MNG", "name": "Manga" },
-		{ "id": "WBT", "name": "Webtoon" },
-		{ "id": "CG", "name": "CG / Illustration" },
-		{ "id": "SOU", "name": "Sound / Voice" },
-		{ "id": "MOV", "name": "Video" },
-		{ "id": "NOV", "name": "Novel" },
-		{ "id": "GAM", "name": "Game" },
-		{ "id": "ETC", "name": "Other" }
-	]
+  "info": {
+    "id": "multi.dlsite-play",
+    "name": "DLsite Play",
+    "version": 6,
+    "url": "https://play.dlsite.com/login/",
+    "contentRating": 2,
+    "languages": [
+      "ja",
+      "en",
+      "zh-Hans",
+      "zh-Hant",
+      "ko",
+      "es",
+      "ar",
+      "de",
+      "fr",
+      "id",
+      "it",
+      "pt",
+      "sv",
+      "th",
+      "vi"
+    ]
+  },
+  "listings": [
+    { "id": "purchases", "name": "Purchases" },
+    { "id": "MNG", "name": "Manga" },
+    { "id": "WBT", "name": "Webtoon" },
+    { "id": "CG", "name": "CG / Illustration" },
+    { "id": "SOU", "name": "Sound / Voice" },
+    { "id": "MOV", "name": "Video" },
+    { "id": "NOV", "name": "Novel" },
+    { "id": "GAM", "name": "Game" },
+    { "id": "ETC", "name": "Other" }
+  ]
 }
