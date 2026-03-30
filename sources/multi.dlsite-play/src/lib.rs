@@ -44,11 +44,7 @@ impl Source for DlsitePlay {
 		if needs_details {
 			let works = api::get_works(&[manga.key.clone()])?;
 			if let Some(work) = works.into_iter().next() {
-				language = work
-					.language
-					.as_ref()
-					.and_then(|l| l.first())
-					.cloned();
+				language = work.primary_language_code();
 				let updated: Manga = work.into();
 				manga.copy_from(updated);
 			}

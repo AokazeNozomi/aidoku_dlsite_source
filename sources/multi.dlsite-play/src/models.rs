@@ -301,6 +301,39 @@ pub struct PurchaseWork {
 }
 
 impl PurchaseWork {
+	fn normalize_language_code(lang: &str) -> Option<&'static str> {
+		let trimmed = lang.trim();
+		let lower = trimmed.to_lowercase();
+		match lower.as_str() {
+			"ja" | "ja_jp" | "ja-jp" | "japanese" | "日本語" => Some("ja"),
+			"en" | "en_us" | "en-us" | "english" | "英語" => Some("en"),
+			"zh_cn" | "zh-cn" | "zh-hans" | "简体中文" | "簡体中文" => Some("zh-Hans"),
+			"zh_tw" | "zh-tw" | "zh-hant" | "繁體中文" | "繁体中文" => Some("zh-Hant"),
+			"ko" | "ko_kr" | "ko-kr" | "korean" | "한국어" => Some("ko"),
+			"es" | "spanish" | "español" => Some("es"),
+			"ar" | "arabic" | "العربية" => Some("ar"),
+			"de" | "german" | "deutsch" => Some("de"),
+			"fr" | "french" | "français" => Some("fr"),
+			"id" | "indonesian" | "bahasa indonesia" => Some("id"),
+			"it" | "italian" | "italiano" => Some("it"),
+			"pt" | "portuguese" | "português" => Some("pt"),
+			"sv" | "swedish" | "svenska" => Some("sv"),
+			"th" | "thai" | "ไทย" => Some("th"),
+			"vi" | "vietnamese" | "tiếng việt" => Some("vi"),
+			_ => None,
+		}
+	}
+
+	pub fn primary_language_code(&self) -> Option<String> {
+		let langs = self.language.as_ref()?;
+		for lang in langs {
+			if let Some(code) = Self::normalize_language_code(lang) {
+				return Some(code.into());
+			}
+		}
+		None
+	}
+
 	pub fn cover_url(&self) -> Option<String> {
 		self.work_files.as_ref()?.main.as_ref().map(|url| {
 			if url.starts_with("//") {
