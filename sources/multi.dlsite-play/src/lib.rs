@@ -29,95 +29,8 @@ impl Source for DlsitePlay {
 		page: i32,
 		filters: Vec<FilterValue>,
 	) -> Result<MangaPageResult> {
-		let worknos = get_or_fetch_worknos(page)?;
-
-		if worknos.is_empty() {
-			return Ok(MangaPageResult {
-				entries: Vec::new(),
-				has_next_page: false,
-			});
-		}
-
-		let page_idx = (page - 1).max(0) as usize;
-		let start = page_idx * PAGE_SIZE;
-
 		let work_types = extract_work_type_filter(&filters);
-		let has_query = query.is_some();
-		let has_filter = !work_types.is_empty();
-
-		if has_query || has_filter {
-			let all_works = api::get_works(&worknos)?;
-			let q_lower = query.as_ref().map(|q| q.to_lowercase());
-
-			let filtered: Vec<Manga> = all_works
-				.into_iter()
-				.filter(|w| {
-					if let Some(ref q_lower) = q_lower {
-						let name = w
-							.name
-							.as_ref()
-							.map(|n| n.best())
-							.unwrap_or_default()
-							.to_lowercase();
-						let maker = w
-							.maker
-							.as_ref()
-							.and_then(|m| m.name.as_ref())
-							.map(|n| n.best())
-							.unwrap_or_default()
-							.to_lowercase();
-						let q_raw = query.as_deref().unwrap_or_default();
-						if !(name.contains(q_lower.as_str())
-							|| maker.contains(q_lower.as_str())
-							|| w.workno.contains(q_raw))
-						{
-							return false;
-						}
-					}
-					if has_filter {
-						let wt = w.work_type.as_deref().unwrap_or("");
-						if !work_types.iter().any(|t| t == wt) {
-							return false;
-						}
-					}
-					true
-				})
-				.map(|w| w.into())
-				.collect();
-
-			let total = filtered.len();
-			if start >= total {
-				return Ok(MangaPageResult {
-					entries: Vec::new(),
-					has_next_page: false,
-				});
-			}
-
-			let end = (start + PAGE_SIZE).min(total);
-			let entries: Vec<Manga> = filtered.into_iter().skip(start).take(end - start).collect();
-
-			Ok(MangaPageResult {
-				entries,
-				has_next_page: end < total,
-			})
-		} else {
-			if start >= worknos.len() {
-				return Ok(MangaPageResult {
-					entries: Vec::new(),
-					has_next_page: false,
-				});
-			}
-
-			let end = (start + PAGE_SIZE).min(worknos.len());
-			let page_worknos: Vec<String> = worknos[start..end].to_vec();
-			let works = api::get_works(&page_worknos)?;
-			let entries: Vec<Manga> = works.into_iter().map(|w| w.into()).collect();
-
-			Ok(MangaPageResult {
-				entries,
-				has_next_page: end < worknos.len(),
-			})
-		}
+		get_manga_list_inner(query, page, work_types)
 	}
 
 	fn get_manga_update(
@@ -186,10 +99,11 @@ impl Source for DlsitePlay {
 
 impl ListingProvider for DlsitePlay {
 	fn get_manga_list(&self, listing: Listing, page: i32) -> Result<MangaPageResult> {
-		match listing.id.as_str() {
-			"purchases" => self.get_search_manga_list(None, page, Vec::new()),
-			_ => Err(error!("Unknown listing: {}", listing.id)),
-		}
+		let work_types = match listing.id.as_str() {
+			"purchases" => Vec::new(),
+			wt => vec![wt.to_string()],
+		};
+		get_manga_list_inner(None, page, work_types)
 	}
 }
 
@@ -275,6 +189,102 @@ impl PageImageProcessor for DlsitePlay {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/// Core listing/search implementation shared by search and listing providers.
+fn get_manga_list_inner(
+	query: Option<String>,
+	page: i32,
+	work_types: Vec<String>,
+) -> Result<MangaPageResult> {
+	let worknos = get_or_fetch_worknos(page)?;
+
+	if worknos.is_empty() {
+		return Ok(MangaPageResult {
+			entries: Vec::new(),
+			has_next_page: false,
+		});
+	}
+
+	let page_idx = (page - 1).max(0) as usize;
+	let start = page_idx * PAGE_SIZE;
+
+	let has_query = query.is_some();
+	let has_filter = !work_types.is_empty();
+
+	if has_query || has_filter {
+		let all_works = api::get_works(&worknos)?;
+		let q_lower = query.as_ref().map(|q| q.to_lowercase());
+
+		let filtered: Vec<Manga> = all_works
+			.into_iter()
+			.filter(|w| {
+				if let Some(ref q_lower) = q_lower {
+					let name = w
+						.name
+						.as_ref()
+						.map(|n| n.best())
+						.unwrap_or_default()
+						.to_lowercase();
+					let maker = w
+						.maker
+						.as_ref()
+						.and_then(|m| m.name.as_ref())
+						.map(|n| n.best())
+						.unwrap_or_default()
+						.to_lowercase();
+					let q_raw = query.as_deref().unwrap_or_default();
+					if !(name.contains(q_lower.as_str())
+						|| maker.contains(q_lower.as_str())
+						|| w.workno.contains(q_raw))
+					{
+						return false;
+					}
+				}
+				if has_filter {
+					let wt = w.work_type.as_deref().unwrap_or("");
+					if !work_types.iter().any(|t| t == wt) {
+						return false;
+					}
+				}
+				true
+			})
+			.map(|w| w.into())
+			.collect();
+
+		let total = filtered.len();
+		if start >= total {
+			return Ok(MangaPageResult {
+				entries: Vec::new(),
+				has_next_page: false,
+			});
+		}
+
+		let end = (start + PAGE_SIZE).min(total);
+		let entries: Vec<Manga> = filtered.into_iter().skip(start).take(end - start).collect();
+
+		Ok(MangaPageResult {
+			entries,
+			has_next_page: end < total,
+		})
+	} else {
+		if start >= worknos.len() {
+			return Ok(MangaPageResult {
+				entries: Vec::new(),
+				has_next_page: false,
+			});
+		}
+
+		let end = (start + PAGE_SIZE).min(worknos.len());
+		let page_worknos: Vec<String> = worknos[start..end].to_vec();
+		let works = api::get_works(&page_worknos)?;
+		let entries: Vec<Manga> = works.into_iter().map(|w| w.into()).collect();
+
+		Ok(MangaPageResult {
+			entries,
+			has_next_page: end < worknos.len(),
+		})
+	}
+}
 
 /// Fetch (or use cached) full purchase work ID list, refreshing on page 1.
 fn get_or_fetch_worknos(page: i32) -> Result<Vec<String>> {
