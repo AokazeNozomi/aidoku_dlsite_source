@@ -1,6 +1,6 @@
 use aidoku::{
 	Result,
-	alloc::{String, Vec, format, vec},
+	alloc::{String, Vec, collections::BTreeMap, format, vec},
 	canvas::Rect,
 	imports::canvas::{Canvas, ImageRef},
 	prelude::*,
@@ -159,35 +159,68 @@ pub fn descramble_image(
 // Page extraction from ziptree
 // ---------------------------------------------------------------------------
 
-/// Extract ordered image pages from a ziptree.
+#[derive(Clone)]
+pub struct ChapterGroup {
+	pub key: String,
+	pub title: String,
+	pub pages: Vec<(String, PlayFile)>,
+}
+
+/// Extract ordered chapter groups from a ziptree.
 ///
-/// Handles image PlayFiles and PDF PlayFiles (whose pages are expanded into
-/// individual synthetic entries). Returns `(path, PlayFile)` pairs sorted
-/// naturally by path.
-pub fn extract_pages(tree: &ZipTree) -> Vec<(String, PlayFile)> {
+/// - Images are grouped by their full parent folder path (any depth).
+/// - PDF files are expanded and each PDF file path becomes its own chapter.
+pub fn extract_chapter_groups(tree: &ZipTree) -> Vec<ChapterGroup> {
 	let entries = tree.walk();
 
-	let mut image_pages: Vec<(String, PlayFile)> = Vec::new();
-	let mut pdf_pages: Vec<(String, PlayFile)> = Vec::new();
+	let mut image_groups: BTreeMap<String, Vec<(String, PlayFile)>> = BTreeMap::new();
+	let mut pdf_groups: BTreeMap<String, Vec<(String, PlayFile)>> = BTreeMap::new();
 
 	for (path, pf) in entries {
 		match pf.file_type.as_str() {
 			"image" => {
 				if pf.optimized_name().is_some() {
-					image_pages.push((path, pf));
+					let folder = parent_folder_path(&path);
+					image_groups.entry(folder).or_default().push((path, pf));
 				}
 			}
 			"pdf" => {
-				pdf_pages.extend(expand_pdf_pages(&path, &pf));
+				let pages = expand_pdf_pages(&path, &pf);
+				if !pages.is_empty() {
+					pdf_groups.entry(path).or_default().extend(pages);
+				}
 			}
 			_ => {}
 		}
 	}
 
-	let mut all_pages = image_pages;
-	all_pages.append(&mut pdf_pages);
-	all_pages.sort_by(|a, b| natural_cmp(&a.0, &b.0));
-	all_pages
+	let mut chapters: Vec<ChapterGroup> = Vec::new();
+
+	for (folder, mut pages) in image_groups {
+		pages.sort_by(|a, b| natural_cmp(&a.0, &b.0));
+		let title = if folder == "root" {
+			"root".into()
+		} else {
+			folder.clone()
+		};
+		chapters.push(ChapterGroup {
+			key: format!("img:{}", folder),
+			title,
+			pages,
+		});
+	}
+
+	for (pdf_path, mut pages) in pdf_groups {
+		pages.sort_by(|a, b| natural_cmp(&a.0, &b.0));
+		chapters.push(ChapterGroup {
+			key: format!("pdf:{}", pdf_path),
+			title: pdf_path,
+			pages,
+		});
+	}
+
+	chapters.sort_by(|a, b| natural_cmp(&a.title, &b.title));
+	chapters
 }
 
 /// Expand a PDF PlayFile into individual page PlayFiles.
@@ -225,6 +258,13 @@ fn expand_pdf_pages(path: &str, playfile: &PlayFile) -> Vec<(String, PlayFile)> 
 	}
 
 	result
+}
+
+fn parent_folder_path(path: &str) -> String {
+	match path.rsplit_once('/') {
+		Some((parent, _)) if !parent.is_empty() => parent.into(),
+		_ => "root".into(),
+	}
 }
 
 // ---------------------------------------------------------------------------

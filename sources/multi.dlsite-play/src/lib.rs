@@ -57,26 +57,36 @@ impl Source for DlsitePlay {
 		if needs_chapters {
 			let token = api::download_token(&manga.key)?;
 			let ziptree = api::fetch_ziptree(&token)?;
-			let pages = helpers::extract_pages(&ziptree);
-			let page_count = pages.len();
+			let chapter_groups = helpers::extract_chapter_groups(&ziptree);
 
-			manga.chapters = Some(vec![Chapter {
-				key: manga.key.clone(),
-				title: Some(format!("{} pages", page_count)),
-				chapter_number: Some(1.0),
-				date_uploaded: release_date,
-				language,
-				..Default::default()
-			}]);
+			let chapters: Vec<Chapter> = chapter_groups
+				.into_iter()
+				.enumerate()
+				.map(|(idx, group)| Chapter {
+					key: group.key,
+					title: Some(format!("{} ({} pages)", group.title, group.pages.len())),
+					chapter_number: Some((idx + 1) as f32),
+					date_uploaded: release_date,
+					language: language.clone(),
+					..Default::default()
+				})
+				.collect();
+
+			manga.chapters = Some(chapters);
 		}
 
 		Ok(manga)
 	}
 
-	fn get_page_list(&self, manga: Manga, _chapter: Chapter) -> Result<Vec<Page>> {
+	fn get_page_list(&self, manga: Manga, chapter: Chapter) -> Result<Vec<Page>> {
 		let token = api::download_token(&manga.key)?;
 		let ziptree = api::fetch_ziptree(&token)?;
-		let pages = helpers::extract_pages(&ziptree);
+		let chapter_groups = helpers::extract_chapter_groups(&ziptree);
+		let pages = chapter_groups
+			.into_iter()
+			.find(|group| group.key == chapter.key)
+			.map(|group| group.pages)
+			.ok_or_else(|| error!("Unable to find chapter pages for key '{}'", chapter.key))?;
 
 		let result: Vec<Page> = pages
 			.into_iter()
