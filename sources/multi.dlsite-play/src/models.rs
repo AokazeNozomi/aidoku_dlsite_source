@@ -1,6 +1,6 @@
 use aidoku::{
 	ContentRating, Manga, Viewer,
-	alloc::{String, Vec, collections::BTreeMap, format},
+	alloc::{String, Vec, collections::BTreeMap, format, vec},
 	serde::Deserialize,
 };
 
@@ -296,6 +296,8 @@ pub struct PurchaseWork {
 	pub tags: Option<Vec<WorkTag>>,
 	#[serde(default)]
 	pub sales_date: Option<String>,
+	#[serde(default)]
+	pub language: Option<Vec<String>>,
 }
 
 impl PurchaseWork {
@@ -310,6 +312,41 @@ impl PurchaseWork {
 	}
 }
 
+impl PurchaseWork {
+	fn work_type_label(&self) -> Option<&'static str> {
+		match self.work_type.as_deref()? {
+			"MNG" => Some("Manga"),
+			"WBT" => Some("Webtoon"),
+			"CG" => Some("CG / Illustration"),
+			"SOU" => Some("Sound / Voice"),
+			"MOV" => Some("Video"),
+			"NOV" => Some("Novel"),
+			"GAM" => Some("Game"),
+			"ETC" => Some("Other"),
+			_ => None,
+		}
+	}
+
+	/// Extract names from tags matching a given `class` value.
+	fn tags_by_class(&self, class: &str) -> Vec<String> {
+		self.tags
+			.as_ref()
+			.map(|tags| {
+				tags.iter()
+					.filter(|t| t.tag_class.as_deref() == Some(class))
+					.filter_map(|t| t.name.clone())
+					.collect()
+			})
+			.unwrap_or_default()
+	}
+
+	/// Truncate an ISO-8601 datetime string to just the date portion.
+	fn release_date_short(&self) -> Option<&str> {
+		let d = self.regist_date.as_deref()?;
+		Some(d.get(..10).unwrap_or(d))
+	}
+}
+
 impl From<PurchaseWork> for Manga {
 	fn from(work: PurchaseWork) -> Self {
 		let title = work
@@ -318,43 +355,114 @@ impl From<PurchaseWork> for Manga {
 			.map(|n| n.best())
 			.unwrap_or_else(|| work.workno.clone());
 
+		// -- Circle --
+		let circle_name = work
+			.maker
+			.as_ref()
+			.and_then(|m| m.name.as_ref())
+			.map(|n| n.best());
+
+		// -- Credits from author_name + tag classes --
 		let mut author_list: Vec<String> = Vec::new();
-
 		if let Some(ref name) = work.author_name {
-			author_list.push(name.clone());
-		} else if let Some(ref maker) = work.maker
-			&& let Some(ref name) = maker.name
-		{
-			author_list.push(name.best());
-		}
-
-		if let Some(ref tags) = work.tags {
-			for t in tags {
-				if t.tag_class.as_deref() == Some("illust_by")
-					&& let Some(ref name) = t.name
-				{
-					author_list.push(name.clone());
+			for part in name.split('/') {
+				let trimmed = part.trim();
+				if !trimmed.is_empty() {
+					author_list.push(trimmed.into());
 				}
 			}
 		}
+		let created_by = work.tags_by_class("created_by");
+		for name in &created_by {
+			if !author_list.contains(name) {
+				author_list.push(name.clone());
+			}
+		}
 
-		let authors = if author_list.is_empty() {
-			None
+		let scenario_by = work.tags_by_class("scenario_by");
+		let illust_by = work.tags_by_class("illust_by");
+		let translated_by = work.tags_by_class("translated_by");
+
+		// Manga.authors = author + scenario credits
+		let mut authors: Vec<String> = author_list.clone();
+		for name in &scenario_by {
+			if !authors.contains(name) {
+				authors.push(name.clone());
+			}
+		}
+		let authors = if authors.is_empty() {
+			circle_name.as_deref().map(|c| vec![c.into()])
 		} else {
-			Some(author_list)
+			Some(authors)
 		};
 
-		let tags: Option<Vec<String>> = work.tags.as_ref().map(|tags| {
-			tags.iter()
-				.filter(|t| {
-					t.tag_class.is_none()
-						|| t.tag_class.as_deref() == Some("")
-						|| t.tag_class.as_deref() == Some("genre")
-				})
-				.filter_map(|t| t.name.clone())
-				.collect()
-		});
+		// Manga.artists = illustration credits
+		let artists = if illust_by.is_empty() {
+			None
+		} else {
+			Some(illust_by.clone())
+		};
 
+		// -- Tags: genre tags + work type label --
+		let mut tag_list: Vec<String> = Vec::new();
+		if let Some(label) = work.work_type_label() {
+			tag_list.push(label.into());
+		}
+		if let Some(ref tags) = work.tags {
+			for t in tags {
+				let dominated = t.tag_class.is_none()
+					|| t.tag_class.as_deref() == Some("")
+					|| t.tag_class.as_deref() == Some("genre");
+				if dominated {
+					if let Some(ref name) = t.name {
+						tag_list.push(name.clone());
+					}
+				}
+			}
+		}
+		let tags = if tag_list.is_empty() {
+			None
+		} else {
+			Some(tag_list)
+		};
+
+		// -- Description --
+		let mut desc_lines: Vec<String> = Vec::new();
+
+		if let Some(ref circle) = circle_name {
+			desc_lines.push(format!("Circle: {}", circle));
+		}
+		if !author_list.is_empty() {
+			desc_lines.push(format!("Author: {}", author_list.join(", ")));
+		}
+		if !scenario_by.is_empty() {
+			desc_lines.push(format!("Scenario: {}", scenario_by.join(", ")));
+		}
+		if !illust_by.is_empty() {
+			desc_lines.push(format!("Illustration: {}", illust_by.join(", ")));
+		}
+		if !translated_by.is_empty() {
+			desc_lines.push(format!("Translation: {}", translated_by.join(", ")));
+		}
+		if let Some(date) = work.release_date_short() {
+			desc_lines.push(format!("Release Date: {}", date));
+		}
+		if let Some(label) = work.work_type_label() {
+			desc_lines.push(format!("Type: {}", label));
+		}
+		if let Some(ref langs) = work.language {
+			if !langs.is_empty() {
+				desc_lines.push(format!("Language: {}", langs.join(", ")));
+			}
+		}
+
+		let description = if desc_lines.is_empty() {
+			None
+		} else {
+			Some(desc_lines.join("\n"))
+		};
+
+		// -- Content rating & viewer --
 		let content_rating = match work.age_category.as_deref() {
 			Some("R18") | Some("r18") => ContentRating::NSFW,
 			Some("R15") | Some("r15") => ContentRating::Suggestive,
@@ -373,6 +481,8 @@ impl From<PurchaseWork> for Manga {
 			title,
 			cover: work.cover_url(),
 			authors,
+			artists,
+			description,
 			tags,
 			content_rating,
 			viewer,
