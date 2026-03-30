@@ -306,14 +306,32 @@ fn get_or_fetch_worknos(page: i32) -> Result<Vec<String>> {
 	}
 
 	if page == 1 {
-		let sales = api::get_sales()?;
+		let sales = api::get_sales().map_err(|e| {
+			let message = format!("{:?}", e);
+			if is_unauthorized_error(&message) {
+				handle_unauthorized();
+				return error!(
+					"Session expired (401 Unauthorized). Please open source settings and tap Login again to refresh cookies."
+				);
+			}
+			e
+		})?;
 		let worknos: Vec<String> = sales.into_iter().map(|s| s.workno).collect();
 		settings::set_cached_worknos(&worknos);
 		Ok(worknos)
 	} else {
 		let cached = settings::get_cached_worknos();
 		if cached.is_empty() {
-			let sales = api::get_sales()?;
+			let sales = api::get_sales().map_err(|e| {
+				let message = format!("{:?}", e);
+				if is_unauthorized_error(&message) {
+					handle_unauthorized();
+					return error!(
+						"Session expired (401 Unauthorized). Please open source settings and tap Login again to refresh cookies."
+					);
+				}
+				e
+			})?;
 			let worknos: Vec<String> = sales.into_iter().map(|s| s.workno).collect();
 			settings::set_cached_worknos(&worknos);
 			Ok(worknos)
@@ -321,6 +339,18 @@ fn get_or_fetch_worknos(page: i32) -> Result<Vec<String>> {
 			Ok(cached)
 		}
 	}
+}
+
+fn is_unauthorized_error(message: &str) -> bool {
+	message.contains("401")
+		|| message.contains("Unauthorized")
+		|| message.contains("unauthorized")
+}
+
+fn handle_unauthorized() {
+	settings::set_logged_in(false);
+	settings::clear_cached_worknos();
+	settings::clear_cached_page();
 }
 
 fn extract_work_type_filter(filters: &[FilterValue]) -> Vec<String> {
