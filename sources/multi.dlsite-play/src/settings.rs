@@ -5,15 +5,18 @@ use aidoku::{
 
 const CACHED_WORKNOS_KEY: &str = "cached_worknos";
 const LOGGED_IN_KEY: &str = "logged_in";
+const LOGIN_SETTING_KEY: &str = "login";
 const LOGIN_USERNAME_KEY: &str = "login_username";
 const LOGIN_PASSWORD_KEY: &str = "login_password";
 
 pub fn is_logged_in() -> bool {
 	defaults_get::<bool>(LOGGED_IN_KEY).unwrap_or(false)
+		|| defaults_get::<bool>(LOGIN_SETTING_KEY).unwrap_or(false)
 }
 
 pub fn set_logged_in(value: bool) {
 	defaults_set(LOGGED_IN_KEY, DefaultValue::Bool(value));
+	defaults_set(LOGIN_SETTING_KEY, DefaultValue::Bool(value));
 }
 
 pub fn set_credentials(username: &str, password: &str) {
