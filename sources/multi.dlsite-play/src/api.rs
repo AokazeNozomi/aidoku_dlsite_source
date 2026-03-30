@@ -5,7 +5,6 @@ use aidoku::{
 	prelude::*,
 	Result,
 };
-use core::str;
 
 const PLAY_API: &str = "https://play.dlsite.com/api/v3";
 const PLAY_DL_API: &str = "https://play.dl.dlsite.com/api/v3";
@@ -25,18 +24,8 @@ fn play_post(url: &str) -> Result<Request> {
 pub fn get_sales() -> Result<Vec<SalesEntry>> {
 	let url = format!("{}/content/sales?last=0", PLAY_API);
 	let data = play_get(&url)?.send()?.get_data()?;
-	let entries: Vec<SalesEntry> = serde_json::from_slice(&data).map_err(|e| {
-		let body_preview = match str::from_utf8(&data) {
-			Ok(s) => s,
-			Err(_) => "<non-utf8 response body>",
-		};
-		error!(
-			"Failed to parse sales response: {} ({} bytes). Body: {}",
-			e,
-			data.len(),
-			body_preview
-		)
-	})?;
+	let entries: Vec<SalesEntry> =
+		serde_json::from_slice(&data).map_err(|_| error!("Failed to parse sales response"))?;
 	Ok(entries)
 }
 
