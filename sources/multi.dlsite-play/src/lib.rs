@@ -165,10 +165,14 @@ impl WebLoginHandler for DlsitePlay {
 			has_session
 		));
 
-		settings::set_logged_in(has_session);
 		if has_session {
+			settings::set_logged_in(false);
+			api::validate_session_probe()?;
+			settings::set_logged_in(true);
 			settings::clear_cached_worknos();
 			settings::clear_cached_page();
+		} else {
+			settings::set_logged_in(false);
 		}
 
 		Ok(has_session)
@@ -332,9 +336,10 @@ fn get_manga_list_inner(
 /// Fetch (or use cached) full purchase work ID list, refreshing on page 1.
 fn get_or_fetch_worknos(page: i32) -> Result<Vec<String>> {
 	print(format!(
-		"[dlsite-play] get_or_fetch_worknos page={} is_logged_in={}",
+		"[dlsite-play] get_or_fetch_worknos page={} is_logged_in={} has_credentials={}",
 		page,
-		settings::is_logged_in()
+		settings::is_logged_in(),
+		settings::has_credentials()
 	));
 	if !settings::is_logged_in() {
 		if let Some((username, password)) = settings::get_credentials() {

@@ -14,7 +14,6 @@ pub fn is_logged_in() -> bool {
 	defaults_get::<bool>(LOGGED_IN_KEY).unwrap_or(false)
 		|| defaults_get::<bool>(LOGIN_SETTING_KEY).unwrap_or(false)
 		|| defaults_get::<bool>(LOGIN_WEB_SETTING_KEY).unwrap_or(false)
-		|| get_credentials().is_some()
 }
 
 pub fn set_logged_in(value: bool) {
@@ -42,6 +41,10 @@ pub fn get_credentials() -> Option<(String, String)> {
 	} else {
 		Some((username, password))
 	}
+}
+
+pub fn has_credentials() -> bool {
+	get_credentials().is_some()
 }
 
 /// Store the full list of purchased work IDs for pagination.

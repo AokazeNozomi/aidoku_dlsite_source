@@ -101,6 +101,30 @@ fn extract_login_token(html: &str) -> Option<String> {
 	None
 }
 
+pub fn validate_session_probe() -> Result<()> {
+	let probe_url = format!("{}/content/sales?last=0", PLAY_API);
+	let probe_response = play_get(&probe_url)?.send()?;
+	let probe_status = probe_response.status_code();
+	let probe_data = probe_response.get_data()?;
+	let probe_auth_expired = is_auth_expired_response(probe_status, &probe_data);
+	print(format!(
+		"[dlsite-play] auth probe status={} auth_expired={}",
+		probe_status, probe_auth_expired
+	));
+	if probe_auth_expired {
+		let preview = match str::from_utf8(&probe_data) {
+			Ok(s) if s.len() > 180 => &s[..180],
+			Ok(s) => s,
+			Err(_) => "<non-utf8 response body>",
+		};
+		bail!(
+			"DLsite login failed. Username/password may be invalid or blocked. Probe response: {}",
+			preview
+		);
+	}
+	Ok(())
+}
+
 pub fn login(username: &str, password: &str) -> Result<()> {
 	print(format!(
 		"[dlsite-play] login start (username_len={}, password_len={})",
@@ -186,29 +210,7 @@ pub fn login(username: &str, password: &str) -> Result<()> {
 		"[dlsite-play] GET play authorize status={}",
 		play_authorize.status_code()
 	));
-
-	// Verify authentication with an actual Play API endpoint instead of HTML marker matching.
-	let probe_url = format!("{}/content/sales?last=0", PLAY_API);
-	let probe_response = play_get(&probe_url)?.send()?;
-	let probe_status = probe_response.status_code();
-	let probe_data = probe_response.get_data()?;
-	let probe_auth_expired = is_auth_expired_response(probe_status, &probe_data);
-	print(format!(
-		"[dlsite-play] auth probe status={} auth_expired={}",
-		probe_status, probe_auth_expired
-	));
-	if probe_auth_expired {
-		let preview = match str::from_utf8(&probe_data) {
-			Ok(s) if s.len() > 180 => &s[..180],
-			Ok(s) => s,
-			Err(_) => "<non-utf8 response body>",
-		};
-		bail!(
-			"DLsite login failed. Username/password may be invalid or blocked. Probe response: {}",
-			preview
-		);
-	}
-	Ok(())
+	validate_session_probe()
 }
 
 fn with_authenticated_data<F>(make_request: F) -> Result<Vec<u8>>
@@ -229,11 +231,14 @@ where
 
 	print("[dlsite-play] attempting automatic reauthentication");
 	let (username, password) = settings::get_credentials().ok_or_else(|| {
+		// Intentionally retain stored credentials so the user can retry
+		// without re-entering username/password after a transient auth failure.
 		settings::set_logged_in(false);
 		error!("Session expired. Please log in again.")
 	})?;
 	if let Err(_e) = login(&username, &password) {
 		print("[dlsite-play] automatic reauthentication failed");
+		// Credentials are intentionally preserved here.
 		settings::set_logged_in(false);
 		settings::clear_cached_worknos();
 		settings::clear_cached_page();
