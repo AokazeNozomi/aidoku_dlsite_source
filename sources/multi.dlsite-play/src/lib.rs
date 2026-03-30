@@ -132,7 +132,8 @@ impl WebLoginHandler for DlsitePlay {
 			bail!("Invalid login key: `{key}`");
 		}
 
-		let has_session = cookies.contains_key("PHPSESSID");
+		let has_session =
+			cookies.contains_key("play_session") || cookies.contains_key("PHPSESSID");
 
 		settings::set_logged_in(has_session);
 
