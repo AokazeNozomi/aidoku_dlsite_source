@@ -10,6 +10,7 @@
 				"key": "login",
 				"title": "Login",
 				"logoutTitle": "Log Out",
+				"notification": "login",
 				"refreshes": [
 					"listings",
 					"content"

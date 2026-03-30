@@ -132,8 +132,9 @@ impl BasicLoginHandler for DlsitePlay {
 			bail!("Invalid login key: `{key}`");
 		}
 
-		api::login(&username, &password)?;
+		// Persist credentials first; several sources rely on these defaults keys.
 		settings::set_credentials(&username, &password);
+		api::login(&username, &password)?;
 		settings::set_logged_in(true);
 		settings::clear_cached_worknos();
 		settings::clear_cached_page();
