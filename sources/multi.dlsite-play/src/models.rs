@@ -3,6 +3,7 @@ use aidoku::{
 	alloc::{String, Vec, collections::BTreeMap, format, vec},
 	serde::Deserialize,
 };
+use serde_json::Value;
 
 // ---------------------------------------------------------------------------
 // Download token from GET /api/v3/download/sign/cookie
@@ -296,8 +297,8 @@ pub struct PurchaseWork {
 	pub tags: Option<Vec<WorkTag>>,
 	#[serde(default)]
 	pub sales_date: Option<String>,
-	#[serde(default)]
-	pub options: Option<String>,
+	#[serde(default, alias = "languages", alias = "lang", alias = "langs")]
+	pub language: Option<Value>,
 }
 
 impl PurchaseWork {
@@ -313,14 +314,13 @@ impl PurchaseWork {
 }
 
 impl PurchaseWork {
-	fn option_language_values(&self) -> Vec<&str> {
-		let Some(options) = self.options.as_deref() else {
+	fn language_values(&self) -> Vec<&str> {
+		let Some(value) = self.language.as_ref() else {
 			return Vec::new();
 		};
-		options
-			.split('#')
-			.filter(|token| !token.is_empty())
-			.collect()
+		let mut out = Vec::new();
+		collect_language_strings(value, &mut out);
+		out
 	}
 
 	fn work_type_label(&self) -> Option<&'static str> {
@@ -372,7 +372,6 @@ impl PurchaseWork {
 		let canonical = lower.replace('_', "-");
 
 		if canonical == "ja"
-			|| canonical == "jpn"
 			|| canonical.starts_with("ja-")
 			|| canonical.contains("japanese")
 			|| lower.contains("日本語")
@@ -380,7 +379,6 @@ impl PurchaseWork {
 			return Some("ja");
 		}
 		if canonical == "en"
-			|| canonical == "eng"
 			|| canonical.starts_with("en-")
 			|| canonical.contains("english")
 			|| lower.contains("英語")
@@ -389,7 +387,6 @@ impl PurchaseWork {
 		}
 		if canonical == "zh-hans"
 			|| canonical == "zh-cn"
-			|| canonical == "chi"
 			|| canonical.starts_with("zh-cn-")
 			|| lower.contains("简体中文")
 			|| lower.contains("簡体中文")
@@ -398,7 +395,6 @@ impl PurchaseWork {
 		}
 		if canonical == "zh-hant"
 			|| canonical == "zh-tw"
-			|| canonical == "chi-hant"
 			|| canonical.starts_with("zh-tw-")
 			|| lower.contains("繁體中文")
 			|| lower.contains("繁体中文")
@@ -448,10 +444,11 @@ impl PurchaseWork {
 
 	/// Infer the best language code for filtering.
 	///
-	/// Uses only language tokens from `options` metadata.
+	/// Prefer translated/non-Japanese language when multiple languages exist,
+	/// because many works keep Japanese titles even for translated content.
 	pub fn infer_language(&self) -> Option<&'static str> {
 		let normalized: Vec<&'static str> = self
-			.option_language_values()
+			.language_values()
 			.into_iter()
 			.filter_map(Self::normalize_language_code)
 			.collect();
@@ -464,6 +461,25 @@ impl PurchaseWork {
 		}
 
 		None
+	}
+}
+
+fn collect_language_strings<'a>(value: &'a Value, out: &mut Vec<&'a str>) {
+	match value {
+		Value::String(s) => out.push(s.as_str()),
+		Value::Array(arr) => {
+			for entry in arr {
+				collect_language_strings(entry, out);
+			}
+		}
+		Value::Object(map) => {
+			for key in ["code", "lang", "locale", "name", "value"] {
+				if let Some(v) = map.get(key) {
+					collect_language_strings(v, out);
+				}
+			}
+		}
+		_ => {}
 	}
 }
 
@@ -586,6 +602,11 @@ impl From<PurchaseWork> for Manga {
 		}
 		if !translated_by.is_empty() {
 			desc_lines.push(format!("Translation: {}", translated_by.join(", ")));
+		}
+		if let Some(raw_lang) = &work.language {
+			desc_lines.push(format!("Raw Language: {}", raw_lang));
+		} else {
+			desc_lines.push("Raw Language: <missing>".into());
 		}
 		if let Some(language) = work.infer_language() {
 			desc_lines.push(format!("Language: {}", language));
