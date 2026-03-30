@@ -6,23 +6,10 @@
 		"items": [
 			{
 				"type": "login",
-				"method": "basic",
-				"key": "login",
-				"title": "Login (Username/Password)",
-				"logoutTitle": "Log Out",
-				"notification": "login",
-				"refreshes": [
-					"listings",
-					"content"
-				]
-			},
-			{
-				"type": "login",
 				"method": "web",
-				"key": "login_web",
-				"title": "Login (Web)",
-				"url": "https://play.dlsite.com/login/",
-				"notification": "login_web",
+				"key": "login",
+				"title": "Login",
+				"url": "https://login.dlsite.com/login?user=self",
 				"refreshes": [
 					"listings",
 					"content"

@@ -5,62 +5,13 @@ use aidoku::{
 
 const CACHED_WORKNOS_KEY: &str = "cached_worknos";
 const LOGGED_IN_KEY: &str = "logged_in";
-const LOGIN_SETTING_KEY: &str = "login";
-const LOGIN_WEB_SETTING_KEY: &str = "login_web";
-const LOGIN_USERNAME_KEY: &str = "login.username";
-const LOGIN_PASSWORD_KEY: &str = "login.password";
-const WEB_COOKIES_KEY: &str = "web_cookies";
 
 pub fn is_logged_in() -> bool {
 	defaults_get::<bool>(LOGGED_IN_KEY).unwrap_or(false)
-		|| defaults_get::<bool>(LOGIN_SETTING_KEY).unwrap_or(false)
-		|| defaults_get::<bool>(LOGIN_WEB_SETTING_KEY).unwrap_or(false)
 }
 
 pub fn set_logged_in(value: bool) {
 	defaults_set(LOGGED_IN_KEY, DefaultValue::Bool(value));
-	defaults_set(LOGIN_SETTING_KEY, DefaultValue::Bool(value));
-	defaults_set(LOGIN_WEB_SETTING_KEY, DefaultValue::Bool(value));
-}
-
-pub fn set_credentials(username: &str, password: &str) {
-	defaults_set(
-		LOGIN_USERNAME_KEY,
-		DefaultValue::String(String::from(username)),
-	);
-	defaults_set(
-		LOGIN_PASSWORD_KEY,
-		DefaultValue::String(String::from(password)),
-	);
-}
-
-pub fn get_credentials() -> Option<(String, String)> {
-	let username = defaults_get::<String>(LOGIN_USERNAME_KEY).unwrap_or_default();
-	let password = defaults_get::<String>(LOGIN_PASSWORD_KEY).unwrap_or_default();
-	if username.is_empty() || password.is_empty() {
-		None
-	} else {
-		Some((username, password))
-	}
-}
-
-pub fn has_credentials() -> bool {
-	get_credentials().is_some()
-}
-
-pub fn set_web_cookies(cookie_header: &str) {
-	defaults_set(
-		WEB_COOKIES_KEY,
-		DefaultValue::String(String::from(cookie_header)),
-	);
-}
-
-pub fn get_web_cookies() -> Option<String> {
-	defaults_get::<String>(WEB_COOKIES_KEY).filter(|s| !s.is_empty())
-}
-
-pub fn clear_web_cookies() {
-	defaults_set(WEB_COOKIES_KEY, DefaultValue::Null);
 }
 
 /// Store the full list of purchased work IDs for pagination.

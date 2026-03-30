@@ -2,11 +2,11 @@
 
 use aidoku::{
 	alloc::{format, string::ToString, vec, String, Vec},
-	imports::{canvas::ImageRef, net::Request, std::print},
+	imports::{canvas::ImageRef, net::Request},
 	prelude::*,
-	register_source, BasicLoginHandler, Chapter, FilterValue, HashMap, ImageRequestProvider,
-	ImageResponse, Listing, ListingProvider, Manga, MangaPageResult, NotificationHandler, Page,
-	PageContent, PageContext, PageImageProcessor, Result, Source, WebLoginHandler,
+	register_source, Chapter, FilterValue, HashMap, ImageRequestProvider, ImageResponse, Listing,
+	ListingProvider, Manga, MangaPageResult, NotificationHandler, Page, PageContent, PageContext,
+	PageImageProcessor, Result, Source, WebLoginHandler,
 };
 
 mod api;
@@ -126,62 +126,19 @@ impl ListingProvider for DlsitePlay {
 	}
 }
 
-impl BasicLoginHandler for DlsitePlay {
-	fn handle_basic_login(&self, key: String, username: String, password: String) -> Result<bool> {
-		print(format!("[dlsite-play] handle_basic_login called with key={}", key));
+impl WebLoginHandler for DlsitePlay {
+	fn handle_web_login(&self, key: String, cookies: HashMap<String, String>) -> Result<bool> {
 		if key != "login" {
 			bail!("Invalid login key: `{key}`");
 		}
 
-		// Persist credentials first; several sources rely on these defaults keys.
-		settings::set_credentials(&username, &password);
-		print(format!(
-			"[dlsite-play] stored credentials (username_len={}, password_len={})",
-			username.len(),
-			password.len()
-		));
-		api::login(&username, &password)?;
-		print("[dlsite-play] api::login succeeded");
-		settings::set_logged_in(true);
-		settings::clear_cached_worknos();
-		settings::clear_cached_page();
-		print("[dlsite-play] login state + caches updated");
-		Ok(true)
-	}
-}
+		let has_session = cookies.contains_key("PHPSESSID");
 
-impl WebLoginHandler for DlsitePlay {
-	fn handle_web_login(&self, key: String, cookies: HashMap<String, String>) -> Result<bool> {
-		print(format!("[dlsite-play] handle_web_login called with key={}", key));
-		if key != "login_web" {
-			bail!("Invalid web login key: `{key}`");
-		}
-
-		let has_session =
-			cookies.contains_key("play_session") || cookies.contains_key("PHPSESSID");
-		print(format!(
-			"[dlsite-play] web login cookies received={}, has_session={}",
-			cookies.len(),
-			has_session
-		));
+		settings::set_logged_in(has_session);
 
 		if has_session {
-			let mut cookie_pairs: Vec<String> = Vec::new();
-			for (name, value) in cookies.into_iter() {
-				cookie_pairs.push(format!("{}={}", name, value));
-			}
-			let cookie_header = cookie_pairs.join("; ");
-			settings::set_web_cookies(&cookie_header);
-			print(format!(
-				"[dlsite-play] saved web cookies header (len={})",
-				cookie_header.len()
-			));
-			settings::set_logged_in(true);
 			settings::clear_cached_worknos();
 			settings::clear_cached_page();
-		} else {
-			settings::set_logged_in(false);
-			settings::clear_web_cookies();
 		}
 
 		Ok(has_session)
@@ -190,7 +147,7 @@ impl WebLoginHandler for DlsitePlay {
 
 impl NotificationHandler for DlsitePlay {
 	fn handle_notification(&self, notification: String) {
-		if (notification == "login" || notification == "login_web") && !settings::is_logged_in() {
+		if notification == "login" && !settings::is_logged_in() {
 			settings::clear_cached_worknos();
 			settings::clear_cached_page();
 		}
@@ -344,22 +301,8 @@ fn get_manga_list_inner(
 
 /// Fetch (or use cached) full purchase work ID list, refreshing on page 1.
 fn get_or_fetch_worknos(page: i32) -> Result<Vec<String>> {
-	print(format!(
-		"[dlsite-play] get_or_fetch_worknos page={} is_logged_in={} has_credentials={}",
-		page,
-		settings::is_logged_in(),
-		settings::has_credentials()
-	));
 	if !settings::is_logged_in() {
-		if let Some((username, password)) = settings::get_credentials() {
-			print("[dlsite-play] attempting lazy login from stored credentials");
-			api::login(&username, &password)?;
-			settings::set_logged_in(true);
-			print("[dlsite-play] lazy login succeeded");
-		} else {
-			print("[dlsite-play] no stored credentials available");
-			bail!("Not logged in. Please log in to view your purchases.");
-		}
+		bail!("Not logged in. Please log in to view your purchases.");
 	}
 
 	if page == 1 {
@@ -394,7 +337,6 @@ fn extract_work_type_filter(filters: &[FilterValue]) -> Vec<String> {
 register_source!(
 	DlsitePlay,
 	ListingProvider,
-	BasicLoginHandler,
 	WebLoginHandler,
 	NotificationHandler,
 	ImageRequestProvider,
