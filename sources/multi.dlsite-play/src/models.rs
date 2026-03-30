@@ -603,11 +603,6 @@ impl From<PurchaseWork> for Manga {
 		if !translated_by.is_empty() {
 			desc_lines.push(format!("Translation: {}", translated_by.join(", ")));
 		}
-		if let Some(raw_lang) = &work.language {
-			desc_lines.push(format!("Raw Language: {}", raw_lang));
-		} else {
-			desc_lines.push("Raw Language: <missing>".into());
-		}
 		if let Some(language) = work.infer_language() {
 			desc_lines.push(format!("Language: {}", language));
 		}
