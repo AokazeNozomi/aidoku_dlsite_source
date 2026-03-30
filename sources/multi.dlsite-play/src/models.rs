@@ -544,7 +544,7 @@ impl From<PurchaseWork> for Manga {
 			_ => Viewer::LeftToRight,
 		};
 
-		let url = Some(format!("https://play.dlsite.com/#/work/{}", work.workno));
+		let url = Some(format!("https://play.dlsite.com/work/{}/tree", work.workno));
 
 		Manga {
 			key: work.workno.clone(),
