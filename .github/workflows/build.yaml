@@ -20,7 +20,7 @@ jobs:
       SCCACHE_VERSION: 0.3.0
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: google/wireit@setup-github-actions-caching/v1
       - name: Cache rust stuff
         uses: actions/cache@v4
