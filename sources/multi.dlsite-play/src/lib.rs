@@ -1,13 +1,12 @@
 #![no_std]
 
 use aidoku::{
-	Chapter, FilterValue, HashMap, ImageRequestProvider, ImageResponse, Listing, ListingProvider,
-	Manga, MangaPageResult, NotificationHandler, Page, PageContent, PageContext,
-	PageImageProcessor, Result, Source, WebLoginHandler,
-	alloc::{String, Vec, format, string::ToString, vec},
+	alloc::{format, string::ToString, vec, String, Vec},
 	imports::{canvas::ImageRef, net::Request},
 	prelude::*,
-	register_source,
+	register_source, Chapter, FilterValue, HashMap, ImageRequestProvider, ImageResponse, Listing,
+	ListingProvider, Manga, MangaPageResult, NotificationHandler, Page, PageContent, PageContext,
+	PageImageProcessor, Result, Source, WebLoginHandler,
 };
 
 mod api;
@@ -201,7 +200,8 @@ impl WebLoginHandler for DlsitePlay {
 		}
 
 		let has_session = cookies.keys().any(|k: &String| {
-			k.contains("DLsite_SID")
+			k == "play"
+				|| k.contains("DLsite_SID")
 				|| k.contains("login_secure")
 				|| k.contains("__DLsite")
 				|| k == "PHPSESSID"

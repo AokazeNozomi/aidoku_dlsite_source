@@ -1,9 +1,9 @@
 use crate::models::{DownloadToken, PurchaseWork, RawZipTree, SalesEntry, WorksResponse, ZipTree};
 use aidoku::{
-	Result,
-	alloc::{String, Vec, format},
+	alloc::{format, String, Vec},
 	imports::net::Request,
 	prelude::*,
+	Result,
 };
 
 const PLAY_API: &str = "https://play.dlsite.com/api/v3";
