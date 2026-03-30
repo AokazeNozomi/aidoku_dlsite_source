@@ -16,3 +16,4 @@ templates/*/target
 .ropeproject
 /target
 /.playwright-mcp
+/.cursor
