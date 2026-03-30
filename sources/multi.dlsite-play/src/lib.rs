@@ -45,7 +45,7 @@ impl Source for DlsitePlay {
 		if needs_details || needs_chapters {
 			let works = api::get_works(&[manga.key.clone()])?;
 			if let Some(work) = works.into_iter().next() {
-				language = Some(work.infer_language().into());
+				language = work.infer_language().map(String::from);
 				release_date = work.release_date_timestamp();
 				if needs_details {
 					let updated: Manga = work.into();
