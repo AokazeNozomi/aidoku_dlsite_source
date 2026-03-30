@@ -132,20 +132,12 @@ impl BasicLoginHandler for DlsitePlay {
 			bail!("Invalid login key: `{key}`");
 		}
 
-		match api::login(&username, &password) {
-			Ok(()) => {
-				settings::set_credentials(&username, &password);
-				settings::set_logged_in(true);
-				settings::clear_cached_worknos();
-				settings::clear_cached_page();
-				Ok(true)
-			}
-			Err(_) => {
-				settings::clear_credentials();
-				settings::set_logged_in(false);
-				Ok(false)
-			}
-		}
+		api::login(&username, &password)?;
+		settings::set_credentials(&username, &password);
+		settings::set_logged_in(true);
+		settings::clear_cached_worknos();
+		settings::clear_cached_page();
+		Ok(true)
 	}
 }
 

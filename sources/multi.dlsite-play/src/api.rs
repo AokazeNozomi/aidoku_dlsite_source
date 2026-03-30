@@ -60,13 +60,38 @@ fn percent_encode_component(value: &str) -> String {
 }
 
 fn extract_login_token(html: &str) -> Option<String> {
-	let token_idx = html.find("name=\"_token\"")?;
-	let after_name = &html[token_idx..];
+	if let Some(token_idx) = html.find("name=\"_token\"") {
+		let after_name = &html[token_idx..];
+		let value_key = "value=\"";
+		if let Some(value_pos) = after_name.find(value_key) {
+			let value_start = value_pos + value_key.len();
+			let rest = &after_name[value_start..];
+			if let Some(value_end) = rest.find('"') {
+				return Some(rest[..value_end].into());
+			}
+		}
+	}
+
+	// Some variants place `value` before `name`.
 	let value_key = "value=\"";
-	let value_start = after_name.find(value_key)? + value_key.len();
-	let rest = &after_name[value_start..];
-	let value_end = rest.find('"')?;
-	Some(rest[..value_end].into())
+	let name_key = "name=\"_token\"";
+	let mut cursor = 0usize;
+	while let Some(value_pos) = html[cursor..].find(value_key) {
+		let absolute_value_pos = cursor + value_pos + value_key.len();
+		let rest = &html[absolute_value_pos..];
+		let Some(value_end) = rest.find('"') else {
+			break;
+		};
+		let candidate = &rest[..value_end];
+		let search_start = absolute_value_pos + value_end + 1;
+		let search_end = (search_start + 160).min(html.len());
+		if html[search_start..search_end].contains(name_key) {
+			return Some(candidate.into());
+		}
+		cursor = search_start;
+	}
+
+	None
 }
 
 pub fn login(username: &str, password: &str) -> Result<()> {
@@ -96,7 +121,15 @@ pub fn login(username: &str, password: &str) -> Result<()> {
 	let login_response_text = str::from_utf8(&login_response_data)
 		.map_err(|_| error!("Failed to decode login response"))?;
 	if !login_response_text.contains(LOGIN_SUCCESS_MARKER) {
-		bail!("DLsite login failed. Please check your username and password.");
+		let preview = if login_response_text.len() > 180 {
+			&login_response_text[..180]
+		} else {
+			login_response_text
+		};
+		bail!(
+			"DLsite login failed. Please check your username/password. Response: {}",
+			preview
+		);
 	}
 
 	Request::get(PLAY_LOGIN_URL)?.send()?;

@@ -37,11 +37,6 @@ pub fn get_credentials() -> Option<(String, String)> {
 	}
 }
 
-pub fn clear_credentials() {
-	defaults_set(LOGIN_USERNAME_KEY, DefaultValue::Null);
-	defaults_set(LOGIN_PASSWORD_KEY, DefaultValue::Null);
-}
-
 /// Store the full list of purchased work IDs for pagination.
 pub fn set_cached_worknos(worknos: &[String]) {
 	let joined: String = worknos.join(",");
