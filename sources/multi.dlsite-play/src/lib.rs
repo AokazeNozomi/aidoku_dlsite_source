@@ -4,9 +4,9 @@ use aidoku::{
 	alloc::{format, string::ToString, vec, String, Vec},
 	imports::{canvas::ImageRef, net::Request, std::print},
 	prelude::*,
-	register_source, BasicLoginHandler, Chapter, FilterValue, ImageRequestProvider, ImageResponse,
-	Listing, ListingProvider, Manga, MangaPageResult, NotificationHandler, Page, PageContent,
-	PageContext, PageImageProcessor, Result, Source,
+	register_source, BasicLoginHandler, Chapter, FilterValue, HashMap, ImageRequestProvider,
+	ImageResponse, Listing, ListingProvider, Manga, MangaPageResult, NotificationHandler, Page,
+	PageContent, PageContext, PageImageProcessor, Result, Source, WebLoginHandler,
 };
 
 mod api;
@@ -150,9 +150,34 @@ impl BasicLoginHandler for DlsitePlay {
 	}
 }
 
+impl WebLoginHandler for DlsitePlay {
+	fn handle_web_login(&self, key: String, cookies: HashMap<String, String>) -> Result<bool> {
+		print(format!("[dlsite-play] handle_web_login called with key={}", key));
+		if key != "login_web" {
+			bail!("Invalid web login key: `{key}`");
+		}
+
+		let has_session =
+			cookies.contains_key("play_session") || cookies.contains_key("PHPSESSID");
+		print(format!(
+			"[dlsite-play] web login cookies received={}, has_session={}",
+			cookies.len(),
+			has_session
+		));
+
+		settings::set_logged_in(has_session);
+		if has_session {
+			settings::clear_cached_worknos();
+			settings::clear_cached_page();
+		}
+
+		Ok(has_session)
+	}
+}
+
 impl NotificationHandler for DlsitePlay {
 	fn handle_notification(&self, notification: String) {
-		if notification == "login" && !settings::is_logged_in() {
+		if (notification == "login" || notification == "login_web") && !settings::is_logged_in() {
 			settings::clear_cached_worknos();
 			settings::clear_cached_page();
 		}
@@ -356,6 +381,7 @@ register_source!(
 	DlsitePlay,
 	ListingProvider,
 	BasicLoginHandler,
+	WebLoginHandler,
 	NotificationHandler,
 	ImageRequestProvider,
 	PageImageProcessor

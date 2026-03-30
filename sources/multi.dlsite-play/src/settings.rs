@@ -6,18 +6,21 @@ use aidoku::{
 const CACHED_WORKNOS_KEY: &str = "cached_worknos";
 const LOGGED_IN_KEY: &str = "logged_in";
 const LOGIN_SETTING_KEY: &str = "login";
+const LOGIN_WEB_SETTING_KEY: &str = "login_web";
 const LOGIN_USERNAME_KEY: &str = "login.username";
 const LOGIN_PASSWORD_KEY: &str = "login.password";
 
 pub fn is_logged_in() -> bool {
 	defaults_get::<bool>(LOGGED_IN_KEY).unwrap_or(false)
 		|| defaults_get::<bool>(LOGIN_SETTING_KEY).unwrap_or(false)
+		|| defaults_get::<bool>(LOGIN_WEB_SETTING_KEY).unwrap_or(false)
 		|| get_credentials().is_some()
 }
 
 pub fn set_logged_in(value: bool) {
 	defaults_set(LOGGED_IN_KEY, DefaultValue::Bool(value));
 	defaults_set(LOGIN_SETTING_KEY, DefaultValue::Bool(value));
+	defaults_set(LOGIN_WEB_SETTING_KEY, DefaultValue::Bool(value));
 }
 
 pub fn set_credentials(username: &str, password: &str) {
