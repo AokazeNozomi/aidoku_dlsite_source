@@ -1,6 +1,6 @@
-# Aidoku Community Sources
+# Aidoku DLsite Play Source
 
-This repository hosts unofficial sources maintained by community members that are installable in [Aidoku](https://github.com/Aidoku/Aidoku).
+This repository hosts a source for DLsite Play that is installable in [Aidoku](https://github.com/Aidoku/Aidoku).
 
 ## Usage
 
