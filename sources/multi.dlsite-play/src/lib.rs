@@ -166,13 +166,22 @@ impl WebLoginHandler for DlsitePlay {
 		));
 
 		if has_session {
-			settings::set_logged_in(false);
-			api::validate_session_probe()?;
+			let mut cookie_pairs: Vec<String> = Vec::new();
+			for (name, value) in cookies.into_iter() {
+				cookie_pairs.push(format!("{}={}", name, value));
+			}
+			let cookie_header = cookie_pairs.join("; ");
+			settings::set_web_cookies(&cookie_header);
+			print(format!(
+				"[dlsite-play] saved web cookies header (len={})",
+				cookie_header.len()
+			));
 			settings::set_logged_in(true);
 			settings::clear_cached_worknos();
 			settings::clear_cached_page();
 		} else {
 			settings::set_logged_in(false);
+			settings::clear_web_cookies();
 		}
 
 		Ok(has_session)

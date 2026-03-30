@@ -9,6 +9,7 @@ const LOGIN_SETTING_KEY: &str = "login";
 const LOGIN_WEB_SETTING_KEY: &str = "login_web";
 const LOGIN_USERNAME_KEY: &str = "login.username";
 const LOGIN_PASSWORD_KEY: &str = "login.password";
+const WEB_COOKIES_KEY: &str = "web_cookies";
 
 pub fn is_logged_in() -> bool {
 	defaults_get::<bool>(LOGGED_IN_KEY).unwrap_or(false)
@@ -45,6 +46,21 @@ pub fn get_credentials() -> Option<(String, String)> {
 
 pub fn has_credentials() -> bool {
 	get_credentials().is_some()
+}
+
+pub fn set_web_cookies(cookie_header: &str) {
+	defaults_set(
+		WEB_COOKIES_KEY,
+		DefaultValue::String(String::from(cookie_header)),
+	);
+}
+
+pub fn get_web_cookies() -> Option<String> {
+	defaults_get::<String>(WEB_COOKIES_KEY).filter(|s| !s.is_empty())
+}
+
+pub fn clear_web_cookies() {
+	defaults_set(WEB_COOKIES_KEY, DefaultValue::Null);
 }
 
 /// Store the full list of purchased work IDs for pagination.

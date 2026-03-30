@@ -24,12 +24,20 @@ fn with_browser_headers(req: Request) -> Request {
 		.header("Accept-Language", "ja,en-US;q=0.9,en;q=0.8")
 }
 
+fn with_stored_web_cookies(req: Request) -> Request {
+	if let Some(cookie_header) = settings::get_web_cookies() {
+		req.header("Cookie", &cookie_header)
+	} else {
+		req
+	}
+}
+
 fn play_get(url: &str) -> Result<Request> {
-	Ok(with_browser_headers(Request::get(url)?).header("Referer", REFERER))
+	Ok(with_stored_web_cookies(with_browser_headers(Request::get(url)?)).header("Referer", REFERER))
 }
 
 fn play_post(url: &str) -> Result<Request> {
-	Ok(with_browser_headers(Request::post(url)?)
+	Ok(with_stored_web_cookies(with_browser_headers(Request::post(url)?))
 		.header("Referer", REFERER)
 		.header("Content-Type", "application/json"))
 }
@@ -108,8 +116,10 @@ pub fn validate_session_probe() -> Result<()> {
 	let probe_data = probe_response.get_data()?;
 	let probe_auth_expired = is_auth_expired_response(probe_status, &probe_data);
 	print(format!(
-		"[dlsite-play] auth probe status={} auth_expired={}",
-		probe_status, probe_auth_expired
+		"[dlsite-play] auth probe status={} auth_expired={} has_web_cookies={}",
+		probe_status,
+		probe_auth_expired,
+		settings::get_web_cookies().is_some()
 	));
 	if probe_auth_expired {
 		let preview = match str::from_utf8(&probe_data) {
