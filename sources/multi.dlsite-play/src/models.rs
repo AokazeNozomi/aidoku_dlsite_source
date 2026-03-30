@@ -1,0 +1,405 @@
+use aidoku::{
+	ContentRating, Manga, Viewer,
+	alloc::{String, Vec, collections::BTreeMap, format},
+	serde::Deserialize,
+};
+
+// ---------------------------------------------------------------------------
+// Download token from GET /api/v3/download/sign/cookie
+// ---------------------------------------------------------------------------
+
+#[derive(Deserialize, Clone)]
+pub struct DownloadToken {
+	#[allow(dead_code)]
+	pub expires: String,
+	pub url: String,
+}
+
+// ---------------------------------------------------------------------------
+// PlayFile from ziptree.json playfile entries
+// ---------------------------------------------------------------------------
+
+#[derive(Deserialize, Clone)]
+pub struct OptimizedInfo {
+	pub name: Option<String>,
+	#[allow(dead_code)]
+	pub length: Option<i64>,
+	pub width: Option<i32>,
+	pub height: Option<i32>,
+	pub crypt: Option<bool>,
+}
+
+#[derive(Deserialize, Clone)]
+pub struct PdfPageOptimized {
+	pub name: Option<String>,
+	pub length: Option<i64>,
+	pub width: Option<i32>,
+	pub height: Option<i32>,
+	pub crypt: Option<bool>,
+}
+
+#[derive(Deserialize, Clone)]
+pub struct PdfPage {
+	pub optimized: Option<PdfPageOptimized>,
+}
+
+#[derive(Deserialize, Clone)]
+pub struct PlayFileFiles {
+	pub optimized: Option<OptimizedInfo>,
+	pub page: Option<Vec<PdfPage>>,
+}
+
+#[derive(Clone)]
+pub struct PlayFile {
+	#[allow(dead_code)]
+	pub length: i64,
+	pub file_type: String,
+	pub files: PlayFileFiles,
+	#[allow(dead_code)]
+	pub hashname: String,
+}
+
+impl PlayFile {
+	pub fn optimized_name(&self) -> Option<&str> {
+		self.files
+			.optimized
+			.as_ref()
+			.and_then(|o| o.name.as_deref())
+	}
+
+	pub fn is_crypt(&self) -> bool {
+		self.files
+			.optimized
+			.as_ref()
+			.and_then(|o| o.crypt)
+			.unwrap_or(false)
+	}
+
+	pub fn crypt_dimensions(&self) -> Option<(i32, i32)> {
+		let opt = self.files.optimized.as_ref()?;
+		Some((opt.width?, opt.height?))
+	}
+}
+
+/// Raw JSON shape for a playfile entry inside ziptree.json.
+/// The `type` field is a reserved keyword, so we deserialize into this
+/// intermediate struct and then convert to `PlayFile`.
+#[derive(Deserialize)]
+pub struct RawPlayFile {
+	pub length: i64,
+	#[serde(rename = "type")]
+	pub file_type: String,
+	#[serde(default)]
+	pub image: Option<PlayFileFiles>,
+	#[serde(default)]
+	pub pdf: Option<PlayFileFiles>,
+	#[serde(default)]
+	pub video: Option<PlayFileFiles>,
+	#[serde(default)]
+	pub ebook_fixed: Option<PlayFileFiles>,
+	#[serde(default)]
+	pub epub: Option<PlayFileFiles>,
+	#[serde(default)]
+	pub epub_reflowable: Option<PlayFileFiles>,
+	#[serde(default)]
+	pub voicecomic_v2: Option<PlayFileFiles>,
+}
+
+impl RawPlayFile {
+	pub fn into_playfile(self, hashname: String) -> PlayFile {
+		let files = match self.file_type.as_str() {
+			"image" => self.image,
+			"pdf" => self.pdf,
+			"video" => self.video,
+			"ebook_fixed" => self.ebook_fixed,
+			"epub" => self.epub,
+			"epub_reflowable" => self.epub_reflowable,
+			"voicecomic_v2" => self.voicecomic_v2,
+			_ => None,
+		};
+		PlayFile {
+			length: self.length,
+			file_type: self.file_type,
+			files: files.unwrap_or(PlayFileFiles {
+				optimized: None,
+				page: None,
+			}),
+			hashname,
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// ZipTree from GET {token.url}ziptree.json
+// ---------------------------------------------------------------------------
+
+#[derive(Deserialize)]
+pub struct RawTreeEntry {
+	#[serde(rename = "type")]
+	pub entry_type: String,
+	#[serde(default)]
+	pub name: Option<String>,
+	#[serde(default)]
+	pub path: Option<String>,
+	#[serde(default)]
+	pub hashname: Option<String>,
+	#[serde(default)]
+	pub children: Option<Vec<RawTreeEntry>>,
+}
+
+#[derive(Deserialize)]
+pub struct RawZipTree {
+	pub hash: String,
+	#[serde(default)]
+	pub playfile: BTreeMap<String, RawPlayFile>,
+	#[serde(default)]
+	pub tree: Vec<RawTreeEntry>,
+}
+
+pub struct ZipTree {
+	#[allow(dead_code)]
+	pub hash: String,
+	pub playfiles: BTreeMap<String, PlayFile>,
+	pub tree: Vec<RawTreeEntry>,
+}
+
+impl ZipTree {
+	pub fn from_raw(raw: RawZipTree) -> Self {
+		let playfiles: BTreeMap<String, PlayFile> = raw
+			.playfile
+			.into_iter()
+			.map(|(k, v): (String, RawPlayFile)| {
+				let pf = v.into_playfile(k.clone());
+				(k, pf)
+			})
+			.collect();
+		ZipTree {
+			hash: raw.hash,
+			playfiles,
+			tree: raw.tree,
+		}
+	}
+
+	/// Walk the tree and return `(relative_path, PlayFile)` pairs.
+	pub fn walk(&self) -> Vec<(String, PlayFile)> {
+		let mut result = Vec::new();
+		walk_entries(&self.tree, None, &self.playfiles, &mut result);
+		result
+	}
+}
+
+fn walk_entries(
+	entries: &[RawTreeEntry],
+	parent: Option<&str>,
+	playfiles: &BTreeMap<String, PlayFile>,
+	out: &mut Vec<(String, PlayFile)>,
+) {
+	for entry in entries {
+		match entry.entry_type.as_str() {
+			"file" => {
+				if let (Some(name), Some(hashname)) = (&entry.name, &entry.hashname) {
+					let path: String = match parent {
+						Some(p) => format!("{}/{}", p, name),
+						None => name.clone(),
+					};
+					if let Some(pf) = playfiles.get(hashname.as_str()) {
+						out.push((path, (*pf).clone()));
+					}
+				}
+			}
+			"folder" => {
+				let folder_path = entry.path.as_deref().or(entry.name.as_deref());
+				if let Some(children) = &entry.children {
+					walk_entries(children, folder_path, playfiles, out);
+				}
+			}
+			_ => {}
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Purchase data from POST /api/v3/content/works
+// ---------------------------------------------------------------------------
+
+#[derive(Deserialize, Clone)]
+#[allow(non_snake_case)]
+pub struct LocalizedName {
+	#[serde(default)]
+	pub ja_JP: Option<String>,
+	#[serde(default)]
+	pub en_US: Option<String>,
+	#[serde(default)]
+	pub zh_CN: Option<String>,
+	#[serde(default)]
+	pub zh_TW: Option<String>,
+	#[serde(default)]
+	pub ko_KR: Option<String>,
+}
+
+impl LocalizedName {
+	pub fn best(&self) -> String {
+		self.ja_JP
+			.as_deref()
+			.or(self.en_US.as_deref())
+			.or(self.zh_CN.as_deref())
+			.or(self.zh_TW.as_deref())
+			.or(self.ko_KR.as_deref())
+			.unwrap_or("Unknown")
+			.into()
+	}
+}
+
+#[derive(Deserialize, Clone)]
+pub struct MakerInfo {
+	pub id: String,
+	#[serde(default)]
+	pub name: Option<LocalizedName>,
+}
+
+#[derive(Deserialize, Clone)]
+pub struct WorkFilesInfo {
+	#[serde(default)]
+	pub main: Option<String>,
+	#[serde(default)]
+	pub sam: Option<String>,
+}
+
+#[derive(Deserialize, Clone)]
+pub struct WorkTag {
+	#[serde(default)]
+	pub name: Option<String>,
+	#[serde(default, rename = "class")]
+	pub tag_class: Option<String>,
+}
+
+#[derive(Deserialize, Clone)]
+pub struct PurchaseWork {
+	pub workno: String,
+	#[serde(default)]
+	pub name: Option<LocalizedName>,
+	#[serde(default)]
+	pub maker: Option<MakerInfo>,
+	#[serde(default)]
+	pub age_category: Option<String>,
+	#[serde(default)]
+	pub work_type: Option<String>,
+	#[serde(default)]
+	pub work_files: Option<WorkFilesInfo>,
+	#[serde(default)]
+	pub author_name: Option<String>,
+	#[serde(default)]
+	pub regist_date: Option<String>,
+	#[serde(default)]
+	pub upgrade_date: Option<String>,
+	#[serde(default)]
+	pub tags: Option<Vec<WorkTag>>,
+	#[serde(default)]
+	pub sales_date: Option<String>,
+}
+
+impl PurchaseWork {
+	pub fn cover_url(&self) -> Option<String> {
+		self.work_files.as_ref()?.main.as_ref().map(|url| {
+			if url.starts_with("//") {
+				format!("https:{}", url)
+			} else {
+				url.clone()
+			}
+		})
+	}
+}
+
+impl From<PurchaseWork> for Manga {
+	fn from(work: PurchaseWork) -> Self {
+		let title = work
+			.name
+			.as_ref()
+			.map(|n| n.best())
+			.unwrap_or_else(|| work.workno.clone());
+
+		let mut author_list: Vec<String> = Vec::new();
+
+		if let Some(ref name) = work.author_name {
+			author_list.push(name.clone());
+		} else if let Some(ref maker) = work.maker
+			&& let Some(ref name) = maker.name
+		{
+			author_list.push(name.best());
+		}
+
+		if let Some(ref tags) = work.tags {
+			for t in tags {
+				if t.tag_class.as_deref() == Some("illust_by")
+					&& let Some(ref name) = t.name
+				{
+					author_list.push(name.clone());
+				}
+			}
+		}
+
+		let authors = if author_list.is_empty() {
+			None
+		} else {
+			Some(author_list)
+		};
+
+		let tags: Option<Vec<String>> = work.tags.as_ref().map(|tags| {
+			tags.iter()
+				.filter(|t| {
+					t.tag_class.is_none()
+						|| t.tag_class.as_deref() == Some("")
+						|| t.tag_class.as_deref() == Some("genre")
+				})
+				.filter_map(|t| t.name.clone())
+				.collect()
+		});
+
+		let content_rating = match work.age_category.as_deref() {
+			Some("R18") | Some("r18") => ContentRating::NSFW,
+			Some("R15") | Some("r15") => ContentRating::Suggestive,
+			_ => ContentRating::Safe,
+		};
+
+		let viewer = match work.work_type.as_deref() {
+			Some("MNG") | Some("WBT") => Viewer::RightToLeft,
+			_ => Viewer::LeftToRight,
+		};
+
+		let url = Some(format!("https://play.dlsite.com/#/work/{}", work.workno));
+
+		Manga {
+			key: work.workno.clone(),
+			title,
+			cover: work.cover_url(),
+			authors,
+			tags,
+			content_rating,
+			viewer,
+			url,
+			..Default::default()
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Sales entry from GET /api/v3/content/sales
+// ---------------------------------------------------------------------------
+
+#[derive(Deserialize, Clone)]
+pub struct SalesEntry {
+	pub workno: String,
+	#[serde(default)]
+	#[allow(dead_code)]
+	pub sales_date: Option<String>,
+}
+
+// ---------------------------------------------------------------------------
+// Works response wrapper from POST /api/v3/content/works
+// ---------------------------------------------------------------------------
+
+#[derive(Deserialize)]
+pub struct WorksResponse {
+	#[serde(default)]
+	pub works: Vec<PurchaseWork>,
+}
