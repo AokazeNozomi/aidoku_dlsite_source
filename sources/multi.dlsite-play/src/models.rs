@@ -296,44 +296,9 @@ pub struct PurchaseWork {
 	pub tags: Option<Vec<WorkTag>>,
 	#[serde(default)]
 	pub sales_date: Option<String>,
-	#[serde(default)]
-	pub language: Option<Vec<String>>,
 }
 
 impl PurchaseWork {
-	fn normalize_language_code(lang: &str) -> Option<&'static str> {
-		let trimmed = lang.trim();
-		let lower = trimmed.to_lowercase();
-		match lower.as_str() {
-			"ja" | "ja_jp" | "ja-jp" | "japanese" | "日本語" => Some("ja"),
-			"en" | "en_us" | "en-us" | "english" | "英語" => Some("en"),
-			"zh_cn" | "zh-cn" | "zh-hans" | "简体中文" | "簡体中文" => Some("zh-Hans"),
-			"zh_tw" | "zh-tw" | "zh-hant" | "繁體中文" | "繁体中文" => Some("zh-Hant"),
-			"ko" | "ko_kr" | "ko-kr" | "korean" | "한국어" => Some("ko"),
-			"es" | "spanish" | "español" => Some("es"),
-			"ar" | "arabic" | "العربية" => Some("ar"),
-			"de" | "german" | "deutsch" => Some("de"),
-			"fr" | "french" | "français" => Some("fr"),
-			"id" | "indonesian" | "bahasa indonesia" => Some("id"),
-			"it" | "italian" | "italiano" => Some("it"),
-			"pt" | "portuguese" | "português" => Some("pt"),
-			"sv" | "swedish" | "svenska" => Some("sv"),
-			"th" | "thai" | "ไทย" => Some("th"),
-			"vi" | "vietnamese" | "tiếng việt" => Some("vi"),
-			_ => None,
-		}
-	}
-
-	pub fn primary_language_code(&self) -> Option<String> {
-		let langs = self.language.as_ref()?;
-		for lang in langs {
-			if let Some(code) = Self::normalize_language_code(lang) {
-				return Some(code.into());
-			}
-		}
-		None
-	}
-
 	pub fn cover_url(&self) -> Option<String> {
 		self.work_files.as_ref()?.main.as_ref().map(|url| {
 			if url.starts_with("//") {
@@ -378,6 +343,59 @@ impl PurchaseWork {
 		let d = self.regist_date.as_deref()?;
 		Some(d.get(..10).unwrap_or(d))
 	}
+
+	/// Parse release date into unix timestamp (UTC midnight).
+	pub fn release_date_timestamp(&self) -> Option<i64> {
+		let date = self.release_date_short()?;
+		let year: i32 = date.get(0..4)?.parse().ok()?;
+		let month: u32 = date.get(5..7)?.parse().ok()?;
+		let day: u32 = date.get(8..10)?.parse().ok()?;
+		let days = days_from_civil(year, month, day)?;
+		Some(days * 86_400)
+	}
+
+	/// Infer the work language from the title text.
+	pub fn infer_language(&self) -> &'static str {
+		let title = self
+			.name
+			.as_ref()
+			.and_then(|n| n.ja_JP.as_deref())
+			.unwrap_or("");
+		if has_japanese(title) {
+			"ja"
+		} else {
+			"en"
+		}
+	}
+}
+
+fn has_japanese(s: &str) -> bool {
+	s.chars().any(|c| {
+		matches!(c,
+			'\u{3040}'..='\u{309F}'   // Hiragana
+			| '\u{30A0}'..='\u{30FF}' // Katakana
+			| '\u{4E00}'..='\u{9FFF}' // CJK Unified Ideographs
+			| '\u{3400}'..='\u{4DBF}' // CJK Extension A
+			| '\u{FF66}'..='\u{FF9F}' // Half-width Katakana
+		)
+	})
+}
+
+/// Returns days since 1970-01-01 for a civil date.
+fn days_from_civil(year: i32, month: u32, day: u32) -> Option<i64> {
+	if !(1..=12).contains(&month) || day == 0 || day > 31 {
+		return None;
+	}
+
+	let y = year - if month <= 2 { 1 } else { 0 };
+	let era = if y >= 0 { y } else { y - 399 } / 400;
+	let yoe = y - era * 400;
+	let m = month as i32;
+	let d = day as i32;
+	let doy = (153 * (m + if m > 2 { -3 } else { 9 }) + 2) / 5 + d - 1;
+	let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+	let days = era as i64 * 146097 + doe as i64 - 719468;
+	Some(days)
 }
 
 impl From<PurchaseWork> for Manga {
@@ -443,11 +461,17 @@ impl From<PurchaseWork> for Manga {
 		}
 		if let Some(ref tags) = work.tags {
 			for t in tags {
-				let dominated = t.tag_class.is_none()
-					|| t.tag_class.as_deref() == Some("")
-					|| t.tag_class.as_deref() == Some("genre");
-				if dominated {
-					if let Some(ref name) = t.name {
+				let is_credit_tag = matches!(
+					t.tag_class.as_deref(),
+					Some("created_by")
+						| Some("scenario_by")
+						| Some("illust_by")
+						| Some("translated_by")
+						| Some("voice_by")
+						| Some("music_by")
+				);
+				if !is_credit_tag && let Some(ref name) = t.name {
+					if !tag_list.contains(name) {
 						tag_list.push(name.clone());
 					}
 				}
@@ -477,17 +501,8 @@ impl From<PurchaseWork> for Manga {
 		if !translated_by.is_empty() {
 			desc_lines.push(format!("Translation: {}", translated_by.join(", ")));
 		}
-		if let Some(date) = work.release_date_short() {
-			desc_lines.push(format!("Release Date: {}", date));
-		}
-		if let Some(label) = work.work_type_label() {
-			desc_lines.push(format!("Type: {}", label));
-		}
-		if let Some(ref langs) = work.language {
-			if !langs.is_empty() {
-				desc_lines.push(format!("Language: {}", langs.join(", ")));
-			}
-		}
+		let language = work.infer_language();
+		desc_lines.push(format!("Language: {}", language));
 
 		let description = if desc_lines.is_empty() {
 			None

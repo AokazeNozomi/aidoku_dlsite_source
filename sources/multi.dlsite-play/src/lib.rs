@@ -40,13 +40,17 @@ impl Source for DlsitePlay {
 		needs_chapters: bool,
 	) -> Result<Manga> {
 		let mut language: Option<String> = None;
+		let mut release_date: Option<i64> = None;
 
-		if needs_details {
+		if needs_details || needs_chapters {
 			let works = api::get_works(&[manga.key.clone()])?;
 			if let Some(work) = works.into_iter().next() {
-				language = work.primary_language_code();
-				let updated: Manga = work.into();
-				manga.copy_from(updated);
+				language = Some(work.infer_language().into());
+				release_date = work.release_date_timestamp();
+				if needs_details {
+					let updated: Manga = work.into();
+					manga.copy_from(updated);
+				}
 			}
 		}
 
@@ -60,6 +64,7 @@ impl Source for DlsitePlay {
 				key: manga.key.clone(),
 				title: Some(format!("{} pages", page_count)),
 				chapter_number: Some(1.0),
+				date_uploaded: release_date,
 				language,
 				..Default::default()
 			}]);
