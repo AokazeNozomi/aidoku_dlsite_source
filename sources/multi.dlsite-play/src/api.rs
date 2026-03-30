@@ -2,7 +2,7 @@ use crate::models::{DownloadToken, PurchaseWork, RawZipTree, SalesEntry, WorksRe
 use crate::settings;
 use aidoku::{
 	alloc::{format, String, Vec},
-	imports::net::Request,
+	imports::{net::Request, std::print},
 	prelude::*,
 	Result,
 };
@@ -15,7 +15,6 @@ const LOGIN_URL: &str = "https://login.dlsite.com/login";
 const LOGIN_URL_WITH_USER: &str = "https://login.dlsite.com/login?user=self";
 const PLAY_LOGIN_URL: &str = "https://play.dlsite.com/login/";
 const PLAY_AUTHORIZE_URL: &str = "https://play.dlsite.com/api/authorize";
-const LOGIN_SUCCESS_MARKER: &str = "ログイン中です";
 
 fn play_get(url: &str) -> Result<Request> {
 	Ok(Request::get(url)?.header("Referer", REFERER))
@@ -95,16 +94,29 @@ fn extract_login_token(html: &str) -> Option<String> {
 }
 
 pub fn login(username: &str, password: &str) -> Result<()> {
+	print(format!(
+		"[dlsite-play] login start (username_len={}, password_len={})",
+		username.len(),
+		password.len()
+	));
 	if username.is_empty() || password.is_empty() {
 		bail!("Username and password are required.");
 	}
 
 	let login_page = Request::get(LOGIN_URL_WITH_USER)?.send()?;
+	print(format!(
+		"[dlsite-play] GET login page status={}",
+		login_page.status_code()
+	));
 	let login_page_data = login_page.get_data()?;
 	let login_page_html =
 		str::from_utf8(&login_page_data).map_err(|_| error!("Failed to decode login page"))?;
 	let token = extract_login_token(login_page_html)
 		.ok_or_else(|| error!("Failed to extract DLsite login form token"))?;
+	print(format!(
+		"[dlsite-play] extracted login token (len={})",
+		token.len()
+	));
 
 	let body = format!(
 		"_token={}&login_id={}&password={}",
@@ -117,23 +129,50 @@ pub fn login(username: &str, password: &str) -> Result<()> {
 		.header("Content-Type", "application/x-www-form-urlencoded")
 		.body(body.as_bytes())
 		.send()?;
+	print(format!(
+		"[dlsite-play] POST login status={}",
+		login_response.status_code()
+	));
 	let login_response_data = login_response.get_data()?;
 	let login_response_text = str::from_utf8(&login_response_data)
 		.map_err(|_| error!("Failed to decode login response"))?;
-	if !login_response_text.contains(LOGIN_SUCCESS_MARKER) {
-		let preview = if login_response_text.len() > 180 {
-			&login_response_text[..180]
-		} else {
-			login_response_text
+	print(format!(
+		"[dlsite-play] login response size={} bytes",
+		login_response_text.len()
+	));
+
+	let play_login = Request::get(PLAY_LOGIN_URL)?.send()?;
+	print(format!(
+		"[dlsite-play] GET play login status={}",
+		play_login.status_code()
+	));
+	let play_authorize = play_get(PLAY_AUTHORIZE_URL)?.send()?;
+	print(format!(
+		"[dlsite-play] GET play authorize status={}",
+		play_authorize.status_code()
+	));
+
+	// Verify authentication with an actual Play API endpoint instead of HTML marker matching.
+	let probe_url = format!("{}/content/sales?last=0", PLAY_API);
+	let probe_response = play_get(&probe_url)?.send()?;
+	let probe_status = probe_response.status_code();
+	let probe_data = probe_response.get_data()?;
+	let probe_auth_expired = is_auth_expired_response(probe_status, &probe_data);
+	print(format!(
+		"[dlsite-play] auth probe status={} auth_expired={}",
+		probe_status, probe_auth_expired
+	));
+	if probe_auth_expired {
+		let preview = match str::from_utf8(&probe_data) {
+			Ok(s) if s.len() > 180 => &s[..180],
+			Ok(s) => s,
+			Err(_) => "<non-utf8 response body>",
 		};
 		bail!(
-			"DLsite login failed. Please check your username/password. Response: {}",
+			"DLsite login failed. Username/password may be invalid or blocked. Probe response: {}",
 			preview
 		);
 	}
-
-	Request::get(PLAY_LOGIN_URL)?.send()?;
-	play_get(PLAY_AUTHORIZE_URL)?.send()?;
 	Ok(())
 }
 
@@ -144,25 +183,38 @@ where
 	let response = make_request()?.send()?;
 	let status_code = response.status_code();
 	let data = response.get_data()?;
+	print(format!(
+		"[dlsite-play] request status={} auth_expired={}",
+		status_code,
+		is_auth_expired_response(status_code, &data)
+	));
 	if !is_auth_expired_response(status_code, &data) {
 		return Ok(data);
 	}
 
+	print("[dlsite-play] attempting automatic reauthentication");
 	let (username, password) = settings::get_credentials().ok_or_else(|| {
 		settings::set_logged_in(false);
 		error!("Session expired. Please log in again.")
 	})?;
 	if let Err(_e) = login(&username, &password) {
+		print("[dlsite-play] automatic reauthentication failed");
 		settings::set_logged_in(false);
 		settings::clear_cached_worknos();
 		settings::clear_cached_page();
 		bail!("Session expired and reauthentication failed. Please log in again.");
 	}
+	print("[dlsite-play] automatic reauthentication succeeded");
 	settings::set_logged_in(true);
 
 	let retry_response = make_request()?.send()?;
 	let retry_status_code = retry_response.status_code();
 	let retry_data = retry_response.get_data()?;
+	print(format!(
+		"[dlsite-play] retry status={} auth_expired={}",
+		retry_status_code,
+		is_auth_expired_response(retry_status_code, &retry_data)
+	));
 	if is_auth_expired_response(retry_status_code, &retry_data) {
 		settings::set_logged_in(false);
 		settings::clear_cached_worknos();

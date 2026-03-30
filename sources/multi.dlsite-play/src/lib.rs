@@ -2,7 +2,7 @@
 
 use aidoku::{
 	alloc::{format, string::ToString, vec, String, Vec},
-	imports::{canvas::ImageRef, net::Request},
+	imports::{canvas::ImageRef, net::Request, std::print},
 	prelude::*,
 	register_source, BasicLoginHandler, Chapter, FilterValue, ImageRequestProvider, ImageResponse,
 	Listing, ListingProvider, Manga, MangaPageResult, NotificationHandler, Page, PageContent,
@@ -128,16 +128,24 @@ impl ListingProvider for DlsitePlay {
 
 impl BasicLoginHandler for DlsitePlay {
 	fn handle_basic_login(&self, key: String, username: String, password: String) -> Result<bool> {
+		print(format!("[dlsite-play] handle_basic_login called with key={}", key));
 		if key != "login" {
 			bail!("Invalid login key: `{key}`");
 		}
 
 		// Persist credentials first; several sources rely on these defaults keys.
 		settings::set_credentials(&username, &password);
+		print(format!(
+			"[dlsite-play] stored credentials (username_len={}, password_len={})",
+			username.len(),
+			password.len()
+		));
 		api::login(&username, &password)?;
+		print("[dlsite-play] api::login succeeded");
 		settings::set_logged_in(true);
 		settings::clear_cached_worknos();
 		settings::clear_cached_page();
+		print("[dlsite-play] login state + caches updated");
 		Ok(true)
 	}
 }
@@ -298,11 +306,19 @@ fn get_manga_list_inner(
 
 /// Fetch (or use cached) full purchase work ID list, refreshing on page 1.
 fn get_or_fetch_worknos(page: i32) -> Result<Vec<String>> {
+	print(format!(
+		"[dlsite-play] get_or_fetch_worknos page={} is_logged_in={}",
+		page,
+		settings::is_logged_in()
+	));
 	if !settings::is_logged_in() {
 		if let Some((username, password)) = settings::get_credentials() {
+			print("[dlsite-play] attempting lazy login from stored credentials");
 			api::login(&username, &password)?;
 			settings::set_logged_in(true);
+			print("[dlsite-play] lazy login succeeded");
 		} else {
+			print("[dlsite-play] no stored credentials available");
 			bail!("Not logged in. Please log in to view your purchases.");
 		}
 	}
