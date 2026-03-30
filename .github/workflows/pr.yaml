@@ -21,7 +21,7 @@ jobs:
         with:
           format: json
       - name: Cache rust stuff
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry/index
@@ -32,7 +32,7 @@ jobs:
           key: ${{ runner.os }}-cargo3-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo3-
       - name: sccache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/sccache
           key: ${{ runner.os }}-sccache-${{ github.sha }}
