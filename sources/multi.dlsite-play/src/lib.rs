@@ -113,7 +113,9 @@ impl WebLoginHandler for DlsitePlay {
 			bail!("Invalid login key: `{key}`");
 		}
 
-		let has_session = cookies.contains_key("jwt");
+		let has_session = cookies.keys().any(|k: &String| {
+			k == "loginchecked" || k == "dlloginjp" || k == "__DLsite_SID"
+		});
 
 		settings::set_logged_in(has_session);
 
