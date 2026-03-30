@@ -3,7 +3,6 @@ use aidoku::{
 	alloc::{String, Vec, collections::BTreeMap, format, vec},
 	serde::Deserialize,
 };
-use serde_json::Value;
 
 // ---------------------------------------------------------------------------
 // Download token from GET /api/v3/download/sign/cookie
@@ -297,8 +296,8 @@ pub struct PurchaseWork {
 	pub tags: Option<Vec<WorkTag>>,
 	#[serde(default)]
 	pub sales_date: Option<String>,
-	#[serde(default, alias = "languages", alias = "lang", alias = "langs")]
-	pub language: Option<Value>,
+	#[serde(default, alias = "languages")]
+	pub language: Option<Vec<String>>,
 }
 
 impl PurchaseWork {
@@ -314,15 +313,6 @@ impl PurchaseWork {
 }
 
 impl PurchaseWork {
-	fn language_values(&self) -> Vec<&str> {
-		let Some(value) = self.language.as_ref() else {
-			return Vec::new();
-		};
-		let mut out = Vec::new();
-		collect_language_strings(value, &mut out);
-		out
-	}
-
 	fn work_type_label(&self) -> Option<&'static str> {
 		match self.work_type.as_deref()? {
 			"MNG" => Some("Manga"),
@@ -369,77 +359,24 @@ impl PurchaseWork {
 	fn normalize_language_code(lang: &str) -> Option<&'static str> {
 		let trimmed = lang.trim();
 		let lower = trimmed.to_lowercase();
-		let canonical = lower.replace('_', "-");
-
-		if canonical == "ja"
-			|| canonical.starts_with("ja-")
-			|| canonical.contains("japanese")
-			|| lower.contains("日本語")
-		{
-			return Some("ja");
+		match lower.as_str() {
+			"ja" | "ja_jp" | "ja-jp" | "japanese" | "日本語" => Some("ja"),
+			"en" | "en_us" | "en-us" | "english" | "英語" => Some("en"),
+			"zh_cn" | "zh-cn" | "zh-hans" | "简体中文" | "簡体中文" => Some("zh-Hans"),
+			"zh_tw" | "zh-tw" | "zh-hant" | "繁體中文" | "繁体中文" => Some("zh-Hant"),
+			"ko" | "ko_kr" | "ko-kr" | "korean" | "한국어" => Some("ko"),
+			"es" | "spanish" | "español" => Some("es"),
+			"ar" | "arabic" | "العربية" => Some("ar"),
+			"de" | "german" | "deutsch" => Some("de"),
+			"fr" | "french" | "français" => Some("fr"),
+			"id" | "indonesian" | "bahasa indonesia" => Some("id"),
+			"it" | "italian" | "italiano" => Some("it"),
+			"pt" | "portuguese" | "português" => Some("pt"),
+			"sv" | "swedish" | "svenska" => Some("sv"),
+			"th" | "thai" | "ไทย" => Some("th"),
+			"vi" | "vietnamese" | "tiếng việt" => Some("vi"),
+			_ => None,
 		}
-		if canonical == "en"
-			|| canonical.starts_with("en-")
-			|| canonical.contains("english")
-			|| lower.contains("英語")
-		{
-			return Some("en");
-		}
-		if canonical == "zh-hans"
-			|| canonical == "zh-cn"
-			|| canonical.starts_with("zh-cn-")
-			|| lower.contains("简体中文")
-			|| lower.contains("簡体中文")
-		{
-			return Some("zh-Hans");
-		}
-		if canonical == "zh-hant"
-			|| canonical == "zh-tw"
-			|| canonical.starts_with("zh-tw-")
-			|| lower.contains("繁體中文")
-			|| lower.contains("繁体中文")
-		{
-			return Some("zh-Hant");
-		}
-		if canonical == "ko"
-			|| canonical.starts_with("ko-")
-			|| canonical.contains("korean")
-			|| lower.contains("한국어")
-		{
-			return Some("ko");
-		}
-		if canonical == "es" || canonical.starts_with("es-") || canonical.contains("spanish") || canonical.contains("español") {
-			return Some("es");
-		}
-		if canonical == "ar" || canonical.starts_with("ar-") || canonical.contains("arabic") || lower.contains("العربية") {
-			return Some("ar");
-		}
-		if canonical == "de" || canonical.starts_with("de-") || canonical.contains("german") || canonical.contains("deutsch") {
-			return Some("de");
-		}
-		if canonical == "fr" || canonical.starts_with("fr-") || canonical.contains("french") || canonical.contains("français") {
-			return Some("fr");
-		}
-		if canonical == "id" || canonical.starts_with("id-") || canonical.contains("indonesian") || canonical.contains("bahasa indonesia") {
-			return Some("id");
-		}
-		if canonical == "it" || canonical.starts_with("it-") || canonical.contains("italian") || canonical.contains("italiano") {
-			return Some("it");
-		}
-		if canonical == "pt" || canonical.starts_with("pt-") || canonical.contains("portuguese") || canonical.contains("português") {
-			return Some("pt");
-		}
-		if canonical == "sv" || canonical.starts_with("sv-") || canonical.contains("swedish") || canonical.contains("svenska") {
-			return Some("sv");
-		}
-		if canonical == "th" || canonical.starts_with("th-") || canonical.contains("thai") || lower.contains("ไทย") {
-			return Some("th");
-		}
-		if canonical == "vi" || canonical.starts_with("vi-") || canonical.contains("vietnamese") || canonical.contains("tiếng việt") {
-			return Some("vi");
-		}
-
-		None
 	}
 
 	/// Infer the best language code for filtering.
@@ -447,39 +384,21 @@ impl PurchaseWork {
 	/// Prefer translated/non-Japanese language when multiple languages exist,
 	/// because many works keep Japanese titles even for translated content.
 	pub fn infer_language(&self) -> Option<&'static str> {
-		let normalized: Vec<&'static str> = self
-			.language_values()
-			.into_iter()
-			.filter_map(Self::normalize_language_code)
-			.collect();
+		if let Some(langs) = &self.language {
+			let normalized: Vec<&'static str> = langs
+				.iter()
+				.filter_map(|lang| Self::normalize_language_code(lang))
+				.collect();
 
-		if let Some(non_ja) = normalized.iter().copied().find(|lang| *lang != "ja") {
-			return Some(non_ja);
-		}
-		if let Some(first) = normalized.first() {
-			return Some(*first);
+			if let Some(non_ja) = normalized.iter().copied().find(|lang| *lang != "ja") {
+				return Some(non_ja);
+			}
+			if let Some(first) = normalized.first() {
+				return Some(*first);
+			}
 		}
 
 		None
-	}
-}
-
-fn collect_language_strings<'a>(value: &'a Value, out: &mut Vec<&'a str>) {
-	match value {
-		Value::String(s) => out.push(s.as_str()),
-		Value::Array(arr) => {
-			for entry in arr {
-				collect_language_strings(entry, out);
-			}
-		}
-		Value::Object(map) => {
-			for key in ["code", "lang", "locale", "name", "value"] {
-				if let Some(v) = map.get(key) {
-					collect_language_strings(v, out);
-				}
-			}
-		}
-		_ => {}
 	}
 }
 
