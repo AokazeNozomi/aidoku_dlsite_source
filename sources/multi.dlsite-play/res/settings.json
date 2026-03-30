@@ -6,10 +6,10 @@
 		"items": [
 			{
 				"type": "login",
-				"method": "web",
+				"method": "basic",
 				"key": "login",
 				"title": "Login",
-				"url": "https://play.dlsite.com/login/",
+				"logoutTitle": "Log Out",
 				"refreshes": [
 					"listings",
 					"content"

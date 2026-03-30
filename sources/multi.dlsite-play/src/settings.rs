@@ -5,6 +5,8 @@ use aidoku::{
 
 const CACHED_WORKNOS_KEY: &str = "cached_worknos";
 const LOGGED_IN_KEY: &str = "logged_in";
+const LOGIN_USERNAME_KEY: &str = "login_username";
+const LOGIN_PASSWORD_KEY: &str = "login_password";
 
 pub fn is_logged_in() -> bool {
 	defaults_get::<bool>(LOGGED_IN_KEY).unwrap_or(false)
@@ -12,6 +14,32 @@ pub fn is_logged_in() -> bool {
 
 pub fn set_logged_in(value: bool) {
 	defaults_set(LOGGED_IN_KEY, DefaultValue::Bool(value));
+}
+
+pub fn set_credentials(username: &str, password: &str) {
+	defaults_set(
+		LOGIN_USERNAME_KEY,
+		DefaultValue::String(String::from(username)),
+	);
+	defaults_set(
+		LOGIN_PASSWORD_KEY,
+		DefaultValue::String(String::from(password)),
+	);
+}
+
+pub fn get_credentials() -> Option<(String, String)> {
+	let username = defaults_get::<String>(LOGIN_USERNAME_KEY).unwrap_or_default();
+	let password = defaults_get::<String>(LOGIN_PASSWORD_KEY).unwrap_or_default();
+	if username.is_empty() || password.is_empty() {
+		None
+	} else {
+		Some((username, password))
+	}
+}
+
+pub fn clear_credentials() {
+	defaults_set(LOGIN_USERNAME_KEY, DefaultValue::Null);
+	defaults_set(LOGIN_PASSWORD_KEY, DefaultValue::Null);
 }
 
 /// Store the full list of purchased work IDs for pagination.

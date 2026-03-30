@@ -4,9 +4,9 @@ use aidoku::{
 	alloc::{format, string::ToString, vec, String, Vec},
 	imports::{canvas::ImageRef, net::Request},
 	prelude::*,
-	register_source, Chapter, FilterValue, HashMap, ImageRequestProvider, ImageResponse, Listing,
-	ListingProvider, Manga, MangaPageResult, NotificationHandler, Page, PageContent, PageContext,
-	PageImageProcessor, Result, Source, WebLoginHandler,
+	register_source, BasicLoginHandler, Chapter, FilterValue, ImageRequestProvider, ImageResponse,
+	Listing, ListingProvider, Manga, MangaPageResult, NotificationHandler, Page, PageContent,
+	PageContext, PageImageProcessor, Result, Source,
 };
 
 mod api;
@@ -126,23 +126,26 @@ impl ListingProvider for DlsitePlay {
 	}
 }
 
-impl WebLoginHandler for DlsitePlay {
-	fn handle_web_login(&self, key: String, cookies: HashMap<String, String>) -> Result<bool> {
+impl BasicLoginHandler for DlsitePlay {
+	fn handle_basic_login(&self, key: String, username: String, password: String) -> Result<bool> {
 		if key != "login" {
 			bail!("Invalid login key: `{key}`");
 		}
 
-		let has_session =
-			cookies.contains_key("play_session") || cookies.contains_key("PHPSESSID");
-
-		settings::set_logged_in(has_session);
-
-		if has_session {
-			settings::clear_cached_worknos();
-			settings::clear_cached_page();
+		match api::login(&username, &password) {
+			Ok(()) => {
+				settings::set_credentials(&username, &password);
+				settings::set_logged_in(true);
+				settings::clear_cached_worknos();
+				settings::clear_cached_page();
+				Ok(true)
+			}
+			Err(_) => {
+				settings::clear_credentials();
+				settings::set_logged_in(false);
+				Ok(false)
+			}
 		}
-
-		Ok(has_session)
 	}
 }
 
@@ -338,7 +341,7 @@ fn extract_work_type_filter(filters: &[FilterValue]) -> Vec<String> {
 register_source!(
 	DlsitePlay,
 	ListingProvider,
-	WebLoginHandler,
+	BasicLoginHandler,
 	NotificationHandler,
 	ImageRequestProvider,
 	PageImageProcessor
