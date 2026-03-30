@@ -16,12 +16,20 @@ const LOGIN_URL_WITH_USER: &str = "https://login.dlsite.com/login?user=self";
 const PLAY_LOGIN_URL: &str = "https://play.dlsite.com/login/";
 const PLAY_AUTHORIZE_URL: &str = "https://play.dlsite.com/api/authorize";
 
+fn with_browser_headers(req: Request) -> Request {
+	req.header(
+		"Accept",
+		"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+	)
+		.header("Accept-Language", "ja,en-US;q=0.9,en;q=0.8")
+}
+
 fn play_get(url: &str) -> Result<Request> {
-	Ok(Request::get(url)?.header("Referer", REFERER))
+	Ok(with_browser_headers(Request::get(url)?).header("Referer", REFERER))
 }
 
 fn play_post(url: &str) -> Result<Request> {
-	Ok(Request::post(url)?
+	Ok(with_browser_headers(Request::post(url)?)
 		.header("Referer", REFERER)
 		.header("Content-Type", "application/json"))
 }
@@ -103,16 +111,36 @@ pub fn login(username: &str, password: &str) -> Result<()> {
 		bail!("Username and password are required.");
 	}
 
-	let login_page = Request::get(LOGIN_URL_WITH_USER)?.send()?;
+	// Start from Play login so we get the same oauth bootstrap cookies/state as a browser.
+	let login_bootstrap = with_browser_headers(Request::get(PLAY_LOGIN_URL)?)
+		.header("Referer", REFERER)
+		.send()?;
 	print(format!(
-		"[dlsite-play] GET login page status={}",
-		login_page.status_code()
+		"[dlsite-play] GET play login bootstrap status={}",
+		login_bootstrap.status_code()
 	));
-	let login_page_data = login_page.get_data()?;
-	let login_page_html =
-		str::from_utf8(&login_page_data).map_err(|_| error!("Failed to decode login page"))?;
-	let token = extract_login_token(login_page_html)
-		.ok_or_else(|| error!("Failed to extract DLsite login form token"))?;
+	let login_bootstrap_data = login_bootstrap.get_data()?;
+	let login_bootstrap_html = str::from_utf8(&login_bootstrap_data)
+		.map_err(|_| error!("Failed to decode login bootstrap page"))?;
+
+	let token = if let Some(token) = extract_login_token(login_bootstrap_html) {
+		print("[dlsite-play] login token found in play bootstrap page");
+		token
+	} else {
+		// Fallback for environments that do not follow redirects the same way.
+		let login_page = with_browser_headers(Request::get(LOGIN_URL_WITH_USER)?)
+			.header("Referer", LOGIN_URL)
+			.send()?;
+		print(format!(
+			"[dlsite-play] GET fallback login page status={}",
+			login_page.status_code()
+		));
+		let login_page_data = login_page.get_data()?;
+		let login_page_html =
+			str::from_utf8(&login_page_data).map_err(|_| error!("Failed to decode login page"))?;
+		extract_login_token(login_page_html)
+			.ok_or_else(|| error!("Failed to extract DLsite login form token"))?
+	};
 	print(format!(
 		"[dlsite-play] extracted login token (len={})",
 		token.len()
@@ -124,8 +152,9 @@ pub fn login(username: &str, password: &str) -> Result<()> {
 		percent_encode_component(username),
 		percent_encode_component(password)
 	);
-	let login_response = Request::post(LOGIN_URL)?
+	let login_response = with_browser_headers(Request::post(LOGIN_URL)?)
 		.header("Referer", LOGIN_URL_WITH_USER)
+		.header("Origin", "https://login.dlsite.com")
 		.header("Content-Type", "application/x-www-form-urlencoded")
 		.body(body.as_bytes())
 		.send()?;
@@ -140,6 +169,12 @@ pub fn login(username: &str, password: &str) -> Result<()> {
 		"[dlsite-play] login response size={} bytes",
 		login_response_text.len()
 	));
+	let login_preview = if login_response_text.len() > 120 {
+		&login_response_text[..120]
+	} else {
+		login_response_text
+	};
+	print(format!("[dlsite-play] login response preview={}", login_preview));
 
 	let play_login = Request::get(PLAY_LOGIN_URL)?.send()?;
 	print(format!(
