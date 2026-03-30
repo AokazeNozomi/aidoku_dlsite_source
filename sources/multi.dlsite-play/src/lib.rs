@@ -28,7 +28,7 @@ impl Source for DlsitePlay {
 		&self,
 		query: Option<String>,
 		page: i32,
-		_filters: Vec<FilterValue>,
+		filters: Vec<FilterValue>,
 	) -> Result<MangaPageResult> {
 		let worknos = get_or_fetch_worknos(page)?;
 
@@ -42,29 +42,46 @@ impl Source for DlsitePlay {
 		let page_idx = (page - 1).max(0) as usize;
 		let start = page_idx * PAGE_SIZE;
 
-		if let Some(ref q) = query {
-			// Fetch metadata for the full library so filtering covers everything
+		let work_types = extract_work_type_filter(&filters);
+		let has_query = query.is_some();
+		let has_filter = !work_types.is_empty();
+
+		if has_query || has_filter {
 			let all_works = api::get_works(&worknos)?;
-			let q_lower = q.to_lowercase();
+			let q_lower = query.as_ref().map(|q| q.to_lowercase());
+
 			let filtered: Vec<Manga> = all_works
 				.into_iter()
 				.filter(|w| {
-					let name = w
-						.name
-						.as_ref()
-						.map(|n| n.best())
-						.unwrap_or_default()
-						.to_lowercase();
-					let maker = w
-						.maker
-						.as_ref()
-						.and_then(|m| m.name.as_ref())
-						.map(|n| n.best())
-						.unwrap_or_default()
-						.to_lowercase();
-					name.contains(&q_lower)
-						|| maker.contains(&q_lower)
-						|| w.workno.contains(q.as_str())
+					if let Some(ref q_lower) = q_lower {
+						let name = w
+							.name
+							.as_ref()
+							.map(|n| n.best())
+							.unwrap_or_default()
+							.to_lowercase();
+						let maker = w
+							.maker
+							.as_ref()
+							.and_then(|m| m.name.as_ref())
+							.map(|n| n.best())
+							.unwrap_or_default()
+							.to_lowercase();
+						let q_raw = query.as_deref().unwrap_or_default();
+						if !(name.contains(q_lower.as_str())
+							|| maker.contains(q_lower.as_str())
+							|| w.workno.contains(q_raw))
+						{
+							return false;
+						}
+					}
+					if has_filter {
+						let wt = w.work_type.as_deref().unwrap_or("");
+						if !work_types.iter().any(|t| t == wt) {
+							return false;
+						}
+					}
+					true
 				})
 				.map(|w| w.into())
 				.collect();
@@ -277,6 +294,17 @@ fn get_or_fetch_worknos(page: i32) -> Result<Vec<String>> {
 			Ok(cached)
 		}
 	}
+}
+
+fn extract_work_type_filter(filters: &[FilterValue]) -> Vec<String> {
+	for f in filters {
+		if let FilterValue::MultiSelect { id, included, .. } = f {
+			if id == "work_type" && !included.is_empty() {
+				return included.clone();
+			}
+		}
+	}
+	Vec::new()
 }
 
 register_source!(

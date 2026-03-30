@@ -1,0 +1,10 @@
+[
+	{
+		"id": "work_type",
+		"title": "Work Type",
+		"type": "multi-select",
+		"canExclude": false,
+		"options": ["Manga", "Webtoon", "CG / Illustration", "Sound / Voice", "Video", "Novel", "Game", "Other"],
+		"ids": ["MNG", "WBT", "CG", "SOU", "MOV", "NOV", "GAM", "ETC"]
+	}
+]

@@ -2,7 +2,7 @@
 	"info": {
 		"id": "multi.dlsite-play",
 		"name": "DLsite Play",
-		"version": 2,
+		"version": 3,
 		"url": "https://play.dlsite.com/login/",
 		"contentRating": 2,
 		"languages": ["ja", "en", "zh-Hans", "zh-Hant", "ko", "es", "ar", "de", "fr", "id", "it", "pt", "sv", "th", "vi"]
