@@ -4,9 +4,9 @@ This repository hosts unofficial sources maintained by community members that ar
 
 ## Usage
 
-On a device with Aidoku (0.7+) installed, you can open [https://aokazenozomi.github.io/sources/](https://aokazenozomi.github.io/sources/) and click the "Add Repository" button to add the source list directly to the app.
+On a device with Aidoku (0.7+) installed, you can open [https://aokazenozomi.github.io/aidoku_dlsite_source/](https://aokazenozomi.github.io/aidoku_dlsite_source/) and click the "Add Repository" button to add the source list directly to the app.
 
-Otherwise, navigate to the settings tab, and under the source lists page add `https://aokazenozomi.github.io/sources/index.min.json`.
+Otherwise, navigate to the settings tab, and under the source lists page add `https://aokazenozomi.github.io/aidoku_dlsite_source/index.min.json`.
 
 If a source is not working, or you want to request a source that isn't available in this source list, feel free to [create a new issue](https://github.com/AokazeNozomi/aidoku_dlsite_source/issues).
 
