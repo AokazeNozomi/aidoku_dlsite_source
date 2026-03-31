@@ -10,11 +10,11 @@ use core::str;
 
 pub(crate) const PLAY_REFERER: &str = "https://play.dlsite.com/";
 const PLAY_ORIGIN: &str = "https://play.dlsite.com";
+/// Match Mobile Safari so Play’s stack treats WASM `Request` like the in-app WebView.
+const PLAY_USER_AGENT: &str = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1";
 
 const PLAY_API: &str = "https://play.dlsite.com/api/v3";
 const PLAY_DL_API: &str = "https://play.dl.dlsite.com/api/v3";
-/// Establishes Play API session after DLsite login (see `dlsite-async` `PlayAPI.login`).
-const PLAY_AUTHORIZE_URL: &str = "https://play.dlsite.com/api/authorize";
 
 fn hex_digit(b: u8) -> Option<u8> {
 	match b {
@@ -57,33 +57,6 @@ fn xsrf_token_for_header(cookie_header: &str) -> Option<String> {
 	None
 }
 
-/// `GET /api/authorize` ties DLsite account cookies to Play’s Laravel session (dlsite-async does this after login).
-///
-/// Does **not** merge `Set-Cookie` into storage: Aidoku often exposes a lossy/truncated `Set-Cookie` string, and
-/// naïvely replacing `play_session` can swap the encrypted WebView cookie for a short opaque id and break `/api/v3`.
-pub(crate) fn prime_play_api_session() -> Result<()> {
-	if settings::get_web_cookies().is_none() {
-		return Ok(());
-	}
-	let resp = play_authenticated_get(PLAY_AUTHORIZE_URL)?.send()?;
-	let status = resp.status_code();
-	let _ = resp.get_data();
-	if !(200..300).contains(&status) {
-		print(format!(
-			"[dlsite-play] prime_play_api_session authorize HTTP {}",
-			status
-		));
-		if status == 401 {
-			bail!("authorize HTTP 401: session expired, complete web login again.");
-		}
-		return Ok(());
-	}
-	print(format!(
-		"[dlsite-play] prime_play_api_session authorize OK (keeping web login Cookie header as-is)"
-	));
-	Ok(())
-}
-
 fn play_authenticated_get_with_cookie(url: &str, cookie_override: Option<&str>) -> Result<Request> {
 	let cookie_str = cookie_override.map(String::from).or_else(settings::get_web_cookies);
 	let xsrf = cookie_str.as_deref().and_then(xsrf_token_for_header);
@@ -92,8 +65,10 @@ fn play_authenticated_get_with_cookie(url: &str, cookie_override: Option<&str>) 
 		"GET",
 		url,
 		&[
+			("User-Agent", PLAY_USER_AGENT),
 			("Referer", PLAY_REFERER),
 			("Origin", PLAY_ORIGIN),
+			("Accept-Language", "ja,en-US;q=0.9,en;q=0.8"),
 			("Accept", accept),
 			("X-Requested-With", "XMLHttpRequest"),
 		],
@@ -102,8 +77,10 @@ fn play_authenticated_get_with_cookie(url: &str, cookie_override: Option<&str>) 
 		xsrf.as_deref(),
 	);
 	let mut req = Request::get(url)?
+		.header("User-Agent", PLAY_USER_AGENT)
 		.header("Referer", PLAY_REFERER)
 		.header("Origin", PLAY_ORIGIN)
+		.header("Accept-Language", "ja,en-US;q=0.9,en;q=0.8")
 		.header("Accept", accept)
 		.header("X-Requested-With", "XMLHttpRequest");
 	if let Some(ref x) = xsrf {
@@ -163,8 +140,10 @@ fn play_post_json_with_cookie(url: &str, body: &[u8], cookie: Option<&str>) -> R
 		"POST",
 		url,
 		&[
+			("User-Agent", PLAY_USER_AGENT),
 			("Referer", PLAY_REFERER),
 			("Origin", PLAY_ORIGIN),
+			("Accept-Language", "ja,en-US;q=0.9,en;q=0.8"),
 			("Accept", "application/json"),
 			("Content-Type", "application/json"),
 			("X-Requested-With", "XMLHttpRequest"),
@@ -174,8 +153,10 @@ fn play_post_json_with_cookie(url: &str, body: &[u8], cookie: Option<&str>) -> R
 		xsrf.as_deref(),
 	);
 	let mut req = Request::post(url)?
+		.header("User-Agent", PLAY_USER_AGENT)
 		.header("Referer", PLAY_REFERER)
 		.header("Origin", PLAY_ORIGIN)
+		.header("Accept-Language", "ja,en-US;q=0.9,en;q=0.8")
 		.header("Accept", "application/json")
 		.header("Content-Type", "application/json")
 		.header("X-Requested-With", "XMLHttpRequest");
@@ -226,7 +207,6 @@ fn ensure_ok(op: &str, status: i32, data: &[u8]) -> Result<()> {
 
 /// Fetch the list of purchased work IDs (sorted by sales date, newest first).
 pub fn get_sales() -> Result<Vec<SalesEntry>> {
-	prime_play_api_session()?;
 	let url = format!("{}/content/sales?last=0", PLAY_API);
 	let resp = play_authenticated_get(url.as_str())?.send()?;
 	let status = resp.status_code();

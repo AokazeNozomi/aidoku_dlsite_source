@@ -161,12 +161,6 @@ impl WebLoginHandler for DlsitePlay {
 				"[dlsite-play] web login stored Cookie header ({} chars)",
 				cookie_header.len()
 			));
-			if let Err(e) = api::prime_play_api_session() {
-				print(format!(
-					"[dlsite-play] prime_play_api_session after web login failed: {:?}",
-					e
-				));
-			}
 			settings::clear_cached_worknos();
 			settings::clear_cached_page();
 		} else {
