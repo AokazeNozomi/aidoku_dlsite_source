@@ -183,19 +183,7 @@ impl NotificationHandler for DlsitePlay {
 
 impl ImageRequestProvider for DlsitePlay {
 	fn get_image_request(&self, url: String, _context: Option<PageContext>) -> Result<Request> {
-		let cookie = settings::get_web_cookies();
-		api::log_outgoing_request(
-			"GET",
-			&url,
-			&[("Referer", api::PLAY_REFERER)],
-			None,
-			cookie.as_deref(),
-		);
-		let mut req = Request::get(&url)?.header("Referer", api::PLAY_REFERER);
-		if let Some(ref c) = cookie {
-			req = req.header("Cookie", c.as_str());
-		}
-		Ok(req)
+		api::play_authenticated_get(&url)
 	}
 }
 

@@ -9,21 +9,76 @@ use aidoku::{
 use core::str;
 
 pub(crate) const PLAY_REFERER: &str = "https://play.dlsite.com/";
+const PLAY_ORIGIN: &str = "https://play.dlsite.com";
 
 const PLAY_API: &str = "https://play.dlsite.com/api/v3";
 const PLAY_DL_API: &str = "https://play.dl.dlsite.com/api/v3";
 
-/// Log outgoing request headers. `cookie` is the value we send (from web login), if any.
+fn hex_digit(b: u8) -> Option<u8> {
+	match b {
+		b'0'..=b'9' => Some(b - b'0'),
+		b'a'..=b'f' => Some(10 + b - b'a'),
+		b'A'..=b'F' => Some(10 + b - b'A'),
+		_ => None,
+	}
+}
+
+/// Browser stacks send `X-XSRF-TOKEN` as URL-decoded cookie value (see Laravel / axios).
+fn percent_decode_cookie_value(input: &str) -> String {
+	let bytes = input.as_bytes();
+	let mut out: Vec<u8> = Vec::new();
+	let mut i = 0usize;
+	while i < bytes.len() {
+		if bytes[i] == b'%' && i + 2 < bytes.len() {
+			if let (Some(hi), Some(lo)) = (hex_digit(bytes[i + 1]), hex_digit(bytes[i + 2])) {
+				out.push(hi * 16 + lo);
+				i += 3;
+				continue;
+			}
+		}
+		out.push(bytes[i]);
+		i += 1;
+	}
+	String::from_utf8_lossy(&out).into_owned()
+}
+
+fn xsrf_token_for_header(cookie_header: &str) -> Option<String> {
+	for part in cookie_header.split(';') {
+		let p = part.trim();
+		let Some((name, value)) = p.split_once('=') else {
+			continue;
+		};
+		if name.trim().eq_ignore_ascii_case("XSRF-TOKEN") {
+			return Some(percent_decode_cookie_value(value.trim()));
+		}
+	}
+	None
+}
+
+fn accept_for_url(url: &str) -> &'static str {
+	if url.contains("/api/") {
+		"application/json"
+	} else {
+		"*/*"
+	}
+}
+
+/// Log outgoing request. `xsrf` is decoded token for `X-XSRF-TOKEN` when present.
 pub(crate) fn log_outgoing_request(
 	method: &str,
 	url: &str,
 	headers: &[(&str, &str)],
 	body_len: Option<usize>,
 	cookie: Option<&str>,
+	xsrf: Option<&str>,
 ) {
 	print(format!("[dlsite-play] → {} {}", method, url));
 	for (name, value) in headers {
 		print(format!("[dlsite-play]     {}: {}", name, value));
+	}
+	match xsrf {
+		Some(x) if !x.is_empty() => print(format!("[dlsite-play]     X-XSRF-TOKEN: {}", x)),
+		_ => print(format!("[dlsite-play]     X-XSRF-TOKEN: <missing>")),
 	}
 	match cookie {
 		Some(c) if !c.is_empty() => print(format!("[dlsite-play]     Cookie: {}", c)),
@@ -36,16 +91,30 @@ pub(crate) fn log_outgoing_request(
 	}
 }
 
-fn play_get(url: &str) -> Result<Request> {
+/// GET with Referer, Accept, optional Cookie + `X-XSRF-TOKEN` (required by Play’s Laravel stack).
+pub(crate) fn play_authenticated_get(url: &str) -> Result<Request> {
 	let cookie = settings::get_web_cookies();
+	let xsrf = cookie.as_deref().and_then(xsrf_token_for_header);
+	let accept = accept_for_url(url);
 	log_outgoing_request(
 		"GET",
 		url,
-		&[("Referer", PLAY_REFERER)],
+		&[
+			("Referer", PLAY_REFERER),
+			("Accept", accept),
+			("X-Requested-With", "XMLHttpRequest"),
+		],
 		None,
 		cookie.as_deref(),
+		xsrf.as_deref(),
 	);
-	let mut req = Request::get(url)?.header("Referer", PLAY_REFERER);
+	let mut req = Request::get(url)?
+		.header("Referer", PLAY_REFERER)
+		.header("Accept", accept)
+		.header("X-Requested-With", "XMLHttpRequest");
+	if let Some(ref x) = xsrf {
+		req = req.header("X-XSRF-TOKEN", x.as_str());
+	}
 	if let Some(ref c) = cookie {
 		req = req.header("Cookie", c.as_str());
 	}
@@ -54,19 +123,30 @@ fn play_get(url: &str) -> Result<Request> {
 
 fn play_post_json(url: &str, body: &[u8]) -> Result<Request> {
 	let cookie = settings::get_web_cookies();
+	let xsrf = cookie.as_deref().and_then(xsrf_token_for_header);
 	log_outgoing_request(
 		"POST",
 		url,
 		&[
 			("Referer", PLAY_REFERER),
+			("Origin", PLAY_ORIGIN),
+			("Accept", "application/json"),
 			("Content-Type", "application/json"),
+			("X-Requested-With", "XMLHttpRequest"),
 		],
 		Some(body.len()),
 		cookie.as_deref(),
+		xsrf.as_deref(),
 	);
 	let mut req = Request::post(url)?
 		.header("Referer", PLAY_REFERER)
-		.header("Content-Type", "application/json");
+		.header("Origin", PLAY_ORIGIN)
+		.header("Accept", "application/json")
+		.header("Content-Type", "application/json")
+		.header("X-Requested-With", "XMLHttpRequest");
+	if let Some(ref x) = xsrf {
+		req = req.header("X-XSRF-TOKEN", x.as_str());
+	}
 	if let Some(ref c) = cookie {
 		req = req.header("Cookie", c.as_str());
 	}
@@ -98,15 +178,21 @@ fn log_http_failure(op: &str, status: i32, data: &[u8]) {
 	));
 }
 
+fn ensure_ok(op: &str, status: i32, data: &[u8]) -> Result<()> {
+	if (200..300).contains(&status) {
+		return Ok(());
+	}
+	log_http_failure(op, status, data);
+	bail!("{} HTTP {}: {}", op, status, body_preview(data));
+}
+
 /// Fetch the list of purchased work IDs (sorted by sales date, newest first).
 pub fn get_sales() -> Result<Vec<SalesEntry>> {
 	let url = format!("{}/content/sales?last=0", PLAY_API);
-	let resp = play_get(&url)?.send()?;
+	let resp = play_authenticated_get(&url)?.send()?;
 	let status = resp.status_code();
 	let data = resp.get_data()?;
-	if !(200..300).contains(&status) {
-		log_http_failure("get_sales", status, &data);
-	}
+	ensure_ok("get_sales", status, &data)?;
 	let entries: Vec<SalesEntry> = serde_json::from_slice(&data).map_err(|e| {
 		print(format!(
 			"[dlsite-play] get_sales parse error: {} status={} {} bytes preview: {}",
@@ -136,9 +222,8 @@ pub fn get_works(worknos: &[String]) -> Result<Vec<PurchaseWork>> {
 		let resp = play_post_json(&url, &body)?.send()?;
 		let status = resp.status_code();
 		let data = resp.get_data()?;
-		if !(200..300).contains(&status) {
-			log_http_failure(&format!("get_works chunk {}", chunk_idx), status, &data);
-		}
+		let op = format!("get_works chunk {}", chunk_idx);
+		ensure_ok(&op, status, &data)?;
 		let parsed: WorksResponse = serde_json::from_slice(&data).map_err(|e| {
 			print(format!(
 				"[dlsite-play] get_works parse error chunk={} {} status={} {} bytes preview: {}",
@@ -164,12 +249,10 @@ pub fn get_works(worknos: &[String]) -> Result<Vec<PurchaseWork>> {
 /// Get a download token for a specific work.
 pub fn download_token(workno: &str) -> Result<DownloadToken> {
 	let url = format!("{}/download/sign/cookie?workno={}", PLAY_DL_API, workno);
-	let resp = play_get(&url)?.send()?;
+	let resp = play_authenticated_get(&url)?.send()?;
 	let status = resp.status_code();
 	let data = resp.get_data()?;
-	if !(200..300).contains(&status) {
-		log_http_failure("download_token", status, &data);
-	}
+	ensure_ok("download_token", status, &data)?;
 	let token: DownloadToken = serde_json::from_slice(&data).map_err(|e| {
 		print(format!(
 			"[dlsite-play] download_token parse error workno={} {} status={} preview: {}",
@@ -191,12 +274,10 @@ pub fn download_token(workno: &str) -> Result<DownloadToken> {
 /// Fetch the ziptree for a download token.
 pub fn fetch_ziptree(token: &DownloadToken) -> Result<ZipTree> {
 	let url = format!("{}ziptree.json", token.url);
-	let resp = play_get(&url)?.send()?;
+	let resp = play_authenticated_get(&url)?.send()?;
 	let status = resp.status_code();
 	let data = resp.get_data()?;
-	if !(200..300).contains(&status) {
-		log_http_failure("fetch_ziptree", status, &data);
-	}
+	ensure_ok("fetch_ziptree", status, &data)?;
 	let raw: RawZipTree = serde_json::from_slice(&data).map_err(|e| {
 		print(format!(
 			"[dlsite-play] fetch_ziptree parse error {} status={} preview: {}",
