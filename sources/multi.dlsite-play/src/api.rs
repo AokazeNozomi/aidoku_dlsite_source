@@ -7,6 +7,10 @@ use aidoku::{
 	Result,
 };
 use core::str;
+use spin::Mutex;
+
+/// Serializes bootstrap + `Set-Cookie` merges when Aidoku invokes the source concurrently (see log interleaving).
+static PLAY_PRIME_LOCK: Mutex<()> = Mutex::new(());
 
 pub(crate) const PLAY_REFERER: &str = "https://play.dlsite.com/";
 const PLAY_ORIGIN: &str = "https://play.dlsite.com";
@@ -216,14 +220,15 @@ fn accept_for_url(url: &str) -> &'static str {
 }
 
 /// Play auth bootstrap with current cookies:
-/// 1) `GET /login/`
-/// 2) `GET /api/authorize`
+/// 1) `GET /login/` (document navigation — cookies only, like aiohttp; no `X-XSRF-TOKEN` / XHR headers)
+/// 2) `GET /api/authorize` (XHR profile + `X-XSRF-TOKEN`)
 /// Persists **only** `XSRF-TOKEN` and `play_session` from `Set-Cookie` (like aiohttp’s jar, without blind merge).
 pub(crate) fn prime_play_api_session() -> Result<()> {
 	if settings::get_web_cookies().is_none() {
 		return Ok(());
 	}
-	let login_resp = play_authenticated_get(PLAY_LOGIN_URL)?.send()?;
+	let _prime_guard = PLAY_PRIME_LOCK.lock();
+	let login_resp = play_login_page_document_get(None)?.send()?;
 	let login_status = login_resp.status_code();
 	persist_allowlisted_play_cookies_from_response(&login_resp);
 	let _ = login_resp.get_data();
@@ -256,6 +261,43 @@ pub(crate) fn prime_play_api_session() -> Result<()> {
 		));
 	}
 	Ok(())
+}
+
+/// `GET /login/` the way a real top-level navigation (and aiohttp) does: `Cookie` only, no Laravel XHR CSRF header.
+fn play_login_page_document_get(cookie_override: Option<&str>) -> Result<Request> {
+	const ACCEPT_HTML: &str =
+		"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
+	let cookie_str = cookie_override.map(String::from).or_else(settings::get_web_cookies);
+	print(format!(
+		"[dlsite-play] → GET {} (document navigation; no X-XSRF-TOKEN)",
+		PLAY_LOGIN_URL
+	));
+	print(format!("[dlsite-play]     User-Agent: {}", PLAY_USER_AGENT));
+	print(format!("[dlsite-play]     Referer: {}", PLAY_REFERER));
+	print(format!("[dlsite-play]     Sec-Fetch-Site: same-origin"));
+	print(format!("[dlsite-play]     Sec-Fetch-Mode: navigate"));
+	print(format!("[dlsite-play]     Sec-Fetch-Dest: document"));
+	print(format!("[dlsite-play]     Accept-Language: ja,en-US;q=0.9,en;q=0.8"));
+	print(format!("[dlsite-play]     Accept: {}", ACCEPT_HTML));
+	print(format!("[dlsite-play]     X-XSRF-TOKEN: <omitted>"));
+	match cookie_str.as_deref() {
+		Some(c) if !c.is_empty() => print(format!("[dlsite-play]     Cookie: {}", c)),
+		_ => print(format!(
+			"[dlsite-play]     Cookie: <none stored; complete web login first>"
+		)),
+	}
+	let mut req = Request::get(PLAY_LOGIN_URL)?
+		.header("User-Agent", PLAY_USER_AGENT)
+		.header("Referer", PLAY_REFERER)
+		.header("Sec-Fetch-Site", "same-origin")
+		.header("Sec-Fetch-Mode", "navigate")
+		.header("Sec-Fetch-Dest", "document")
+		.header("Accept-Language", "ja,en-US;q=0.9,en;q=0.8")
+		.header("Accept", ACCEPT_HTML);
+	if let Some(ref c) = cookie_str {
+		req = req.header("Cookie", c.as_str());
+	}
+	Ok(req)
 }
 
 fn play_authenticated_get_with_cookie(url: &str, cookie_override: Option<&str>) -> Result<Request> {
@@ -415,7 +457,7 @@ fn ensure_ok(op: &str, status: i32, data: &[u8]) -> Result<()> {
 /// Fetch the list of purchased work IDs (sorted by sales date, newest first).
 pub fn get_sales() -> Result<Vec<SalesEntry>> {
 	print(format!(
-		"[dlsite-play] get_sales (build v44; prime merges XSRF-TOKEN+play_session from Set-Cookie)"
+		"[dlsite-play] get_sales (build v45; prime lock + document GET /login/ + Set-Cookie merge)"
 	));
 	if settings::get_web_cookies().is_some() {
 		prime_play_api_session()?;

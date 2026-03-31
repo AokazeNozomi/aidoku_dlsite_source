@@ -78,6 +78,7 @@ dependencies = [
  "aidoku-test",
  "serde",
  "serde_json",
+ "spin",
 ]
 
 [[package]]
