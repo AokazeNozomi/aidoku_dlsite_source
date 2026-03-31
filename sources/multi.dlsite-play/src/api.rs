@@ -13,6 +13,8 @@ const PLAY_ORIGIN: &str = "https://play.dlsite.com";
 
 const PLAY_API: &str = "https://play.dlsite.com/api/v3";
 const PLAY_DL_API: &str = "https://play.dl.dlsite.com/api/v3";
+/// Establishes Play API session after DLsite login (see `dlsite-async` `PlayAPI.login`).
+const PLAY_AUTHORIZE_URL: &str = "https://play.dlsite.com/api/authorize";
 
 fn hex_digit(b: u8) -> Option<u8> {
 	match b {
@@ -55,6 +57,81 @@ fn xsrf_token_for_header(cookie_header: &str) -> Option<String> {
 	None
 }
 
+/// Merge `Set-Cookie` (first `name=value` of each line) into the stored `Cookie` header value.
+fn apply_set_cookie_headers(existing: Option<&str>, set_cookie: Option<String>) -> Option<String> {
+	let raw = set_cookie.filter(|s| !s.is_empty())?;
+	let mut pairs: Vec<(String, String)> = Vec::new();
+	if let Some(ex) = existing {
+		for part in ex.split(';') {
+			let p = part.trim();
+			if let Some((n, v)) = p.split_once('=') {
+				pairs.push((n.trim().into(), v.trim().into()));
+			}
+		}
+	}
+	for block in raw.split('\n') {
+		let line = block.trim();
+		if line.is_empty() {
+			continue;
+		}
+		let first = line.split(';').next().unwrap_or("").trim();
+		let Some((n, v)) = first.split_once('=') else {
+			continue;
+		};
+		let name = n.trim();
+		let value = v.trim();
+		if let Some(idx) = pairs
+			.iter()
+			.position(|(k, _)| k.eq_ignore_ascii_case(name))
+		{
+			pairs[idx] = (name.into(), value.into());
+		} else {
+			pairs.push((name.into(), value.into()));
+		}
+	}
+	if pairs.is_empty() {
+		return existing.map(Into::into);
+	}
+	pairs.sort_by(|a, b| a.0.cmp(&b.0));
+	let merged = pairs
+		.into_iter()
+		.map(|(n, v)| format!("{}={}", n, v))
+		.collect::<Vec<_>>()
+		.join("; ");
+	Some(merged)
+}
+
+/// `GET /api/authorize` ties DLsite account cookies to Play’s Laravel session (dlsite-async does this after login).
+pub(crate) fn prime_play_api_session() -> Result<()> {
+	if settings::get_web_cookies().is_none() {
+		return Ok(());
+	}
+	let resp = play_authenticated_get(PLAY_AUTHORIZE_URL)?.send()?;
+	let status = resp.status_code();
+	let set_cookie = resp
+		.get_header("Set-Cookie")
+		.or_else(|| resp.get_header("set-cookie"));
+	let _ = resp.get_data();
+	if !(200..300).contains(&status) {
+		print(format!(
+			"[dlsite-play] prime_play_api_session authorize HTTP {}",
+			status
+		));
+		if status == 401 {
+			bail!("authorize HTTP 401: session expired, complete web login again.");
+		}
+		return Ok(());
+	}
+	if let Some(merged) = apply_set_cookie_headers(settings::get_web_cookies().as_deref(), set_cookie) {
+		settings::set_web_cookies(&merged);
+		print(format!(
+			"[dlsite-play] prime_play_api_session updated cookie jar ({} chars)",
+			merged.len()
+		));
+	}
+	Ok(())
+}
+
 fn play_authenticated_get_with_cookie(url: &str, cookie_override: Option<&str>) -> Result<Request> {
 	let cookie_str = cookie_override.map(String::from).or_else(settings::get_web_cookies);
 	let xsrf = cookie_str.as_deref().and_then(xsrf_token_for_header);
@@ -64,6 +141,7 @@ fn play_authenticated_get_with_cookie(url: &str, cookie_override: Option<&str>) 
 		url,
 		&[
 			("Referer", PLAY_REFERER),
+			("Origin", PLAY_ORIGIN),
 			("Accept", accept),
 			("X-Requested-With", "XMLHttpRequest"),
 		],
@@ -73,6 +151,7 @@ fn play_authenticated_get_with_cookie(url: &str, cookie_override: Option<&str>) 
 	);
 	let mut req = Request::get(url)?
 		.header("Referer", PLAY_REFERER)
+		.header("Origin", PLAY_ORIGIN)
 		.header("Accept", accept)
 		.header("X-Requested-With", "XMLHttpRequest");
 	if let Some(ref x) = xsrf {
@@ -195,6 +274,7 @@ fn ensure_ok(op: &str, status: i32, data: &[u8]) -> Result<()> {
 
 /// Fetch the list of purchased work IDs (sorted by sales date, newest first).
 pub fn get_sales() -> Result<Vec<SalesEntry>> {
+	prime_play_api_session()?;
 	let url = format!("{}/content/sales?last=0", PLAY_API);
 	let resp = play_authenticated_get(url.as_str())?.send()?;
 	let status = resp.status_code();
