@@ -190,7 +190,7 @@ impl NotificationHandler for DlsitePlay {
 
 impl ImageRequestProvider for DlsitePlay {
 	fn get_image_request(&self, url: String, _context: Option<PageContext>) -> Result<Request> {
-		api::play_authenticated_get(&url)
+		api::play_image_get(&url)
 	}
 }
 

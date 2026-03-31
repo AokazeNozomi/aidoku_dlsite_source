@@ -9,13 +9,14 @@ use aidoku::{
 use core::str;
 use spin::Mutex;
 
-/// Serializes bootstrap + `Set-Cookie` merges when Aidoku invokes the source concurrently (see log interleaving).
+/// Serializes bootstrap + `Set-Cookie` merges within one WASM instance (multiple installed source versions still share Aidoku defaults and can race).
 static PLAY_PRIME_LOCK: Mutex<()> = Mutex::new(());
 
 pub(crate) const PLAY_REFERER: &str = "https://play.dlsite.com/";
-const PLAY_ORIGIN: &str = "https://play.dlsite.com";
-/// Match Mobile Safari so Play’s stack treats WASM `Request` like the in-app WebView.
-const PLAY_USER_AGENT: &str = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1";
+/// dlsite-async `PlayAPI` uses plain `aiohttp.ClientSession` — no browser `Origin` / `Sec-Fetch-*` / `X-Requested-With`.
+const PLAY_AIOHTTP_USER_AGENT: &str = "Python/3.12 aiohttp/3.11.16";
+/// CDN / optimized assets: keep a real browser UA so hotlink rules stay happy.
+const PLAY_IMAGE_USER_AGENT: &str = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1";
 
 const PLAY_API: &str = "https://play.dlsite.com/api/v3";
 const PLAY_DL_API: &str = "https://play.dl.dlsite.com/api/v3";
@@ -99,17 +100,15 @@ fn collect_allowlisted_set_cookie_pairs(resp: &Response) -> Vec<(String, String)
 	out
 }
 
-/// Apply `Set-Cookie` updates for allowlisted names into stored `Cookie` header.
-fn persist_allowlisted_play_cookies_from_response(resp: &Response) {
-	let updates = collect_allowlisted_set_cookie_pairs(resp);
+fn merge_allowlisted_into_cookie_header(
+	base: &str,
+	updates: &[(String, String)],
+) -> Option<String> {
 	if updates.is_empty() {
-		return;
+		return None;
 	}
-	let Some(cur) = settings::get_web_cookies() else {
-		return;
-	};
 	let mut pairs: Vec<(String, String)> = Vec::new();
-	for part in cur.split(';') {
+	for part in base.split(';') {
 		let p = part.trim();
 		let Some((n, v)) = p.split_once('=') else {
 			continue;
@@ -117,7 +116,7 @@ fn persist_allowlisted_play_cookies_from_response(resp: &Response) {
 		pairs.push((String::from(n.trim()), String::from(v.trim())));
 	}
 	let mut changed = false;
-	for (uname, uval) in &updates {
+	for (uname, uval) in updates {
 		let mut found = false;
 		for (n, v) in pairs.iter_mut() {
 			if n.eq_ignore_ascii_case(uname) {
@@ -135,14 +134,30 @@ fn persist_allowlisted_play_cookies_from_response(resp: &Response) {
 		}
 	}
 	if !changed {
-		return;
+		return None;
 	}
 	pairs.sort_by(|a, b| a.0.cmp(&b.0));
-	let new_header: String = pairs
-		.into_iter()
-		.map(|(n, v)| format!("{}={}", n, v))
-		.collect::<Vec<_>>()
-		.join("; ");
+	Some(
+		pairs
+			.into_iter()
+			.map(|(n, v)| format!("{}={}", n, v))
+			.collect::<Vec<_>>()
+			.join("; "),
+	)
+}
+
+/// Apply `Set-Cookie` updates for allowlisted names into stored `Cookie` header.
+fn persist_allowlisted_play_cookies_from_response(resp: &Response) {
+	let updates = collect_allowlisted_set_cookie_pairs(resp);
+	if updates.is_empty() {
+		return;
+	}
+	let Some(base) = settings::get_web_cookies() else {
+		return;
+	};
+	let Some(new_header) = merge_allowlisted_into_cookie_header(&base, &updates) else {
+		return;
+	};
 	settings::set_web_cookies(&new_header);
 	print(format!(
 		"[dlsite-play] applied Set-Cookie for {:?} (Cookie header length {})",
@@ -195,17 +210,6 @@ fn xsrf_token_for_header(cookie_header: &str) -> Option<String> {
 	None
 }
 
-fn sec_fetch_metadata(url: &str) -> (&'static str, &'static str, &'static str) {
-	let site = if url.starts_with("https://play.dlsite.com/") {
-		"same-origin"
-	} else if url.contains("play.dl.dlsite.com") {
-		"same-site"
-	} else {
-		"cross-site"
-	};
-	(site, "cors", "empty")
-}
-
 fn accept_for_url(url: &str) -> &'static str {
 	if url.contains("/api/v3/") {
 		return "application/json";
@@ -220,8 +224,8 @@ fn accept_for_url(url: &str) -> &'static str {
 }
 
 /// Play auth bootstrap with current cookies:
-/// 1) `GET /login/` (document navigation — cookies only, like aiohttp; no `X-XSRF-TOKEN` / XHR headers)
-/// 2) `GET /api/authorize` (XHR profile + `X-XSRF-TOKEN`)
+/// 1) `GET /login/` (cookies only — like aiohttp; no fake browser / XHR headers)
+/// 2) `GET /api/authorize` with `Referer` only (matches dlsite-async; cookies from jar — no `X-XSRF-TOKEN`)
 /// Persists **only** `XSRF-TOKEN` and `play_session` from `Set-Cookie` (like aiohttp’s jar, without blind merge).
 pub(crate) fn prime_play_api_session() -> Result<()> {
 	if settings::get_web_cookies().is_none() {
@@ -243,7 +247,7 @@ pub(crate) fn prime_play_api_session() -> Result<()> {
 		));
 	}
 
-	let resp = play_authenticated_get(PLAY_AUTHORIZE_URL)?.send()?;
+	let resp = play_authorize_get()?.send()?;
 	let status = resp.status_code();
 	persist_allowlisted_play_cookies_from_response(&resp);
 	let _ = resp.get_data();
@@ -263,23 +267,20 @@ pub(crate) fn prime_play_api_session() -> Result<()> {
 	Ok(())
 }
 
-/// `GET /login/` the way a real top-level navigation (and aiohttp) does: `Cookie` only, no Laravel XHR CSRF header.
+/// `GET /login/` like aiohttp: `User-Agent` + `Accept` + `Cookie` only (no Referer / Sec-Fetch / XSRF header).
 fn play_login_page_document_get(cookie_override: Option<&str>) -> Result<Request> {
 	const ACCEPT_HTML: &str =
 		"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
 	let cookie_str = cookie_override.map(String::from).or_else(settings::get_web_cookies);
 	print(format!(
-		"[dlsite-play] → GET {} (document navigation; no X-XSRF-TOKEN)",
+		"[dlsite-play] → GET {} (aiohttp-style bootstrap /login/)",
 		PLAY_LOGIN_URL
 	));
-	print(format!("[dlsite-play]     User-Agent: {}", PLAY_USER_AGENT));
-	print(format!("[dlsite-play]     Referer: {}", PLAY_REFERER));
-	print(format!("[dlsite-play]     Sec-Fetch-Site: same-origin"));
-	print(format!("[dlsite-play]     Sec-Fetch-Mode: navigate"));
-	print(format!("[dlsite-play]     Sec-Fetch-Dest: document"));
-	print(format!("[dlsite-play]     Accept-Language: ja,en-US;q=0.9,en;q=0.8"));
+	print(format!(
+		"[dlsite-play]     User-Agent: {}",
+		PLAY_AIOHTTP_USER_AGENT
+	));
 	print(format!("[dlsite-play]     Accept: {}", ACCEPT_HTML));
-	print(format!("[dlsite-play]     X-XSRF-TOKEN: <omitted>"));
 	match cookie_str.as_deref() {
 		Some(c) if !c.is_empty() => print(format!("[dlsite-play]     Cookie: {}", c)),
 		_ => print(format!(
@@ -287,12 +288,7 @@ fn play_login_page_document_get(cookie_override: Option<&str>) -> Result<Request
 		)),
 	}
 	let mut req = Request::get(PLAY_LOGIN_URL)?
-		.header("User-Agent", PLAY_USER_AGENT)
-		.header("Referer", PLAY_REFERER)
-		.header("Sec-Fetch-Site", "same-origin")
-		.header("Sec-Fetch-Mode", "navigate")
-		.header("Sec-Fetch-Dest", "document")
-		.header("Accept-Language", "ja,en-US;q=0.9,en;q=0.8")
+		.header("User-Agent", PLAY_AIOHTTP_USER_AGENT)
 		.header("Accept", ACCEPT_HTML);
 	if let Some(ref c) = cookie_str {
 		req = req.header("Cookie", c.as_str());
@@ -300,41 +296,56 @@ fn play_login_page_document_get(cookie_override: Option<&str>) -> Result<Request
 	Ok(req)
 }
 
-fn play_authenticated_get_with_cookie(url: &str, cookie_override: Option<&str>) -> Result<Request> {
-	let cookie_str = cookie_override.map(String::from).or_else(settings::get_web_cookies);
-	let xsrf = cookie_str.as_deref().and_then(xsrf_token_for_header);
-	let accept = accept_for_url(url);
-	let (sf_site, sf_mode, sf_dest) = sec_fetch_metadata(url);
-	log_outgoing_request(
-		"GET",
-		url,
-		&[
-			("User-Agent", PLAY_USER_AGENT),
-			("Referer", PLAY_REFERER),
-			("Origin", PLAY_ORIGIN),
-			("Sec-Fetch-Site", sf_site),
-			("Sec-Fetch-Mode", sf_mode),
-			("Sec-Fetch-Dest", sf_dest),
-			("Accept-Language", "ja,en-US;q=0.9,en;q=0.8"),
-			("Accept", accept),
-			("X-Requested-With", "XMLHttpRequest"),
-		],
-		None,
-		cookie_str.as_deref(),
-		xsrf.as_deref(),
-	);
-	let mut req = Request::get(url)?
-		.header("User-Agent", PLAY_USER_AGENT)
+/// `GET /api/authorize` with `Referer` only — matches dlsite-async `PlayAPI.login` (cookie jar; no `X-XSRF-TOKEN`).
+fn play_authorize_get() -> Result<Request> {
+	let cookie_str = settings::get_web_cookies();
+	print(format!("[dlsite-play] → GET {}", PLAY_AUTHORIZE_URL));
+	print(format!(
+		"[dlsite-play]     User-Agent: {}",
+		PLAY_AIOHTTP_USER_AGENT
+	));
+	print(format!("[dlsite-play]     Referer: {}", PLAY_REFERER));
+	print(format!("[dlsite-play]     Accept: */*"));
+	match cookie_str.as_deref() {
+		Some(c) if !c.is_empty() => print(format!("[dlsite-play]     Cookie: {}", c)),
+		_ => print(format!(
+			"[dlsite-play]     Cookie: <none stored; complete web login first>"
+		)),
+	}
+	let mut req = Request::get(PLAY_AUTHORIZE_URL)?
+		.header("User-Agent", PLAY_AIOHTTP_USER_AGENT)
 		.header("Referer", PLAY_REFERER)
-		.header("Origin", PLAY_ORIGIN)
-		.header("Sec-Fetch-Site", sf_site)
-		.header("Sec-Fetch-Mode", sf_mode)
-		.header("Sec-Fetch-Dest", sf_dest)
-		.header("Accept-Language", "ja,en-US;q=0.9,en;q=0.8")
-		.header("Accept", accept)
-		.header("X-Requested-With", "XMLHttpRequest");
-	if let Some(ref x) = xsrf {
-		req = req.header("X-XSRF-TOKEN", x.as_str());
+		.header("Accept", "*/*");
+	if let Some(ref c) = cookie_str {
+		req = req.header("Cookie", c.as_str());
+	}
+	Ok(req)
+}
+
+fn play_api_get_with_cookie(url: &str, cookie_override: Option<&str>) -> Result<Request> {
+	let cookie_str = cookie_override.map(String::from).or_else(settings::get_web_cookies);
+	let accept = accept_for_url(url);
+	let referer = url.contains("play.dl.dlsite.com").then_some(PLAY_REFERER);
+	print(format!("[dlsite-play] → GET {}", url));
+	print(format!(
+		"[dlsite-play]     User-Agent: {}",
+		PLAY_AIOHTTP_USER_AGENT
+	));
+	print(format!("[dlsite-play]     Accept: {}", accept));
+	if let Some(r) = referer {
+		print(format!("[dlsite-play]     Referer: {}", r));
+	}
+	match cookie_str.as_deref() {
+		Some(c) if !c.is_empty() => print(format!("[dlsite-play]     Cookie: {}", c)),
+		_ => print(format!(
+			"[dlsite-play]     Cookie: <none stored; complete web login first>"
+		)),
+	}
+	let mut req = Request::get(url)?
+		.header("User-Agent", PLAY_AIOHTTP_USER_AGENT)
+		.header("Accept", accept);
+	if let Some(r) = referer {
+		req = req.header("Referer", r);
 	}
 	if let Some(ref c) = cookie_str {
 		req = req.header("Cookie", c.as_str());
@@ -342,73 +353,65 @@ fn play_authenticated_get_with_cookie(url: &str, cookie_override: Option<&str>) 
 	Ok(req)
 }
 
-/// Log outgoing request. `xsrf` is decoded token for `X-XSRF-TOKEN` when present.
-pub(crate) fn log_outgoing_request(
-	method: &str,
-	url: &str,
-	headers: &[(&str, &str)],
-	body_len: Option<usize>,
-	cookie: Option<&str>,
-	xsrf: Option<&str>,
-) {
-	print(format!("[dlsite-play] → {} {}", method, url));
-	for (name, value) in headers {
-		print(format!("[dlsite-play]     {}: {}", name, value));
-	}
-	match xsrf {
-		Some(x) if !x.is_empty() => print(format!("[dlsite-play]     X-XSRF-TOKEN: {}", x)),
-		_ => print(format!("[dlsite-play]     X-XSRF-TOKEN: <missing>")),
-	}
-	match cookie {
+/// JSON / API GET — same header model as dlsite-async aiohttp (no browser CORS simulation).
+pub(crate) fn play_authenticated_get(url: &str) -> Result<Request> {
+	play_api_get_with_cookie(url, None)
+}
+
+/// Optimized page images: browser UA + `Referer` (not aiohttp).
+pub(crate) fn play_image_get(url: &str) -> Result<Request> {
+	let cookie_str = settings::get_web_cookies();
+	print(format!("[dlsite-play] → GET {} (image)", url));
+	print(format!("[dlsite-play]     User-Agent: {}", PLAY_IMAGE_USER_AGENT));
+	print(format!("[dlsite-play]     Referer: {}", PLAY_REFERER));
+	match cookie_str.as_deref() {
 		Some(c) if !c.is_empty() => print(format!("[dlsite-play]     Cookie: {}", c)),
 		_ => print(format!(
 			"[dlsite-play]     Cookie: <none stored; complete web login first>"
 		)),
 	}
-	if let Some(n) = body_len {
-		print(format!("[dlsite-play]     body: {} bytes", n));
+	let mut req = Request::get(url)?
+		.header("User-Agent", PLAY_IMAGE_USER_AGENT)
+		.header("Referer", PLAY_REFERER)
+		.header("Accept", "image/webp,image/apng,image/*,*/*;q=0.8");
+	if let Some(ref c) = cookie_str {
+		req = req.header("Cookie", c.as_str());
 	}
-}
-
-/// GET with Referer, Accept, optional Cookie + `X-XSRF-TOKEN` (required by Play’s Laravel stack).
-pub(crate) fn play_authenticated_get(url: &str) -> Result<Request> {
-	play_authenticated_get_with_cookie(url, None)
+	Ok(req)
 }
 
 fn play_post_json_with_cookie(url: &str, body: &[u8], cookie: Option<&str>) -> Result<Request> {
 	let cookie_str = cookie.map(String::from).or_else(settings::get_web_cookies);
 	let xsrf = cookie_str.as_deref().and_then(xsrf_token_for_header);
-	let (sf_site, sf_mode, sf_dest) = sec_fetch_metadata(url);
-	log_outgoing_request(
-		"POST",
-		url,
-		&[
-			("User-Agent", PLAY_USER_AGENT),
-			("Referer", PLAY_REFERER),
-			("Origin", PLAY_ORIGIN),
-			("Sec-Fetch-Site", sf_site),
-			("Sec-Fetch-Mode", sf_mode),
-			("Sec-Fetch-Dest", sf_dest),
-			("Accept-Language", "ja,en-US;q=0.9,en;q=0.8"),
-			("Accept", "application/json"),
-			("Content-Type", "application/json"),
-			("X-Requested-With", "XMLHttpRequest"),
-		],
-		Some(body.len()),
-		cookie_str.as_deref(),
-		xsrf.as_deref(),
-	);
+	let referer = url.contains("play.dl.dlsite.com").then_some(PLAY_REFERER);
+	print(format!("[dlsite-play] → POST {}", url));
+	print(format!(
+		"[dlsite-play]     User-Agent: {}",
+		PLAY_AIOHTTP_USER_AGENT
+	));
+	print(format!("[dlsite-play]     Accept: application/json"));
+	print(format!("[dlsite-play]     Content-Type: application/json"));
+	if let Some(r) = referer {
+		print(format!("[dlsite-play]     Referer: {}", r));
+	}
+	match xsrf {
+		Some(ref x) if !x.is_empty() => print(format!("[dlsite-play]     X-XSRF-TOKEN: {}", x)),
+		_ => print(format!("[dlsite-play]     X-XSRF-TOKEN: <missing>")),
+	}
+	match cookie_str.as_deref() {
+		Some(c) if !c.is_empty() => print(format!("[dlsite-play]     Cookie: {}", c)),
+		_ => print(format!(
+			"[dlsite-play]     Cookie: <none stored; complete web login first>"
+		)),
+	}
+	print(format!("[dlsite-play]     body: {} bytes", body.len()));
 	let mut req = Request::post(url)?
-		.header("User-Agent", PLAY_USER_AGENT)
-		.header("Referer", PLAY_REFERER)
-		.header("Origin", PLAY_ORIGIN)
-		.header("Sec-Fetch-Site", sf_site)
-		.header("Sec-Fetch-Mode", sf_mode)
-		.header("Sec-Fetch-Dest", sf_dest)
-		.header("Accept-Language", "ja,en-US;q=0.9,en;q=0.8")
+		.header("User-Agent", PLAY_AIOHTTP_USER_AGENT)
 		.header("Accept", "application/json")
-		.header("Content-Type", "application/json")
-		.header("X-Requested-With", "XMLHttpRequest");
+		.header("Content-Type", "application/json");
+	if let Some(r) = referer {
+		req = req.header("Referer", r);
+	}
 	if let Some(ref x) = xsrf {
 		req = req.header("X-XSRF-TOKEN", x.as_str());
 	}
@@ -457,15 +460,24 @@ fn ensure_ok(op: &str, status: i32, data: &[u8]) -> Result<()> {
 /// Fetch the list of purchased work IDs (sorted by sales date, newest first).
 pub fn get_sales() -> Result<Vec<SalesEntry>> {
 	print(format!(
-		"[dlsite-play] get_sales (build v45; prime lock + document GET /login/ + Set-Cookie merge)"
+		"[dlsite-play] get_sales (build v46; aiohttp-style API + image UA split; 401 retry)"
 	));
 	if settings::get_web_cookies().is_some() {
 		prime_play_api_session()?;
 	}
 	let url = format!("{}/content/sales?last=0", PLAY_API);
-	let resp = play_authenticated_get(url.as_str())?.send()?;
-	let status = resp.status_code();
-	let data = resp.get_data()?;
+	let mut resp = play_authenticated_get(url.as_str())?.send()?;
+	let mut status = resp.status_code();
+	let mut data = resp.get_data()?;
+	if status == 401 && settings::get_web_cookies().is_some() {
+		print(format!(
+			"[dlsite-play] get_sales HTTP 401, running prime again and retrying once"
+		));
+		prime_play_api_session()?;
+		resp = play_authenticated_get(url.as_str())?.send()?;
+		status = resp.status_code();
+		data = resp.get_data()?;
+	}
 	ensure_ok("get_sales", status, &data)?;
 	let entries: Vec<SalesEntry> = serde_json::from_slice(&data).map_err(|e| {
 		print(format!(
