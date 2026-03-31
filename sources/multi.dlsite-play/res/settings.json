@@ -9,7 +9,7 @@
 				"method": "web",
 				"key": "login",
 				"title": "Login",
-				"url": "https://login.dlsite.com/login?user=self",
+				"url": "https://play.dlsite.com/login",
 				"refreshes": [
 					"listings",
 					"content"
