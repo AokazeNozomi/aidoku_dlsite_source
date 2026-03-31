@@ -17,6 +17,8 @@ const PLAY_DL_API: &str = "https://play.dl.dlsite.com/api/v3";
 const LOGIN_URL: &str = "https://login.dlsite.com/login";
 const PLAY_LOGIN_URL: &str = "https://play.dlsite.com/login/";
 const PLAY_AUTHORIZE_URL: &str = "https://play.dlsite.com/api/authorize";
+const LOGIN_HOST: &str = "login.dlsite.com";
+const PLAY_HOST: &str = "play.dlsite.com";
 
 fn hex_digit(b: u8) -> Option<u8> {
 	match b {
@@ -104,14 +106,34 @@ fn parse_login_token(html: &str) -> Option<String> {
 	None
 }
 
-fn upsert_cookie(cookies: &mut Vec<(String, String)>, name: &str, value: &str) {
-	for (n, v) in cookies.iter_mut() {
-		if n.as_str().eq_ignore_ascii_case(name) {
-			*v = String::from(value);
+#[derive(Clone, Debug)]
+struct CookieEntry {
+	name: String,
+	value: String,
+	domain: String,
+	path: String,
+}
+
+fn normalize_domain(input: &str) -> String {
+	String::from(
+		input
+		.trim()
+		.trim_start_matches('.')
+		.to_ascii_lowercase(),
+	)
+}
+
+fn upsert_cookie(cookies: &mut Vec<CookieEntry>, cookie: CookieEntry) {
+	for existing in cookies.iter_mut() {
+		if existing.name.as_str().eq_ignore_ascii_case(cookie.name.as_str())
+			&& existing.domain.as_str().eq_ignore_ascii_case(cookie.domain.as_str())
+			&& existing.path == cookie.path
+		{
+			existing.value = cookie.value;
 			return;
 		}
 	}
-	cookies.push((String::from(name), String::from(value)));
+	cookies.push(cookie);
 }
 
 fn split_set_cookie_header(header: &str) -> Vec<String> {
@@ -152,37 +174,88 @@ fn split_set_cookie_header(header: &str) -> Vec<String> {
 	parts
 }
 
-fn parse_set_cookie_header(header: &str, cookies: &mut Vec<(String, String)>) {
+fn parse_set_cookie_header(header: &str, default_domain: &str, cookies: &mut Vec<CookieEntry>) {
 	for part in split_set_cookie_header(header) {
-		let first = part.split(';').next().unwrap_or_default().trim();
+		let mut attrs = part.split(';').map(|s| s.trim());
+		let first = attrs.next().unwrap_or_default();
 		let Some((name, value)) = first.split_once('=') else {
 			continue;
 		};
 		let name = name.trim();
 		let value = value.trim();
-		if !name.is_empty() && !value.is_empty() {
-			upsert_cookie(cookies, name, value);
+		if name.is_empty() || value.is_empty() {
+			continue;
 		}
+		let mut domain = String::from(default_domain);
+		let mut path = String::from("/");
+		for attr in attrs {
+			let Some((k, v)) = attr.split_once('=') else {
+				continue;
+			};
+			if k.eq_ignore_ascii_case("Domain") {
+				domain = normalize_domain(v);
+			} else if k.eq_ignore_ascii_case("Path") {
+				let trimmed = v.trim();
+				if !trimmed.is_empty() {
+					path = String::from(trimmed);
+				}
+			}
+		}
+		upsert_cookie(
+			cookies,
+			CookieEntry {
+				name: String::from(name),
+				value: String::from(value),
+				domain,
+				path,
+			},
+		);
 	}
 }
 
-fn ingest_response_cookies(resp: &aidoku::imports::net::Response, cookies: &mut Vec<(String, String)>) {
+fn ingest_response_cookies(
+	resp: &aidoku::imports::net::Response,
+	default_domain: &str,
+	cookies: &mut Vec<CookieEntry>,
+) {
 	if let Some(set_cookie) = resp.get_header("Set-Cookie") {
-		parse_set_cookie_header(set_cookie.as_str(), cookies);
+		parse_set_cookie_header(set_cookie.as_str(), default_domain, cookies);
 	}
 	if let Some(set_cookie) = resp.get_header("set-cookie") {
-		parse_set_cookie_header(set_cookie.as_str(), cookies);
+		parse_set_cookie_header(set_cookie.as_str(), default_domain, cookies);
 	}
 }
 
-fn build_cookie_header(cookies: &[(String, String)]) -> String {
-	let mut pairs: Vec<(String, String)> = cookies.to_vec();
+fn domain_matches(host: &str, cookie_domain: &str) -> bool {
+	let host = host.to_ascii_lowercase();
+	let cookie_domain = cookie_domain.to_ascii_lowercase();
+	host == cookie_domain || host.ends_with(format!(".{}", cookie_domain).as_str())
+}
+
+fn path_matches(request_path: &str, cookie_path: &str) -> bool {
+	let normalized = if cookie_path.is_empty() { "/" } else { cookie_path };
+	request_path.starts_with(normalized)
+}
+
+fn build_cookie_header_for_host(cookies: &[CookieEntry], host: &str, request_path: &str) -> String {
+	let mut pairs: Vec<(String, String)> = cookies
+		.iter()
+		.filter(|c| domain_matches(host, c.domain.as_str()) && path_matches(request_path, c.path.as_str()))
+		.map(|c| (c.name.clone(), c.value.clone()))
+		.collect();
 	pairs.sort_by(|a, b| a.0.cmp(&b.0));
 	pairs
 		.into_iter()
 		.map(|(k, v)| format!("{}={}", k, v))
 		.collect::<Vec<String>>()
 		.join("; ")
+}
+
+fn looks_like_login_page(html: &str) -> bool {
+	html.contains("name=\"login_id\"")
+		|| html.contains("id=\"form_id\"")
+		|| html.contains("ログインID")
+		|| html.contains("password")
 }
 
 fn build_login_form_body(token: &str, username: &str, password: &str) -> String {
@@ -378,7 +451,7 @@ fn probe_session_cookie(cookie_header: &str) -> Result<()> {
 fn login_from_settings() -> Result<()> {
 	let (username, password) = settings::get_credentials().ok_or_else(|| {
 		error!(
-			"Missing DLsite credentials. Open source settings and run Login first."
+			"Missing DLsite credentials. Set username/password in source settings."
 		)
 	})?;
 	login_with_credentials(username.as_str(), password.as_str())
@@ -391,13 +464,13 @@ pub fn login_with_credentials(username: &str, password: &str) -> Result<()> {
 		bail!("DLsite username and password are required.");
 	}
 
-	let mut cookies: Vec<(String, String)> = Vec::new();
+	let mut cookies: Vec<CookieEntry> = Vec::new();
 
 	let login_page_url = format!("{}?user=self", LOGIN_URL);
 	let login_page = Request::get(login_page_url.as_str())?
 		.header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
 		.send()?;
-	ingest_response_cookies(&login_page, &mut cookies);
+	ingest_response_cookies(&login_page, LOGIN_HOST, &mut cookies);
 	let login_page_status = login_page.status_code();
 	let login_page_data = login_page.get_data()?;
 	ensure_ok("login_page", login_page_status, &login_page_data)?;
@@ -405,16 +478,20 @@ pub fn login_with_credentials(username: &str, password: &str) -> Result<()> {
 		.map_err(|_| error!("Failed to decode DLsite login page as utf-8"))?;
 	let token = parse_login_token(login_page_html)
 		.ok_or_else(|| error!("Failed to find DLsite login form token"))?;
+	let login_cookie = build_cookie_header_for_host(&cookies, LOGIN_HOST, "/login");
 
 	let form_body = build_login_form_body(token.as_str(), username, password);
-	let login_response = Request::post(LOGIN_URL)?
+	let mut login_req = Request::post(LOGIN_URL)?
 		.header("Origin", LOGIN_ORIGIN)
 		.header("Referer", login_page_url.as_str())
 		.header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
 		.header("Content-Type", "application/x-www-form-urlencoded")
-		.body(form_body.as_bytes())
-		.send()?;
-	ingest_response_cookies(&login_response, &mut cookies);
+		.body(form_body.as_bytes());
+	if !login_cookie.is_empty() {
+		login_req = login_req.header("Cookie", login_cookie.as_str());
+	}
+	let login_response = login_req.send()?;
+	ingest_response_cookies(&login_response, LOGIN_HOST, &mut cookies);
 	let login_status = login_response.status_code();
 	let login_data = login_response.get_data()?;
 	if !status_is_ok_or_redirect(login_status) {
@@ -424,12 +501,20 @@ pub fn login_with_credentials(username: &str, password: &str) -> Result<()> {
 			login_status
 		);
 	}
+	let login_html = str::from_utf8(&login_data).unwrap_or_default();
+	if looks_like_login_page(login_html) {
+		bail!("DLsite credential login did not complete. Verify username/password.");
+	}
 
-	let play_login = Request::get(PLAY_LOGIN_URL)?
+	let play_cookie = build_cookie_header_for_host(&cookies, PLAY_HOST, "/login");
+	let mut play_login_req = Request::get(PLAY_LOGIN_URL)?
 		.header("Referer", LOGIN_URL)
-		.header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-		.send()?;
-	ingest_response_cookies(&play_login, &mut cookies);
+		.header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+	if !play_cookie.is_empty() {
+		play_login_req = play_login_req.header("Cookie", play_cookie.as_str());
+	}
+	let play_login = play_login_req.send()?;
+	ingest_response_cookies(&play_login, PLAY_HOST, &mut cookies);
 	let play_login_status = play_login.status_code();
 	let play_login_data = play_login.get_data()?;
 	if !status_is_ok_or_redirect(play_login_status) {
@@ -437,11 +522,15 @@ pub fn login_with_credentials(username: &str, password: &str) -> Result<()> {
 		bail!("Failed to establish DLsite Play session (HTTP {}).", play_login_status);
 	}
 
-	let authorize = Request::get(PLAY_AUTHORIZE_URL)?
+	let authorize_cookie = build_cookie_header_for_host(&cookies, PLAY_HOST, "/api/authorize");
+	let mut authorize_req = Request::get(PLAY_AUTHORIZE_URL)?
 		.header("Referer", PLAY_REFERER)
-		.header("Accept", "application/json")
-		.send()?;
-	ingest_response_cookies(&authorize, &mut cookies);
+		.header("Accept", "application/json");
+	if !authorize_cookie.is_empty() {
+		authorize_req = authorize_req.header("Cookie", authorize_cookie.as_str());
+	}
+	let authorize = authorize_req.send()?;
+	ingest_response_cookies(&authorize, PLAY_HOST, &mut cookies);
 	let authorize_status = authorize.status_code();
 	let authorize_data = authorize.get_data()?;
 	if !status_is_ok_or_redirect(authorize_status) {
@@ -449,9 +538,12 @@ pub fn login_with_credentials(username: &str, password: &str) -> Result<()> {
 		bail!("DLsite Play authorize failed (HTTP {}).", authorize_status);
 	}
 
-	let cookie_header = build_cookie_header(&cookies);
+	let cookie_header = build_cookie_header_for_host(&cookies, PLAY_HOST, "/");
 	if !cookie_header.contains("play_session=") {
 		bail!("DLsite login succeeded but no play_session cookie was returned.");
+	}
+	if !cookie_header.contains("XSRF-TOKEN=") {
+		bail!("DLsite login succeeded but no XSRF-TOKEN cookie was returned.");
 	}
 
 	settings::set_web_cookies(cookie_header.as_str());
