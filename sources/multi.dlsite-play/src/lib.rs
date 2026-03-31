@@ -1,7 +1,7 @@
 #![no_std]
 
 use aidoku::{
-	alloc::{format, string::ToString, vec, String, Vec},
+	alloc::{collections::BTreeMap, format, string::ToString, vec, String, Vec},
 	imports::{canvas::ImageRef, net::Request, std::{current_date, print}},
 	prelude::*,
 	register_source, Chapter, FilterValue, HashMap, ImageRequestProvider, ImageResponse, Listing,
@@ -33,7 +33,8 @@ impl Source for DlsitePlay {
 	) -> Result<MangaPageResult> {
 		let work_types = extract_work_type_filter(&filters);
 		let translation_filter = extract_translation_filter(&filters);
-		get_manga_list_inner(query, page, work_types, translation_filter)
+		let genre_filter = extract_genre_filter(&filters);
+		get_manga_list_inner(query, page, work_types, translation_filter, genre_filter)
 	}
 
 	fn get_manga_update(
@@ -45,11 +46,14 @@ impl Source for DlsitePlay {
 		let mut release_date: Option<i64> = None;
 
 		if needs_details || needs_chapters {
-			let works = api::get_works(&[manga.key.clone()])?;
-			if let Some(work) = works.into_iter().next() {
+			let resp = api::get_works(&[manga.key.clone()])?;
+			let series = resp.series;
+			if let Some(work) = resp.works.into_iter().next() {
 				release_date = work.release_date_timestamp();
 				if needs_details {
-					let updated: Manga = work.into();
+					let genre_names = resolve_genre_names(&[&work]);
+					let series_names = build_series_lookup(&series);
+					let updated = work.into_manga(&genre_names, &series_names);
 					manga.copy_from(updated);
 
 					// Enrich with language editions from public API (cached)
@@ -147,7 +151,7 @@ impl ListingProvider for DlsitePlay {
 			"purchases" => Vec::new(),
 			wt => vec![wt.to_string()],
 		};
-		get_manga_list_inner(None, page, work_types, None)
+		get_manga_list_inner(None, page, work_types, None, None)
 	}
 }
 
@@ -275,12 +279,86 @@ impl PageImageProcessor for DlsitePlay {
 // Helpers
 // ---------------------------------------------------------------------------
 
+/// Resolve genre IDs to localized names, using the persistent cache.
+/// Fetches only IDs not already in the cache.
+fn resolve_genre_names(works: &[&models::PurchaseWork]) -> BTreeMap<u32, String> {
+	let mut lookup = BTreeMap::new();
+
+	// Load existing cache
+	if let Some(cached) = settings::get_cached_genres() {
+		for pair in cached.split('\n') {
+			if let Some((id_str, name)) = pair.split_once(':') {
+				if let Ok(id) = id_str.parse::<u32>() {
+					lookup.insert(id, name.into());
+				}
+			}
+		}
+	}
+
+	// Collect IDs we still need to fetch
+	let mut missing: Vec<u32> = Vec::new();
+	for w in works {
+		for gid in &w.genre_ids {
+			if !lookup.contains_key(gid) && !missing.contains(gid) {
+				missing.push(*gid);
+			}
+		}
+	}
+
+	if missing.is_empty() {
+		return lookup;
+	}
+
+	// Fetch missing genres
+	if let Ok(genres) = api::get_genres(&missing) {
+		for g in &genres {
+			if let Some(ref name) = g.name {
+				lookup.insert(g.id, name.best());
+			}
+		}
+
+		// Persist updated cache
+		let cache_str: String = lookup
+			.iter()
+			.map(|(id, name)| format!("{}:{}", id, name))
+			.collect::<Vec<_>>()
+			.join("\n");
+		settings::set_cached_genres(&cache_str);
+	}
+
+	lookup
+}
+
+/// Build a series title_id → name lookup from the top-level series array.
+fn build_series_lookup(series: &[models::SeriesInfo]) -> BTreeMap<String, String> {
+	let mut map = BTreeMap::new();
+	for s in series {
+		map.insert(s.title_id.clone(), s.name.clone());
+	}
+	map
+}
+
+/// Convert a batch of works into Manga entries with resolved genres and series.
+fn works_to_manga(
+	works: Vec<models::PurchaseWork>,
+	series: &[models::SeriesInfo],
+) -> Vec<Manga> {
+	let work_refs: Vec<&models::PurchaseWork> = works.iter().collect();
+	let genre_names = resolve_genre_names(&work_refs);
+	let series_names = build_series_lookup(series);
+	works
+		.into_iter()
+		.map(|w| w.into_manga(&genre_names, &series_names))
+		.collect()
+}
+
 /// Core listing/search implementation shared by search and listing providers.
 fn get_manga_list_inner(
 	query: Option<String>,
 	page: i32,
 	work_types: Vec<String>,
 	translation_filter: Option<String>,
+	genre_filter: Option<String>,
 ) -> Result<MangaPageResult> {
 	let worknos = get_or_fetch_worknos(page)?;
 
@@ -295,13 +373,22 @@ fn get_manga_list_inner(
 	let start = page_idx * PAGE_SIZE;
 
 	let has_query = query.is_some();
-	let has_filter = !work_types.is_empty() || translation_filter.is_some();
+	let has_filter = !work_types.is_empty()
+		|| translation_filter.is_some()
+		|| genre_filter.is_some();
 
 	if has_query || has_filter {
-		let all_works = api::get_works(&worknos)?;
+		let resp = api::get_works(&worknos)?;
 		let q_lower = query.as_ref().map(|q| q.to_lowercase());
 
-		let filtered: Vec<Manga> = all_works
+		// Resolve genres for filtering
+		let work_refs: Vec<&models::PurchaseWork> = resp.works.iter().collect();
+		let genre_names = resolve_genre_names(&work_refs);
+		let series_names = build_series_lookup(&resp.series);
+		let genre_filter_lower = genre_filter.as_ref().map(|g| g.to_lowercase());
+
+		let filtered: Vec<Manga> = resp
+			.works
 			.into_iter()
 			.filter(|w| {
 				if let Some(ref q_lower) = q_lower {
@@ -340,9 +427,20 @@ fn get_manga_list_inner(
 						_ => {}
 					}
 				}
+				if let Some(ref gf) = genre_filter_lower {
+					let has_genre = w.genre_ids.iter().any(|gid| {
+						genre_names
+							.get(gid)
+							.map(|name| name.to_lowercase().contains(gf.as_str()))
+							.unwrap_or(false)
+					});
+					if !has_genre {
+						return false;
+					}
+				}
 				true
 			})
-			.map(|w| w.into())
+			.map(|w| w.into_manga(&genre_names, &series_names))
 			.collect();
 
 		let total = filtered.len();
@@ -370,8 +468,8 @@ fn get_manga_list_inner(
 
 		let end = (start + PAGE_SIZE).min(worknos.len());
 		let page_worknos: Vec<String> = worknos[start..end].to_vec();
-		let works = api::get_works(&page_worknos)?;
-		let entries: Vec<Manga> = works.into_iter().map(|w| w.into()).collect();
+		let resp = api::get_works(&page_worknos)?;
+		let entries = works_to_manga(resp.works, &resp.series);
 
 		Ok(MangaPageResult {
 			entries,
@@ -464,6 +562,17 @@ fn extract_translation_filter(filters: &[FilterValue]) -> Option<String> {
 	for f in filters {
 		if let FilterValue::Select { id, value } = f {
 			if id == "translation" && value != "all" {
+				return Some(value.clone());
+			}
+		}
+	}
+	None
+}
+
+fn extract_genre_filter(filters: &[FilterValue]) -> Option<String> {
+	for f in filters {
+		if let FilterValue::Text { id, value } = f {
+			if id == "genre" && !value.is_empty() {
 				return Some(value.clone());
 			}
 		}

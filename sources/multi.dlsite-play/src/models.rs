@@ -251,13 +251,17 @@ impl LocalizedName {
 }
 
 #[derive(Deserialize, Clone)]
+#[allow(dead_code)]
 pub struct MakerInfo {
 	pub id: String,
 	#[serde(default)]
 	pub name: Option<LocalizedName>,
+	#[serde(default)]
+	pub name_phonetic: Option<LocalizedName>,
 }
 
 #[derive(Deserialize, Clone)]
+#[allow(dead_code)]
 pub struct WorkFilesInfo {
 	#[serde(default)]
 	pub main: Option<String>,
@@ -266,45 +270,133 @@ pub struct WorkFilesInfo {
 }
 
 #[derive(Deserialize, Clone)]
+#[allow(dead_code)]
 pub struct WorkTag {
 	#[serde(default)]
 	pub name: Option<String>,
 	#[serde(default, rename = "class")]
 	pub tag_class: Option<String>,
+	#[serde(default)]
+	pub sub_class: Option<String>,
 }
 
 #[derive(Deserialize, Clone)]
+#[allow(dead_code)]
+pub struct TranslatorInfo {
+	pub id: String,
+	#[serde(default)]
+	pub name: Option<LocalizedName>,
+	#[serde(default)]
+	pub name_phonetic: Option<LocalizedName>,
+}
+
+#[derive(Deserialize, Clone)]
+pub struct WorkSeries {
+	pub title_id: String,
+	#[serde(default)]
+	pub volume_number: Option<u32>,
+}
+
+#[derive(Deserialize, Clone)]
+#[allow(dead_code)]
+pub struct GenreInfo {
+	pub id: u32,
+	#[serde(default)]
+	pub category_id: Option<u32>,
+	#[serde(default)]
+	pub sort: Option<u32>,
+	#[serde(default)]
+	pub name: Option<LocalizedName>,
+}
+
+#[derive(Deserialize, Clone)]
+#[allow(dead_code)]
+pub struct GenreCategory {
+	pub id: u32,
+	#[serde(default)]
+	pub sort: Option<u32>,
+	#[serde(default)]
+	pub name: Option<LocalizedName>,
+}
+
+#[derive(Deserialize)]
+#[allow(dead_code)]
+pub struct GenresResponse {
+	#[serde(default)]
+	pub genres: Vec<GenreInfo>,
+	#[serde(default)]
+	pub categories: Vec<GenreCategory>,
+}
+
+#[derive(Deserialize, Clone)]
+#[allow(dead_code)]
 pub struct PurchaseWork {
 	pub workno: String,
 	#[serde(default)]
 	pub name: Option<LocalizedName>,
 	#[serde(default)]
+	pub name_phonetic: Option<LocalizedName>,
+	#[serde(default)]
 	pub maker: Option<MakerInfo>,
 	#[serde(default)]
-	pub age_category: Option<String>,
+	pub translator: Option<TranslatorInfo>,
+	#[serde(default)]
+	pub author_name: Option<String>,
 	#[serde(default)]
 	pub work_type: Option<String>,
 	#[serde(default)]
+	pub file_type: Option<String>,
+	#[serde(default)]
+	pub age_category: Option<String>,
+	#[serde(default)]
+	pub dl_format: Option<u32>,
+	#[serde(default)]
+	pub site_id: Option<String>,
+	#[serde(default)]
+	pub content_length: Option<u64>,
+	#[serde(default)]
+	pub content_count: Option<u32>,
+	#[serde(default)]
+	pub content_size: Option<u64>,
+	#[serde(default)]
+	pub touch_content_count: Option<u32>,
+	#[serde(default)]
+	pub touch_site_id: Option<String>,
+	#[serde(default)]
+	pub os: Option<Vec<String>>,
+	#[serde(default)]
 	pub work_files: Option<WorkFilesInfo>,
 	#[serde(default)]
-	pub author_name: Option<String>,
+	pub is_playwork: Option<bool>,
+	#[serde(default)]
+	pub downloadable: Option<bool>,
+	#[serde(default)]
+	pub encodable: Option<bool>,
+	#[serde(default)]
+	pub app_type: Option<String>,
+	#[serde(default)]
+	pub viewer_type: Option<String>,
+	#[serde(default)]
+	pub tags: Option<Vec<WorkTag>>,
 	#[serde(default)]
 	pub regist_date: Option<String>,
 	#[serde(default)]
 	pub upgrade_date: Option<String>,
 	#[serde(default)]
-	pub tags: Option<Vec<WorkTag>>,
-	#[serde(default)]
 	pub sales_date: Option<String>,
 	#[serde(default)]
-	pub translator: Option<String>,
+	pub genre_ids: Vec<u32>,
+	#[serde(default)]
+	pub series: Option<WorkSeries>,
+	#[serde(default)]
+	pub purchase_type: Option<u32>,
+	#[serde(default)]
+	pub download_start_date: Option<String>,
 }
 
 impl PurchaseWork {
 	pub fn has_translator(&self) -> bool {
-		self.translator
-			.as_ref()
-			.map_or(false, |t| !t.trim().is_empty())
+		self.translator.is_some()
 	}
 
 	pub fn cover_url(&self) -> Option<String> {
@@ -380,16 +472,29 @@ fn days_from_civil(year: i32, month: u32, day: u32) -> Option<i64> {
 	Some(days)
 }
 
-impl From<PurchaseWork> for Manga {
-	fn from(work: PurchaseWork) -> Self {
-		let title = work
+fn format_size(bytes: u64) -> String {
+	if bytes >= 1_073_741_824 {
+		format!("{:.1} GB", bytes as f64 / 1_073_741_824.0)
+	} else {
+		format!("{:.1} MB", bytes as f64 / 1_048_576.0)
+	}
+}
+
+impl PurchaseWork {
+	/// Convert into a [`Manga`], using pre-resolved genre and series lookups.
+	pub fn into_manga(
+		self,
+		genre_names: &BTreeMap<u32, String>,
+		series_names: &BTreeMap<String, String>,
+	) -> Manga {
+		let title = self
 			.name
 			.as_ref()
 			.map(|n| n.best())
-			.unwrap_or_else(|| work.workno.clone());
+			.unwrap_or_else(|| self.workno.clone());
 
 		// -- Circle --
-		let circle_name = work
+		let circle_name = self
 			.maker
 			.as_ref()
 			.and_then(|m| m.name.as_ref())
@@ -397,7 +502,7 @@ impl From<PurchaseWork> for Manga {
 
 		// -- Credits from author_name + tag classes --
 		let mut author_list: Vec<String> = Vec::new();
-		if let Some(ref name) = work.author_name {
+		if let Some(ref name) = self.author_name {
 			for part in name.split('/') {
 				let trimmed = part.trim();
 				if !trimmed.is_empty() {
@@ -405,16 +510,16 @@ impl From<PurchaseWork> for Manga {
 				}
 			}
 		}
-		let created_by = work.tags_by_class("created_by");
+		let created_by = self.tags_by_class("created_by");
 		for name in &created_by {
 			if !author_list.contains(name) {
 				author_list.push(name.clone());
 			}
 		}
 
-		let scenario_by = work.tags_by_class("scenario_by");
-		let illust_by = work.tags_by_class("illust_by");
-		let translated_by = work.tags_by_class("translated_by");
+		let scenario_by = self.tags_by_class("scenario_by");
+		let illust_by = self.tags_by_class("illust_by");
+		let translated_by = self.tags_by_class("translated_by");
 
 		// Manga.authors = author + scenario credits
 		let mut authors: Vec<String> = author_list.clone();
@@ -436,15 +541,27 @@ impl From<PurchaseWork> for Manga {
 			Some(illust_by.clone())
 		};
 
-		// -- Tags: genre tags + work type label --
+		// -- Tags: work type label + translated + genre_ids + tag names --
 		let mut tag_list: Vec<String> = Vec::new();
-		if let Some(label) = work.work_type_label() {
+		if let Some(label) = self.work_type_label() {
 			tag_list.push(label.into());
 		}
-		if work.has_translator() {
+		if self.has_translator() {
 			tag_list.push("Translated".into());
 		}
-		if let Some(ref tags) = work.tags {
+		if self.is_playwork == Some(false) {
+			tag_list.push("Not Playable".into());
+		}
+		// Resolved genre names from genre_ids
+		for gid in &self.genre_ids {
+			if let Some(name) = genre_names.get(gid) {
+				if !tag_list.contains(name) {
+					tag_list.push(name.clone());
+				}
+			}
+		}
+		// Tag names from the tags array (non-credit tags)
+		if let Some(ref tags) = self.tags {
 			for t in tags {
 				let is_credit_tag = matches!(
 					t.tag_class.as_deref(),
@@ -485,10 +602,25 @@ impl From<PurchaseWork> for Manga {
 		}
 		if !translated_by.is_empty() {
 			desc_lines.push(format!("Translation: {}", translated_by.join(", ")));
-		} else if let Some(ref translator) = work.translator {
-			let t = translator.trim();
-			if !t.is_empty() {
-				desc_lines.push(format!("Translator: {}", t));
+		} else if let Some(ref translator) = self.translator {
+			if let Some(ref name) = translator.name {
+				desc_lines.push(format!("Translator: {}", name.best()));
+			}
+		}
+		// Series info
+		if let Some(ref ws) = self.series {
+			if let Some(series_name) = series_names.get(&ws.title_id) {
+				let line = match ws.volume_number {
+					Some(vol) => format!("Series: {} (Vol. {})", series_name, vol),
+					None => format!("Series: {}", series_name),
+				};
+				desc_lines.push(line);
+			}
+		}
+		// File size
+		if let Some(size) = self.content_size {
+			if size > 0 {
+				desc_lines.push(format!("Size: {}", format_size(size)));
 			}
 		}
 
@@ -498,24 +630,29 @@ impl From<PurchaseWork> for Manga {
 			Some(desc_lines.join("\n"))
 		};
 
-		// -- Content rating & viewer --
-		let content_rating = match work.age_category.as_deref() {
+		// -- Content rating --
+		let content_rating = match self.age_category.as_deref() {
 			Some("R18") | Some("r18") => ContentRating::NSFW,
 			Some("R15") | Some("r15") => ContentRating::Suggestive,
 			_ => ContentRating::Safe,
 		};
 
-		let viewer = match work.work_type.as_deref() {
-			Some("MNG") | Some("WBT") => Viewer::RightToLeft,
+		// -- Viewer: prefer viewer_type, fall back to work_type --
+		let viewer = match self.viewer_type.as_deref() {
+			Some("ebook_fixed_v2") => Viewer::RightToLeft,
+			Some("play") => match self.work_type.as_deref() {
+				Some("WBT") => Viewer::Webtoon,
+				_ => Viewer::RightToLeft,
+			},
 			_ => Viewer::LeftToRight,
 		};
 
-		let url = Some(format!("https://play.dlsite.com/work/{}/tree", work.workno));
+		let url = Some(format!("https://play.dlsite.com/work/{}/tree", self.workno));
 
 		Manga {
-			key: work.workno.clone(),
+			key: self.workno.clone(),
 			title,
-			cover: work.cover_url(),
+			cover: self.cover_url(),
 			authors,
 			artists,
 			description,
@@ -544,10 +681,26 @@ pub struct SalesEntry {
 // Works response wrapper from POST /api/v3/content/works
 // ---------------------------------------------------------------------------
 
+#[derive(Deserialize, Clone)]
+#[allow(dead_code)]
+pub struct SeriesInfo {
+	pub id: u64,
+	pub title_id: String,
+	pub name: String,
+	#[serde(default)]
+	pub name_phonetic: Option<String>,
+	#[serde(default)]
+	pub total: Option<u32>,
+	#[serde(default)]
+	pub maker: Option<MakerInfo>,
+}
+
 #[derive(Deserialize)]
 pub struct WorksResponse {
 	#[serde(default)]
 	pub works: Vec<PurchaseWork>,
+	#[serde(default)]
+	pub series: Vec<SeriesInfo>,
 }
 
 // ---------------------------------------------------------------------------

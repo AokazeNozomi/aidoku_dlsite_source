@@ -13,5 +13,10 @@
 		"type": "select",
 		"options": ["All", "Translated Only", "Original Only"],
 		"ids": ["all", "translated", "original"]
+	},
+	{
+		"id": "genre",
+		"title": "Genre",
+		"type": "text"
 	}
 ]

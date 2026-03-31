@@ -68,6 +68,22 @@ pub fn clear_web_cookies() {
 	defaults_set(WEB_COOKIES_KEY, DefaultValue::Null);
 }
 
+const CACHED_GENRES_KEY: &str = "cached_genres";
+
+/// Store resolved genre ID→name pairs as `"id:name,id:name,..."`.
+pub fn set_cached_genres(value: &str) {
+	defaults_set(
+		CACHED_GENRES_KEY,
+		DefaultValue::String(String::from(value)),
+	);
+}
+
+/// Retrieve cached genre ID→name pairs.
+/// Returns empty string if no cache exists.
+pub fn get_cached_genres() -> Option<String> {
+	defaults_get::<String>(CACHED_GENRES_KEY).filter(|s| !s.is_empty())
+}
+
 fn lang_cache_key(workno: &str) -> String {
 	format!("lang_{}", workno)
 }

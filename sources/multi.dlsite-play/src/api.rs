@@ -1,6 +1,6 @@
 use crate::models::{
-	DownloadToken, LanguageEdition, ProductInfo, PurchaseWork, RawZipTree, SalesEntry,
-	WorksResponse, ZipTree,
+	DownloadToken, GenreInfo, GenresResponse, LanguageEdition, ProductInfo, PurchaseWork,
+	RawZipTree, SalesEntry, WorksResponse, ZipTree,
 };
 use crate::settings;
 use aidoku::{
@@ -188,8 +188,10 @@ pub fn get_sales() -> Result<Vec<SalesEntry>> {
 
 /// Fetch full work metadata for a batch of work IDs.
 /// The Play API accepts up to 100 work IDs per request.
-pub fn get_works(worknos: &[String]) -> Result<Vec<PurchaseWork>> {
+/// Returns the combined `WorksResponse` (works + series).
+pub fn get_works(worknos: &[String]) -> Result<WorksResponse> {
 	let mut all_works: Vec<PurchaseWork> = Vec::new();
+	let mut all_series = Vec::new();
 
 	for (chunk_idx, chunk) in worknos.chunks(100).enumerate() {
 		let url = format!("{}/content/works", PLAY_API);
@@ -216,9 +218,54 @@ pub fn get_works(worknos: &[String]) -> Result<Vec<PurchaseWork>> {
 			)
 		})?;
 		all_works.extend(parsed.works);
+		all_series.extend(parsed.series);
 	}
 
-	Ok(all_works)
+	Ok(WorksResponse {
+		works: all_works,
+		series: all_series,
+	})
+}
+
+/// Resolve numeric genre IDs to localized names.
+/// `POST /api/v3/genres` with body `{"genre_ids": [...]}`.
+/// No authentication required.
+pub fn get_genres(ids: &[u32]) -> Result<Vec<GenreInfo>> {
+	let mut all_genres: Vec<GenreInfo> = Vec::new();
+
+	for (chunk_idx, chunk) in ids.chunks(100).enumerate() {
+		let url = format!("{}/genres", PLAY_API);
+		let wrapper = serde_json::to_vec(&GenreRequest { genre_ids: chunk })
+			.map_err(|_| error!("Failed to serialize genre IDs"))?;
+		let resp = play_post_json(url.as_str(), &wrapper)?.send()?;
+		let status = resp.status_code();
+		let data = resp.get_data()?;
+		let op = format!("get_genres chunk {}", chunk_idx);
+		ensure_ok(&op, status, &data)?;
+		let parsed: GenresResponse = serde_json::from_slice(&data).map_err(|e| {
+			print(format!(
+				"[dlsite-play] get_genres parse error chunk={} {} status={} preview: {}",
+				chunk_idx,
+				e,
+				status,
+				body_preview(&data)
+			));
+			error!(
+				"Failed to parse genres response: {} ({} bytes)",
+				e,
+				data.len()
+			)
+		})?;
+		all_genres.extend(parsed.genres);
+	}
+
+	Ok(all_genres)
+}
+
+/// Serialization wrapper for `POST /api/v3/genres` request body.
+#[derive(serde::Serialize)]
+struct GenreRequest<'a> {
+	genre_ids: &'a [u32],
 }
 
 /// Get a download token for a specific work.
