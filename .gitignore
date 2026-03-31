@@ -18,3 +18,4 @@ templates/*/target
 /.playwright-mcp
 /.cursor
 /scripts
+tests/full_cookies.txt

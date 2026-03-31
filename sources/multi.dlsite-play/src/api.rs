@@ -2,7 +2,7 @@ use crate::models::{DownloadToken, PurchaseWork, RawZipTree, SalesEntry, WorksRe
 use crate::settings;
 use aidoku::{
 	alloc::{format, String, Vec},
-	imports::{net::{Request, Response}, std::print},
+	imports::{net::Request, std::print},
 	prelude::*,
 	Result,
 };
@@ -16,7 +16,6 @@ const PLAY_IMAGE_USER_AGENT: &str = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 lik
 
 const PLAY_API: &str = "https://play.dlsite.com/api/v3";
 const PLAY_DL_API: &str = "https://play.dl.dlsite.com/api/v3";
-const PLAY_AUTHORIZE_URL: &str = "https://play.dlsite.com/api/authorize";
 
 fn hex_digit(b: u8) -> Option<u8> {
 	match b {
@@ -63,94 +62,10 @@ fn accept_for_url(url: &str) -> &'static str {
 	if url.contains("/api/v3/") {
 		return "application/json";
 	}
-	if url.contains("/api/authorize") {
-		return "*/*";
-	}
 	if url.contains("/api/") {
 		return "application/json";
 	}
 	"*/*"
-}
-
-/// Extract a cookie value by name from a `Set-Cookie` header.
-///
-/// Aidoku may join multiple `Set-Cookie` headers with `", "`.  We only need
-/// `play_session` from `/api/authorize`, so a targeted scan is sufficient.
-fn extract_set_cookie_value(resp: &Response, target: &str) -> Option<String> {
-	let raw = resp
-		.get_header("Set-Cookie")
-		.or_else(|| resp.get_header("set-cookie"))?;
-	for segment in raw.split(',') {
-		let cookie_part = segment.split(';').next()?.trim();
-		let (name, value) = cookie_part.split_once('=')?;
-		if name.trim().eq_ignore_ascii_case(target) {
-			return Some(String::from(value.trim()));
-		}
-	}
-	None
-}
-
-/// Replace a cookie value in a `name=val; name2=val2` header string.
-fn replace_cookie_value(header: &str, target: &str, new_value: &str) -> String {
-	let mut parts: Vec<String> = Vec::new();
-	let mut replaced = false;
-	for part in header.split(';') {
-		let p = part.trim();
-		if let Some((name, _)) = p.split_once('=') {
-			if name.trim().eq_ignore_ascii_case(target) {
-				parts.push(format!("{}={}", name.trim(), new_value));
-				replaced = true;
-				continue;
-			}
-		}
-		if !p.is_empty() {
-			parts.push(String::from(p));
-		}
-	}
-	if !replaced {
-		parts.push(format!("{}={}", target, new_value));
-	}
-	parts.join("; ")
-}
-
-/// Bind the WebView session to the Play API.
-///
-/// The Aidoku WebView may capture cookies before the SPA calls `/api/authorize`,
-/// leaving the session unbound for API use.  This single GET binds it and
-/// persists the rotated `play_session` from the response.
-///
-/// **Only `/api/authorize`** is called (NOT `/login/`, which causes session
-/// invalidation via server-side regeneration).
-pub(crate) fn authorize_play_session() -> Result<()> {
-	let Some(cookies) = settings::get_web_cookies() else {
-		return Ok(());
-	};
-	print(format!("[dlsite-play] → GET {}", PLAY_AUTHORIZE_URL));
-	let req = Request::get(PLAY_AUTHORIZE_URL)?
-		.header("User-Agent", PLAY_AIOHTTP_USER_AGENT)
-		.header("Referer", PLAY_REFERER)
-		.header("Accept", "*/*")
-		.header("Cookie", cookies.as_str());
-	let resp = req.send()?;
-	let status = resp.status_code();
-	// Persist rotated play_session before consuming the body.
-	if let Some(new_session) = extract_set_cookie_value(&resp, "play_session") {
-		let updated = replace_cookie_value(&cookies, "play_session", &new_session);
-		settings::set_web_cookies(&updated);
-		print(format!(
-			"[dlsite-play] authorize: persisted rotated play_session ({} chars)",
-			updated.len()
-		));
-	}
-	let _ = resp.get_data();
-	print(format!(
-		"[dlsite-play] authorize HTTP {}",
-		status
-	));
-	if status == 401 {
-		bail!("authorize HTTP 401: complete web login again.");
-	}
-	Ok(())
 }
 
 fn play_api_get_with_cookie(url: &str, cookie_override: Option<&str>) -> Result<Request> {

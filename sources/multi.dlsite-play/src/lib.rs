@@ -134,24 +134,42 @@ impl WebLoginHandler for DlsitePlay {
 			bail!("Invalid login key: `{key}`");
 		}
 
+		let play_session = cookies.get("play_session");
+
+		// Aidoku's WebView fires cookiesDidChange continuously. The initial
+		// redirect sets an encrypted play_session (Laravel EncryptCookies
+		// middleware — value starts with "eyJ", base64 for `{"iv":…`).
+		// Returning true here dismisses the WebView, which kills the SPA
+		// before it can call /api/authorize to bind the session.
+		//
+		// Wait for the SPA's /api/authorize to replace the cookie with a
+		// plain session ID (~40 chars). Aidoku calls handle_web_login again
+		// when the cookie changes.
+		if let Some(ps) = play_session {
+			if ps.starts_with("eyJ") {
+				print(format!(
+					"[dlsite-play] web login: play_session still encrypted ({} chars), waiting for SPA to authorize",
+					ps.len()
+				));
+				return Ok(false);
+			}
+		}
+
 		let mut keys: Vec<&str> = cookies.keys().map(|s| s.as_str()).collect();
 		keys.sort();
 		let mut cookie_pairs: Vec<String> = Vec::new();
 		for name in &keys {
 			if let Some(value) = cookies.get(*name) {
-				print(format!(
-					"[dlsite-play] web login cookie `{}` = `{}`",
-					name, value
-				));
 				cookie_pairs.push(format!("{}={}", name, value));
 			}
 		}
 
-		let has_session = cookies.contains_key("play_session");
+		let has_session = play_session.is_some();
 		print(format!(
-			"[dlsite-play] web login summary count={} has_play_session={}",
+			"[dlsite-play] web login summary count={} has_play_session={} session_len={}",
 			cookies.len(),
 			has_session,
+			play_session.map(|s| s.len()).unwrap_or(0),
 		));
 
 		settings::set_logged_in(has_session);
@@ -163,12 +181,6 @@ impl WebLoginHandler for DlsitePlay {
 				"[dlsite-play] web login stored Cookie header ({} chars)",
 				cookie_header.len()
 			));
-			if let Err(e) = api::authorize_play_session() {
-				print(format!(
-					"[dlsite-play] authorize_play_session after web login: {:?}",
-					e
-				));
-			}
 			settings::clear_cached_worknos();
 			settings::clear_cached_page();
 		} else {
