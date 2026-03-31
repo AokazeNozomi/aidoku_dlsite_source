@@ -15,6 +15,8 @@ const PLAY_USER_AGENT: &str = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac 
 
 const PLAY_API: &str = "https://play.dlsite.com/api/v3";
 const PLAY_DL_API: &str = "https://play.dl.dlsite.com/api/v3";
+/// Binds DLsite account to Play API session (`dlsite-async` `PlayAPI.login`). Never merge `Set-Cookie` from this response.
+const PLAY_AUTHORIZE_URL: &str = "https://play.dlsite.com/api/authorize";
 
 fn hex_digit(b: u8) -> Option<u8> {
 	match b {
@@ -57,10 +59,59 @@ fn xsrf_token_for_header(cookie_header: &str) -> Option<String> {
 	None
 }
 
+fn sec_fetch_metadata(url: &str) -> (&'static str, &'static str, &'static str) {
+	let site = if url.starts_with("https://play.dlsite.com/") {
+		"same-origin"
+	} else if url.contains("play.dl.dlsite.com") {
+		"same-site"
+	} else {
+		"cross-site"
+	};
+	(site, "cors", "empty")
+}
+
+fn accept_for_url(url: &str) -> &'static str {
+	if url.contains("/api/v3/") {
+		return "application/json";
+	}
+	if url.contains("/api/authorize") {
+		return "*/*";
+	}
+	if url.contains("/api/") {
+		return "application/json";
+	}
+	"*/*"
+}
+
+/// `GET /api/authorize` with current cookies; does **not** persist `Set-Cookie` (Aidoku header is unreliable).
+pub(crate) fn prime_play_api_session() -> Result<()> {
+	if settings::get_web_cookies().is_none() {
+		return Ok(());
+	}
+	let resp = play_authenticated_get(PLAY_AUTHORIZE_URL)?.send()?;
+	let status = resp.status_code();
+	let _ = resp.get_data();
+	print(format!(
+		"[dlsite-play] prime_play_api_session /api/authorize HTTP {}",
+		status
+	));
+	if status == 401 {
+		bail!("authorize HTTP 401: complete web login again.");
+	}
+	if status >= 400 {
+		print(format!(
+			"[dlsite-play] prime_play_api_session non-success status={}, continuing",
+			status
+		));
+	}
+	Ok(())
+}
+
 fn play_authenticated_get_with_cookie(url: &str, cookie_override: Option<&str>) -> Result<Request> {
 	let cookie_str = cookie_override.map(String::from).or_else(settings::get_web_cookies);
 	let xsrf = cookie_str.as_deref().and_then(xsrf_token_for_header);
 	let accept = accept_for_url(url);
+	let (sf_site, sf_mode, sf_dest) = sec_fetch_metadata(url);
 	log_outgoing_request(
 		"GET",
 		url,
@@ -68,6 +119,9 @@ fn play_authenticated_get_with_cookie(url: &str, cookie_override: Option<&str>) 
 			("User-Agent", PLAY_USER_AGENT),
 			("Referer", PLAY_REFERER),
 			("Origin", PLAY_ORIGIN),
+			("Sec-Fetch-Site", sf_site),
+			("Sec-Fetch-Mode", sf_mode),
+			("Sec-Fetch-Dest", sf_dest),
 			("Accept-Language", "ja,en-US;q=0.9,en;q=0.8"),
 			("Accept", accept),
 			("X-Requested-With", "XMLHttpRequest"),
@@ -80,6 +134,9 @@ fn play_authenticated_get_with_cookie(url: &str, cookie_override: Option<&str>) 
 		.header("User-Agent", PLAY_USER_AGENT)
 		.header("Referer", PLAY_REFERER)
 		.header("Origin", PLAY_ORIGIN)
+		.header("Sec-Fetch-Site", sf_site)
+		.header("Sec-Fetch-Mode", sf_mode)
+		.header("Sec-Fetch-Dest", sf_dest)
 		.header("Accept-Language", "ja,en-US;q=0.9,en;q=0.8")
 		.header("Accept", accept)
 		.header("X-Requested-With", "XMLHttpRequest");
@@ -90,14 +147,6 @@ fn play_authenticated_get_with_cookie(url: &str, cookie_override: Option<&str>) 
 		req = req.header("Cookie", c.as_str());
 	}
 	Ok(req)
-}
-
-fn accept_for_url(url: &str) -> &'static str {
-	if url.contains("/api/") {
-		"application/json"
-	} else {
-		"*/*"
-	}
 }
 
 /// Log outgoing request. `xsrf` is decoded token for `X-XSRF-TOKEN` when present.
@@ -136,6 +185,7 @@ pub(crate) fn play_authenticated_get(url: &str) -> Result<Request> {
 fn play_post_json_with_cookie(url: &str, body: &[u8], cookie: Option<&str>) -> Result<Request> {
 	let cookie_str = cookie.map(String::from).or_else(settings::get_web_cookies);
 	let xsrf = cookie_str.as_deref().and_then(xsrf_token_for_header);
+	let (sf_site, sf_mode, sf_dest) = sec_fetch_metadata(url);
 	log_outgoing_request(
 		"POST",
 		url,
@@ -143,6 +193,9 @@ fn play_post_json_with_cookie(url: &str, body: &[u8], cookie: Option<&str>) -> R
 			("User-Agent", PLAY_USER_AGENT),
 			("Referer", PLAY_REFERER),
 			("Origin", PLAY_ORIGIN),
+			("Sec-Fetch-Site", sf_site),
+			("Sec-Fetch-Mode", sf_mode),
+			("Sec-Fetch-Dest", sf_dest),
 			("Accept-Language", "ja,en-US;q=0.9,en;q=0.8"),
 			("Accept", "application/json"),
 			("Content-Type", "application/json"),
@@ -156,6 +209,9 @@ fn play_post_json_with_cookie(url: &str, body: &[u8], cookie: Option<&str>) -> R
 		.header("User-Agent", PLAY_USER_AGENT)
 		.header("Referer", PLAY_REFERER)
 		.header("Origin", PLAY_ORIGIN)
+		.header("Sec-Fetch-Site", sf_site)
+		.header("Sec-Fetch-Mode", sf_mode)
+		.header("Sec-Fetch-Dest", sf_dest)
 		.header("Accept-Language", "ja,en-US;q=0.9,en;q=0.8")
 		.header("Accept", "application/json")
 		.header("Content-Type", "application/json")
@@ -208,8 +264,11 @@ fn ensure_ok(op: &str, status: i32, data: &[u8]) -> Result<()> {
 /// Fetch the list of purchased work IDs (sorted by sales date, newest first).
 pub fn get_sales() -> Result<Vec<SalesEntry>> {
 	print(format!(
-		"[dlsite-play] get_sales (build v41; if logs show /api/authorize you are on an old WASM)"
+		"[dlsite-play] get_sales (build v42; authorize primes session, Set-Cookie never merged)"
 	));
+	if settings::get_web_cookies().is_some() {
+		prime_play_api_session()?;
+	}
 	let url = format!("{}/content/sales?last=0", PLAY_API);
 	let resp = play_authenticated_get(url.as_str())?.send()?;
 	let status = resp.status_code();

@@ -163,6 +163,12 @@ impl WebLoginHandler for DlsitePlay {
 				"[dlsite-play] web login stored Cookie header ({} chars)",
 				cookie_header.len()
 			));
+			if let Err(e) = api::prime_play_api_session() {
+				print(format!(
+					"[dlsite-play] prime_play_api_session after web login: {:?}",
+					e
+				));
+			}
 			settings::clear_cached_worknos();
 			settings::clear_cached_page();
 		} else {
@@ -334,6 +340,12 @@ fn get_or_fetch_worknos(page: i32) -> Result<Vec<String>> {
 		page,
 		settings::is_logged_in()
 	));
+	if !settings::is_logged_in() {
+		print(format!(
+			"[dlsite-play] get_or_fetch_worknos skip: not logged in (Account → Login)"
+		));
+		return Ok(Vec::new());
+	}
 	if page == 1 {
 		let now = current_date();
 		let cached = settings::get_cached_worknos();
