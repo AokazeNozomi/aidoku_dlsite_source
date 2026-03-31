@@ -301,10 +301,6 @@ fn get_manga_list_inner(
 
 /// Fetch (or use cached) full purchase work ID list, refreshing on page 1.
 fn get_or_fetch_worknos(page: i32) -> Result<Vec<String>> {
-	if !settings::is_logged_in() {
-		bail!("Not logged in. Please log in to view your purchases.");
-	}
-
 	if page == 1 {
 		let sales = api::get_sales()?;
 		let worknos: Vec<String> = sales.into_iter().map(|s| s.workno).collect();
