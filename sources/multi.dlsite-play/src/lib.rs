@@ -129,15 +129,18 @@ impl ListingProvider for DlsitePlay {
 impl WebLoginHandler for DlsitePlay {
 	fn handle_web_login(&self, key: String, cookies: HashMap<String, String>) -> Result<bool> {
 		if key != "login" {
-			print(format!("[dlsite-play] web login rejected invalid key `{key}`"));
+			print(format!(
+				"[dlsite-play] web login rejected invalid key `{key}`"
+			));
 			bail!("Invalid login key: `{key}`");
 		}
 
-		let has_session = cookies.contains_key("PHPSESSID");
+		// Authenticated Play API uses `play_session` on play.dlsite.com (HttpOnly in browser).
+		let has_session = cookies.contains_key("play_session");
 		print(format!(
-			"[dlsite-play] web login cookies={} has_PHPSESSID={}",
+			"[dlsite-play] web login cookies={} has_play_session={}",
 			cookies.len(),
-			has_session
+			has_session,
 		));
 
 		settings::set_logged_in(has_session);
