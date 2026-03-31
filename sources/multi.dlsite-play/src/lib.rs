@@ -132,10 +132,21 @@ impl WebLoginHandler for DlsitePlay {
 			bail!("Invalid login key: `{key}`");
 		}
 
+		let mut keys: Vec<&str> = cookies.keys().map(|s| s.as_str()).collect();
+		keys.sort();
+		for name in keys {
+			if let Some(value) = cookies.get(name) {
+				print(format!(
+					"[dlsite-play] web login cookie `{}` = `{}`",
+					name, value
+				));
+			}
+		}
+
 		// Authenticated Play API uses `play_session` on play.dlsite.com (HttpOnly in browser).
 		let has_session = cookies.contains_key("play_session");
 		print(format!(
-			"[dlsite-play] web login cookies={} has_play_session={}",
+			"[dlsite-play] web login summary count={} has_play_session={}",
 			cookies.len(),
 			has_session,
 		));
