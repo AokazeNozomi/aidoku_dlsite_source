@@ -6,8 +6,6 @@ use aidoku::{
 const CACHED_WORKNOS_KEY: &str = "cached_worknos";
 const LOGGED_IN_KEY: &str = "logged_in";
 const WEB_COOKIES_KEY: &str = "web_cookies";
-const USERNAME_KEY: &str = "username";
-const PASSWORD_KEY: &str = "password";
 
 pub fn is_logged_in() -> bool {
 	defaults_get::<bool>(LOGGED_IN_KEY).unwrap_or(false)
@@ -40,7 +38,7 @@ pub fn clear_cached_page() {
 }
 
 /// Full `Cookie` header value for `play.dlsite.com` / `play.dl.dlsite.com` requests.
-/// Populated from direct credential login; Aidoku does not share WebView cookies with WASM `Request`s.
+/// Populated from web login; Aidoku does not attach WebView cookies to WASM `Request`s.
 pub fn set_web_cookies(header_value: &str) {
 	defaults_set(
 		WEB_COOKIES_KEY,
@@ -54,10 +52,4 @@ pub fn get_web_cookies() -> Option<String> {
 
 pub fn clear_web_cookies() {
 	defaults_set(WEB_COOKIES_KEY, DefaultValue::Null);
-}
-
-pub fn get_credentials() -> Option<(String, String)> {
-	let username = defaults_get::<String>(USERNAME_KEY).filter(|s| !s.is_empty())?;
-	let password = defaults_get::<String>(PASSWORD_KEY).filter(|s| !s.is_empty())?;
-	Some((username, password))
 }
