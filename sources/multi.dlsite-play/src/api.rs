@@ -68,89 +68,47 @@ fn accept_for_url(url: &str) -> &'static str {
 	"*/*"
 }
 
-fn play_api_get_with_cookie(url: &str, cookie_override: Option<&str>) -> Result<Request> {
-	let cookie_str = cookie_override.map(String::from).or_else(settings::get_web_cookies);
+/// Build a GET request.  **No manual `Cookie` header** — Aidoku's runtime
+/// injects cookies from `HTTPCookieStorage` (synced from the WebView's
+/// `WKWebsiteDataStore.default()`).  Setting `Cookie` here would create
+/// duplicates that confuse the server.
+fn play_api_get(url: &str) -> Result<Request> {
 	let accept = accept_for_url(url);
 	let referer = url.contains("play.dl.dlsite.com").then_some(PLAY_REFERER);
 	print(format!("[dlsite-play] → GET {}", url));
-	print(format!(
-		"[dlsite-play]     User-Agent: {}",
-		PLAY_AIOHTTP_USER_AGENT
-	));
-	print(format!("[dlsite-play]     Accept: {}", accept));
-	if let Some(r) = referer {
-		print(format!("[dlsite-play]     Referer: {}", r));
-	}
-	match cookie_str.as_deref() {
-		Some(c) if !c.is_empty() => print(format!("[dlsite-play]     Cookie: {}", c)),
-		_ => print(format!(
-			"[dlsite-play]     Cookie: <none stored; complete web login first>"
-		)),
-	}
 	let mut req = Request::get(url)?
 		.header("User-Agent", PLAY_AIOHTTP_USER_AGENT)
 		.header("Accept", accept);
 	if let Some(r) = referer {
 		req = req.header("Referer", r);
 	}
-	if let Some(ref c) = cookie_str {
-		req = req.header("Cookie", c.as_str());
-	}
 	Ok(req)
 }
 
-/// JSON / API GET — same header model as dlsite-async aiohttp (no browser CORS simulation).
+/// JSON / API GET.
 pub(crate) fn play_authenticated_get(url: &str) -> Result<Request> {
-	play_api_get_with_cookie(url, None)
+	play_api_get(url)
 }
 
 /// Optimized page images: browser UA + `Referer` (not aiohttp).
 pub(crate) fn play_image_get(url: &str) -> Result<Request> {
-	let cookie_str = settings::get_web_cookies();
 	print(format!("[dlsite-play] → GET {} (image)", url));
-	print(format!("[dlsite-play]     User-Agent: {}", PLAY_IMAGE_USER_AGENT));
-	print(format!("[dlsite-play]     Referer: {}", PLAY_REFERER));
-	match cookie_str.as_deref() {
-		Some(c) if !c.is_empty() => print(format!("[dlsite-play]     Cookie: {}", c)),
-		_ => print(format!(
-			"[dlsite-play]     Cookie: <none stored; complete web login first>"
-		)),
-	}
-	let mut req = Request::get(url)?
+	let req = Request::get(url)?
 		.header("User-Agent", PLAY_IMAGE_USER_AGENT)
 		.header("Referer", PLAY_REFERER)
 		.header("Accept", "image/webp,image/apng,image/*,*/*;q=0.8");
-	if let Some(ref c) = cookie_str {
-		req = req.header("Cookie", c.as_str());
-	}
 	Ok(req)
 }
 
-fn play_post_json_with_cookie(url: &str, body: &[u8], cookie: Option<&str>) -> Result<Request> {
-	let cookie_str = cookie.map(String::from).or_else(settings::get_web_cookies);
-	let xsrf = cookie_str.as_deref().and_then(xsrf_token_for_header);
+/// Build a POST request.  `X-XSRF-TOKEN` header is read from the stored
+/// cookie snapshot (needed for Laravel CSRF on state-changing requests).
+/// Cookie header is left to Aidoku's runtime.
+fn play_post_json(url: &str, body: &[u8]) -> Result<Request> {
+	let xsrf = settings::get_web_cookies()
+		.as_deref()
+		.and_then(xsrf_token_for_header);
 	let referer = url.contains("play.dl.dlsite.com").then_some(PLAY_REFERER);
 	print(format!("[dlsite-play] → POST {}", url));
-	print(format!(
-		"[dlsite-play]     User-Agent: {}",
-		PLAY_AIOHTTP_USER_AGENT
-	));
-	print(format!("[dlsite-play]     Accept: application/json"));
-	print(format!("[dlsite-play]     Content-Type: application/json"));
-	if let Some(r) = referer {
-		print(format!("[dlsite-play]     Referer: {}", r));
-	}
-	match xsrf {
-		Some(ref x) if !x.is_empty() => print(format!("[dlsite-play]     X-XSRF-TOKEN: {}", x)),
-		_ => print(format!("[dlsite-play]     X-XSRF-TOKEN: <missing>")),
-	}
-	match cookie_str.as_deref() {
-		Some(c) if !c.is_empty() => print(format!("[dlsite-play]     Cookie: {}", c)),
-		_ => print(format!(
-			"[dlsite-play]     Cookie: <none stored; complete web login first>"
-		)),
-	}
-	print(format!("[dlsite-play]     body: {} bytes", body.len()));
 	let mut req = Request::post(url)?
 		.header("User-Agent", PLAY_AIOHTTP_USER_AGENT)
 		.header("Accept", "application/json")
@@ -160,9 +118,6 @@ fn play_post_json_with_cookie(url: &str, body: &[u8], cookie: Option<&str>) -> R
 	}
 	if let Some(ref x) = xsrf {
 		req = req.header("X-XSRF-TOKEN", x.as_str());
-	}
-	if let Some(ref c) = cookie_str {
-		req = req.header("Cookie", c.as_str());
 	}
 	Ok(req.body(body))
 }
@@ -236,7 +191,7 @@ pub fn get_works(worknos: &[String]) -> Result<Vec<PurchaseWork>> {
 	for (chunk_idx, chunk) in worknos.chunks(100).enumerate() {
 		let url = format!("{}/content/works", PLAY_API);
 		let body = serde_json::to_vec(chunk).map_err(|_| error!("Failed to serialize work IDs"))?;
-		let resp = play_post_json_with_cookie(url.as_str(), &body, None)?.send()?;
+		let resp = play_post_json(url.as_str(), &body)?.send()?;
 		let status = resp.status_code();
 		let data = resp.get_data()?;
 		let op = format!("get_works chunk {}", chunk_idx);

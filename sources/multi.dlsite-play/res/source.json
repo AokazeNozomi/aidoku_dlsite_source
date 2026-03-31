@@ -3,6 +3,7 @@
     "id": "multi.dlsite-play",
     "name": "DLsite Play",
     "version": 49,
+    "version": 50,
     "url": "https://play.dlsite.com/login/",
     "contentRating": 2,
     "languages": [
