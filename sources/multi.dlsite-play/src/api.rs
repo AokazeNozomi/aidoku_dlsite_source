@@ -57,60 +57,16 @@ fn xsrf_token_for_header(cookie_header: &str) -> Option<String> {
 	None
 }
 
-/// Merge `Set-Cookie` (first `name=value` of each line) into the stored `Cookie` header value.
-fn apply_set_cookie_headers(existing: Option<&str>, set_cookie: Option<String>) -> Option<String> {
-	let raw = set_cookie.filter(|s| !s.is_empty())?;
-	let mut pairs: Vec<(String, String)> = Vec::new();
-	if let Some(ex) = existing {
-		for part in ex.split(';') {
-			let p = part.trim();
-			if let Some((n, v)) = p.split_once('=') {
-				pairs.push((n.trim().into(), v.trim().into()));
-			}
-		}
-	}
-	for block in raw.split('\n') {
-		let line = block.trim();
-		if line.is_empty() {
-			continue;
-		}
-		let first = line.split(';').next().unwrap_or("").trim();
-		let Some((n, v)) = first.split_once('=') else {
-			continue;
-		};
-		let name = n.trim();
-		let value = v.trim();
-		if let Some(idx) = pairs
-			.iter()
-			.position(|(k, _)| k.eq_ignore_ascii_case(name))
-		{
-			pairs[idx] = (name.into(), value.into());
-		} else {
-			pairs.push((name.into(), value.into()));
-		}
-	}
-	if pairs.is_empty() {
-		return existing.map(Into::into);
-	}
-	pairs.sort_by(|a, b| a.0.cmp(&b.0));
-	let merged = pairs
-		.into_iter()
-		.map(|(n, v)| format!("{}={}", n, v))
-		.collect::<Vec<_>>()
-		.join("; ");
-	Some(merged)
-}
-
 /// `GET /api/authorize` ties DLsite account cookies to Play’s Laravel session (dlsite-async does this after login).
+///
+/// Does **not** merge `Set-Cookie` into storage: Aidoku often exposes a lossy/truncated `Set-Cookie` string, and
+/// naïvely replacing `play_session` can swap the encrypted WebView cookie for a short opaque id and break `/api/v3`.
 pub(crate) fn prime_play_api_session() -> Result<()> {
 	if settings::get_web_cookies().is_none() {
 		return Ok(());
 	}
 	let resp = play_authenticated_get(PLAY_AUTHORIZE_URL)?.send()?;
 	let status = resp.status_code();
-	let set_cookie = resp
-		.get_header("Set-Cookie")
-		.or_else(|| resp.get_header("set-cookie"));
 	let _ = resp.get_data();
 	if !(200..300).contains(&status) {
 		print(format!(
@@ -122,13 +78,9 @@ pub(crate) fn prime_play_api_session() -> Result<()> {
 		}
 		return Ok(());
 	}
-	if let Some(merged) = apply_set_cookie_headers(settings::get_web_cookies().as_deref(), set_cookie) {
-		settings::set_web_cookies(&merged);
-		print(format!(
-			"[dlsite-play] prime_play_api_session updated cookie jar ({} chars)",
-			merged.len()
-		));
-	}
+	print(format!(
+		"[dlsite-play] prime_play_api_session authorize OK (keeping web login Cookie header as-is)"
+	));
 	Ok(())
 }
 
