@@ -15,7 +15,9 @@ const PLAY_USER_AGENT: &str = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac 
 
 const PLAY_API: &str = "https://play.dlsite.com/api/v3";
 const PLAY_DL_API: &str = "https://play.dl.dlsite.com/api/v3";
-/// Binds DLsite account to Play API session (`dlsite-async` `PlayAPI.login`). Never merge `Set-Cookie` from this response.
+/// Matches `dlsite-async` `PlayAPI.login` bootstrap order (`GET /login/` then `GET /api/authorize`).
+const PLAY_LOGIN_URL: &str = "https://play.dlsite.com/login/";
+/// Binds DLsite account to Play API session. Never merge `Set-Cookie` from this response.
 const PLAY_AUTHORIZE_URL: &str = "https://play.dlsite.com/api/authorize";
 
 fn hex_digit(b: u8) -> Option<u8> {
@@ -83,11 +85,28 @@ fn accept_for_url(url: &str) -> &'static str {
 	"*/*"
 }
 
-/// `GET /api/authorize` with current cookies; does **not** persist `Set-Cookie` (Aidoku header is unreliable).
+/// Play auth bootstrap with current cookies:
+/// 1) `GET /login/`
+/// 2) `GET /api/authorize`
+/// Does **not** persist `Set-Cookie` (Aidoku header is unreliable).
 pub(crate) fn prime_play_api_session() -> Result<()> {
 	if settings::get_web_cookies().is_none() {
 		return Ok(());
 	}
+	let login_resp = play_authenticated_get(PLAY_LOGIN_URL)?.send()?;
+	let login_status = login_resp.status_code();
+	let _ = login_resp.get_data();
+	print(format!(
+		"[dlsite-play] prime_play_api_session /login/ HTTP {}",
+		login_status
+	));
+	if login_status >= 400 {
+		print(format!(
+			"[dlsite-play] prime_play_api_session /login/ non-success status={}, continuing to /api/authorize",
+			login_status
+		));
+	}
+
 	let resp = play_authenticated_get(PLAY_AUTHORIZE_URL)?.send()?;
 	let status = resp.status_code();
 	let _ = resp.get_data();
@@ -264,7 +283,7 @@ fn ensure_ok(op: &str, status: i32, data: &[u8]) -> Result<()> {
 /// Fetch the list of purchased work IDs (sorted by sales date, newest first).
 pub fn get_sales() -> Result<Vec<SalesEntry>> {
 	print(format!(
-		"[dlsite-play] get_sales (build v42; authorize primes session, Set-Cookie never merged)"
+		"[dlsite-play] get_sales (build v43; /login/ then /api/authorize prime session, Set-Cookie never merged)"
 	));
 	if settings::get_web_cookies().is_some() {
 		prime_play_api_session()?;
