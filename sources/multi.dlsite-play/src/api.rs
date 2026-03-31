@@ -530,22 +530,19 @@ pub fn login_with_credentials(username: &str, password: &str) -> Result<()> {
 		);
 	}
 	let login_text = str::from_utf8(&login_data).unwrap_or_default();
-	if !login_text.contains("ログイン中です") {
-		if looks_like_challenge_page(login_text) {
-			bail!(
-				"DLsite blocked automatic credential login with a challenge (captcha/verification)."
-			);
-		}
-		if let Some(msg) = extract_login_error_message(login_text) {
-			bail!("DLsite credential login failed: {}", msg);
-		}
-		if looks_like_login_page(login_text) {
-			bail!("DLsite credential login failed. Check login ID/password.");
-		}
+	if looks_like_challenge_page(login_text) {
 		bail!(
-			"DLsite login did not return the expected success page. Body: {}",
-			body_preview(&login_data)
+			"DLsite blocked automatic credential login with a challenge (captcha/verification)."
 		);
+	}
+	if let Some(msg) = extract_login_error_message(login_text) {
+		bail!("DLsite credential login failed: {}", msg);
+	}
+	if looks_like_login_page(login_text) && !login_text.contains("ログイン中です") {
+		// Some successful flows redirect without this marker; continue and rely on Play probe.
+		print(format!(
+			"[dlsite-play] login response still looked like login page; continuing with Play session checks"
+		));
 	}
 
 	let play_cookie = build_cookie_header_for_host(&cookies, PLAY_HOST, "/login");
