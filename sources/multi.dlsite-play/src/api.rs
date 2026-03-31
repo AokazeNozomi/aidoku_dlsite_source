@@ -19,6 +19,7 @@ const PLAY_LOGIN_URL: &str = "https://play.dlsite.com/login/";
 const PLAY_AUTHORIZE_URL: &str = "https://play.dlsite.com/api/authorize";
 const LOGIN_HOST: &str = "login.dlsite.com";
 const PLAY_HOST: &str = "play.dlsite.com";
+const DLSITE_COOKIE_FALLBACK_DOMAIN: &str = "dlsite.com";
 
 fn hex_digit(b: u8) -> Option<u8> {
 	match b {
@@ -493,7 +494,7 @@ pub fn login_with_credentials(username: &str, password: &str) -> Result<()> {
 	let login_page = Request::get(login_page_url.as_str())?
 		.header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
 		.send()?;
-	ingest_response_cookies(&login_page, LOGIN_HOST, &mut cookies);
+	ingest_response_cookies(&login_page, DLSITE_COOKIE_FALLBACK_DOMAIN, &mut cookies);
 	let login_page_status = login_page.status_code();
 	let login_page_data = login_page.get_data()?;
 	ensure_ok("login_page", login_page_status, &login_page_data)?;
@@ -514,7 +515,11 @@ pub fn login_with_credentials(username: &str, password: &str) -> Result<()> {
 		login_req = login_req.header("Cookie", login_cookie.as_str());
 	}
 	let login_response = login_req.send()?;
-	ingest_response_cookies(&login_response, LOGIN_HOST, &mut cookies);
+	ingest_response_cookies(
+		&login_response,
+		DLSITE_COOKIE_FALLBACK_DOMAIN,
+		&mut cookies,
+	);
 	let login_status = login_response.status_code();
 	let login_data = login_response.get_data()?;
 	if !status_is_ok_or_redirect(login_status) {
@@ -551,7 +556,7 @@ pub fn login_with_credentials(username: &str, password: &str) -> Result<()> {
 		play_login_req = play_login_req.header("Cookie", play_cookie.as_str());
 	}
 	let play_login = play_login_req.send()?;
-	ingest_response_cookies(&play_login, PLAY_HOST, &mut cookies);
+	ingest_response_cookies(&play_login, DLSITE_COOKIE_FALLBACK_DOMAIN, &mut cookies);
 	let play_login_status = play_login.status_code();
 	let play_login_data = play_login.get_data()?;
 	if !status_is_ok_or_redirect(play_login_status) {
@@ -567,7 +572,7 @@ pub fn login_with_credentials(username: &str, password: &str) -> Result<()> {
 		authorize_req = authorize_req.header("Cookie", authorize_cookie.as_str());
 	}
 	let authorize = authorize_req.send()?;
-	ingest_response_cookies(&authorize, PLAY_HOST, &mut cookies);
+	ingest_response_cookies(&authorize, DLSITE_COOKIE_FALLBACK_DOMAIN, &mut cookies);
 	let authorize_status = authorize.status_code();
 	let authorize_data = authorize.get_data()?;
 	if !status_is_ok_or_redirect(authorize_status) {
