@@ -17,3 +17,4 @@ templates/*/target
 /target
 /.playwright-mcp
 /.cursor
+/scripts
