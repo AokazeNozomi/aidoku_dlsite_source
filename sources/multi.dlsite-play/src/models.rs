@@ -296,8 +296,6 @@ pub struct PurchaseWork {
 	pub tags: Option<Vec<WorkTag>>,
 	#[serde(default)]
 	pub sales_date: Option<String>,
-	#[serde(default, alias = "languages")]
-	pub language: Option<Vec<String>>,
 }
 
 impl PurchaseWork {
@@ -354,51 +352,6 @@ impl PurchaseWork {
 		let day: u32 = date.get(8..10)?.parse().ok()?;
 		let days = days_from_civil(year, month, day)?;
 		Some(days * 86_400)
-	}
-
-	fn normalize_language_code(lang: &str) -> Option<&'static str> {
-		let trimmed = lang.trim();
-		let lower = trimmed.to_lowercase();
-		match lower.as_str() {
-			"ja" | "ja_jp" | "ja-jp" | "japanese" | "日本語" => Some("ja"),
-			"en" | "en_us" | "en-us" | "english" | "英語" => Some("en"),
-			"zh_cn" | "zh-cn" | "zh-hans" | "简体中文" | "簡体中文" => Some("zh-Hans"),
-			"zh_tw" | "zh-tw" | "zh-hant" | "繁體中文" | "繁体中文" => Some("zh-Hant"),
-			"ko" | "ko_kr" | "ko-kr" | "korean" | "한국어" => Some("ko"),
-			"es" | "spanish" | "español" => Some("es"),
-			"ar" | "arabic" | "العربية" => Some("ar"),
-			"de" | "german" | "deutsch" => Some("de"),
-			"fr" | "french" | "français" => Some("fr"),
-			"id" | "indonesian" | "bahasa indonesia" => Some("id"),
-			"it" | "italian" | "italiano" => Some("it"),
-			"pt" | "portuguese" | "português" => Some("pt"),
-			"sv" | "swedish" | "svenska" => Some("sv"),
-			"th" | "thai" | "ไทย" => Some("th"),
-			"vi" | "vietnamese" | "tiếng việt" => Some("vi"),
-			_ => None,
-		}
-	}
-
-	/// Infer the best language code for filtering.
-	///
-	/// Prefer translated/non-Japanese language when multiple languages exist,
-	/// because many works keep Japanese titles even for translated content.
-	pub fn infer_language(&self) -> Option<&'static str> {
-		if let Some(langs) = &self.language {
-			let normalized: Vec<&'static str> = langs
-				.iter()
-				.filter_map(|lang| Self::normalize_language_code(lang))
-				.collect();
-
-			if let Some(non_ja) = normalized.iter().copied().find(|lang| *lang != "ja") {
-				return Some(non_ja);
-			}
-			if let Some(first) = normalized.first() {
-				return Some(*first);
-			}
-		}
-
-		None
 	}
 }
 
@@ -521,9 +474,6 @@ impl From<PurchaseWork> for Manga {
 		}
 		if !translated_by.is_empty() {
 			desc_lines.push(format!("Translation: {}", translated_by.join(", ")));
-		}
-		if let Some(language) = work.infer_language() {
-			desc_lines.push(format!("Language: {}", language));
 		}
 
 		let description = if desc_lines.is_empty() {
