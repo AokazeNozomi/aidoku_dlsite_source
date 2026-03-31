@@ -207,6 +207,9 @@ fn ensure_ok(op: &str, status: i32, data: &[u8]) -> Result<()> {
 
 /// Fetch the list of purchased work IDs (sorted by sales date, newest first).
 pub fn get_sales() -> Result<Vec<SalesEntry>> {
+	print(format!(
+		"[dlsite-play] get_sales (build v41; if logs show /api/authorize you are on an old WASM)"
+	));
 	let url = format!("{}/content/sales?last=0", PLAY_API);
 	let resp = play_authenticated_get(url.as_str())?.send()?;
 	let status = resp.status_code();

@@ -1,11 +1,12 @@
 use aidoku::{
-	alloc::{String, Vec},
+	alloc::{format, String, Vec},
 	imports::defaults::{DefaultValue, defaults_get, defaults_set},
 };
 
 const CACHED_WORKNOS_KEY: &str = "cached_worknos";
 const LOGGED_IN_KEY: &str = "logged_in";
 const WEB_COOKIES_KEY: &str = "web_cookies";
+const SALES_FETCHED_AT_KEY: &str = "sales_fetched_at_unix";
 
 pub fn is_logged_in() -> bool {
 	defaults_get::<bool>(LOGGED_IN_KEY).unwrap_or(false)
@@ -31,6 +32,19 @@ pub fn get_cached_worknos() -> Vec<String> {
 
 pub fn clear_cached_worknos() {
 	defaults_set(CACHED_WORKNOS_KEY, DefaultValue::Null);
+	defaults_set(SALES_FETCHED_AT_KEY, DefaultValue::Null);
+}
+
+/// Unix time when `/content/sales` last succeeded and populated [Self::get_cached_worknos].
+pub fn get_sales_fetched_at() -> Option<i64> {
+	defaults_get::<String>(SALES_FETCHED_AT_KEY).and_then(|s| s.parse().ok())
+}
+
+pub fn set_sales_fetched_at(ts: i64) {
+	defaults_set(
+		SALES_FETCHED_AT_KEY,
+		DefaultValue::String(format!("{}", ts)),
+	);
 }
 
 pub fn clear_cached_page() {

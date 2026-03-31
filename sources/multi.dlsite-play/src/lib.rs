@@ -2,7 +2,7 @@
 
 use aidoku::{
 	alloc::{format, string::ToString, vec, String, Vec},
-	imports::{canvas::ImageRef, net::Request, std::print},
+	imports::{canvas::ImageRef, net::Request, std::{current_date, print}},
 	prelude::*,
 	register_source, Chapter, FilterValue, HashMap, ImageRequestProvider, ImageResponse, Listing,
 	ListingProvider, Manga, MangaPageResult, NotificationHandler, Page, PageContent, PageContext,
@@ -15,6 +15,8 @@ mod models;
 mod settings;
 
 const PAGE_SIZE: usize = 20;
+/// Skip duplicate `/content/sales` calls when Aidoku requests page 1 several times in a row.
+const SALES_CACHE_MAX_AGE_SEC: i64 = 120;
 
 struct DlsitePlay;
 
@@ -333,6 +335,21 @@ fn get_or_fetch_worknos(page: i32) -> Result<Vec<String>> {
 		settings::is_logged_in()
 	));
 	if page == 1 {
+		let now = current_date();
+		let cached = settings::get_cached_worknos();
+		let fetched_at = settings::get_sales_fetched_at();
+		let cache_fresh = fetched_at
+			.map(|t| now.saturating_sub(t) < SALES_CACHE_MAX_AGE_SEC)
+			.unwrap_or(false);
+		if !cached.is_empty() && cache_fresh {
+			print(format!(
+				"[dlsite-play] get_or_fetch_worknos page=1 using sales cache age={}s count={}",
+				fetched_at.map(|t| now.saturating_sub(t)).unwrap_or(0),
+				cached.len()
+			));
+			return Ok(cached);
+		}
+
 		let sales = api::get_sales()?;
 		let worknos: Vec<String> = sales.into_iter().map(|s| s.workno).collect();
 		print(format!(
@@ -340,6 +357,7 @@ fn get_or_fetch_worknos(page: i32) -> Result<Vec<String>> {
 			worknos.len()
 		));
 		settings::set_cached_worknos(&worknos);
+		settings::set_sales_fetched_at(now);
 		Ok(worknos)
 	} else {
 		let cached = settings::get_cached_worknos();
@@ -352,6 +370,7 @@ fn get_or_fetch_worknos(page: i32) -> Result<Vec<String>> {
 				worknos.len()
 			));
 			settings::set_cached_worknos(&worknos);
+			settings::set_sales_fetched_at(current_date());
 			Ok(worknos)
 		} else {
 			print(format!(
