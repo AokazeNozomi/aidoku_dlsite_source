@@ -6,5 +6,12 @@
 		"canExclude": false,
 		"options": ["Manga", "Webtoon", "CG / Illustration", "Sound / Voice", "Video", "Novel", "Game", "Other"],
 		"ids": ["MNG", "WBT", "CG", "SOU", "MOV", "NOV", "GAM", "ETC"]
+	},
+	{
+		"id": "translation",
+		"title": "Translation",
+		"type": "select",
+		"options": ["All", "Translated Only", "Original Only"],
+		"ids": ["all", "translated", "original"]
 	}
 ]

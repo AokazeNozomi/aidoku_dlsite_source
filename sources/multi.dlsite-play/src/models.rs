@@ -296,9 +296,17 @@ pub struct PurchaseWork {
 	pub tags: Option<Vec<WorkTag>>,
 	#[serde(default)]
 	pub sales_date: Option<String>,
+	#[serde(default)]
+	pub translator: Option<String>,
 }
 
 impl PurchaseWork {
+	pub fn has_translator(&self) -> bool {
+		self.translator
+			.as_ref()
+			.map_or(false, |t| !t.trim().is_empty())
+	}
+
 	pub fn cover_url(&self) -> Option<String> {
 		self.work_files.as_ref()?.main.as_ref().map(|url| {
 			if url.starts_with("//") {
@@ -433,6 +441,9 @@ impl From<PurchaseWork> for Manga {
 		if let Some(label) = work.work_type_label() {
 			tag_list.push(label.into());
 		}
+		if work.has_translator() {
+			tag_list.push("Translated".into());
+		}
 		if let Some(ref tags) = work.tags {
 			for t in tags {
 				let is_credit_tag = matches!(
@@ -474,6 +485,11 @@ impl From<PurchaseWork> for Manga {
 		}
 		if !translated_by.is_empty() {
 			desc_lines.push(format!("Translation: {}", translated_by.join(", ")));
+		} else if let Some(ref translator) = work.translator {
+			let t = translator.trim();
+			if !t.is_empty() {
+				desc_lines.push(format!("Translator: {}", t));
+			}
 		}
 
 		let description = if desc_lines.is_empty() {
@@ -532,4 +548,22 @@ pub struct SalesEntry {
 pub struct WorksResponse {
 	#[serde(default)]
 	pub works: Vec<PurchaseWork>,
+}
+
+// ---------------------------------------------------------------------------
+// Language editions from GET /maniax/api/=/product.json (public API)
+// ---------------------------------------------------------------------------
+
+#[derive(Deserialize, Clone)]
+pub struct LanguageEdition {
+	#[allow(dead_code)]
+	pub workno: String,
+	pub lang: String,
+	pub label: String,
+}
+
+#[derive(Deserialize, Clone)]
+pub struct ProductInfo {
+	#[serde(default)]
+	pub language_editions: Vec<LanguageEdition>,
 }

@@ -67,3 +67,18 @@ pub fn get_web_cookies() -> Option<String> {
 pub fn clear_web_cookies() {
 	defaults_set(WEB_COOKIES_KEY, DefaultValue::Null);
 }
+
+fn lang_cache_key(workno: &str) -> String {
+	format!("lang_{}", workno)
+}
+
+pub fn get_cached_languages(workno: &str) -> Option<String> {
+	defaults_get::<String>(&lang_cache_key(workno)).filter(|s| !s.is_empty())
+}
+
+pub fn set_cached_languages(workno: &str, value: &str) {
+	defaults_set(
+		&lang_cache_key(workno),
+		DefaultValue::String(String::from(value)),
+	);
+}

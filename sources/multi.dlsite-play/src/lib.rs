@@ -32,7 +32,8 @@ impl Source for DlsitePlay {
 		filters: Vec<FilterValue>,
 	) -> Result<MangaPageResult> {
 		let work_types = extract_work_type_filter(&filters);
-		get_manga_list_inner(query, page, work_types)
+		let translation_filter = extract_translation_filter(&filters);
+		get_manga_list_inner(query, page, work_types, translation_filter)
 	}
 
 	fn get_manga_update(
@@ -50,6 +51,31 @@ impl Source for DlsitePlay {
 				if needs_details {
 					let updated: Manga = work.into();
 					manga.copy_from(updated);
+
+					// Enrich with language editions from public API (cached)
+					if let Some(lang_str) = get_or_fetch_languages(&manga.key) {
+						let mut tags = manga.tags.take().unwrap_or_default();
+						for part in lang_str.split(',') {
+							if let Some((_code, label)) = part.split_once(':') {
+								let tag = format!("Lang: {}", label);
+								if !tags.contains(&tag) {
+									tags.push(tag);
+								}
+							}
+						}
+						manga.tags = Some(tags);
+
+						let labels: Vec<&str> = lang_str
+							.split(',')
+							.filter_map(|s| s.split_once(':').map(|(_, l)| l))
+							.collect();
+						if !labels.is_empty() {
+							let mut desc = manga.description.take().unwrap_or_default();
+							desc.push('\n');
+							desc.push_str(&format!("Languages: {}", labels.join(", ")));
+							manga.description = Some(desc);
+						}
+					}
 				}
 			}
 		}
@@ -121,7 +147,7 @@ impl ListingProvider for DlsitePlay {
 			"purchases" => Vec::new(),
 			wt => vec![wt.to_string()],
 		};
-		get_manga_list_inner(None, page, work_types)
+		get_manga_list_inner(None, page, work_types, None)
 	}
 }
 
@@ -254,6 +280,7 @@ fn get_manga_list_inner(
 	query: Option<String>,
 	page: i32,
 	work_types: Vec<String>,
+	translation_filter: Option<String>,
 ) -> Result<MangaPageResult> {
 	let worknos = get_or_fetch_worknos(page)?;
 
@@ -268,7 +295,7 @@ fn get_manga_list_inner(
 	let start = page_idx * PAGE_SIZE;
 
 	let has_query = query.is_some();
-	let has_filter = !work_types.is_empty();
+	let has_filter = !work_types.is_empty() || translation_filter.is_some();
 
 	if has_query || has_filter {
 		let all_works = api::get_works(&worknos)?;
@@ -299,10 +326,18 @@ fn get_manga_list_inner(
 						return false;
 					}
 				}
-				if has_filter {
+				if !work_types.is_empty() {
 					let wt = w.work_type.as_deref().unwrap_or("");
 					if !work_types.iter().any(|t| t == wt) {
 						return false;
+					}
+				}
+				if let Some(ref tf) = translation_filter {
+					let is_translated = w.has_translator();
+					match tf.as_str() {
+						"translated" if !is_translated => return false,
+						"original" if is_translated => return false,
+						_ => {}
 					}
 				}
 				true
@@ -404,6 +439,36 @@ fn get_or_fetch_worknos(page: i32) -> Result<Vec<String>> {
 			Ok(cached)
 		}
 	}
+}
+
+/// Fetch language editions from cache or public API. Empty results are not
+/// cached so region-locked lookups can be retried later (e.g. via VPN).
+fn get_or_fetch_languages(workno: &str) -> Option<String> {
+	if let Some(cached) = settings::get_cached_languages(workno) {
+		return Some(cached);
+	}
+	let editions = api::get_language_editions(workno).ok()?;
+	if editions.is_empty() {
+		return None;
+	}
+	let pairs: Vec<String> = editions
+		.iter()
+		.map(|e| format!("{}:{}", e.lang, e.label))
+		.collect();
+	let value = pairs.join(",");
+	settings::set_cached_languages(workno, &value);
+	Some(value)
+}
+
+fn extract_translation_filter(filters: &[FilterValue]) -> Option<String> {
+	for f in filters {
+		if let FilterValue::Select { id, value } = f {
+			if id == "translation" && value != "all" {
+				return Some(value.clone());
+			}
+		}
+	}
+	None
 }
 
 fn extract_work_type_filter(filters: &[FilterValue]) -> Vec<String> {
