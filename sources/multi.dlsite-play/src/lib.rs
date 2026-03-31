@@ -4,9 +4,9 @@ use aidoku::{
 	alloc::{format, string::ToString, vec, String, Vec},
 	imports::{canvas::ImageRef, net::Request, std::print},
 	prelude::*,
-	register_source, Chapter, FilterValue, HashMap, ImageRequestProvider, ImageResponse, Listing,
-	ListingProvider, Manga, MangaPageResult, NotificationHandler, Page, PageContent, PageContext,
-	PageImageProcessor, Result, Source, WebLoginHandler,
+	register_source, Chapter, FilterValue, ImageRequestProvider, ImageResponse, Listing,
+	ListingProvider, Manga, MangaPageResult, Page, PageContent, PageContext, PageImageProcessor,
+	Result, Source,
 };
 
 mod api;
@@ -120,64 +120,6 @@ impl ListingProvider for DlsitePlay {
 			wt => vec![wt.to_string()],
 		};
 		get_manga_list_inner(None, page, work_types)
-	}
-}
-
-impl WebLoginHandler for DlsitePlay {
-	fn handle_web_login(&self, key: String, cookies: HashMap<String, String>) -> Result<bool> {
-		if key != "login" {
-			print(format!(
-				"[dlsite-play] web login rejected invalid key `{key}`"
-			));
-			bail!("Invalid login key: `{key}`");
-		}
-
-		let mut keys: Vec<&str> = cookies.keys().map(|s| s.as_str()).collect();
-		keys.sort();
-		let mut cookie_pairs: Vec<String> = Vec::new();
-		for name in &keys {
-			if let Some(value) = cookies.get(*name) {
-				print(format!(
-					"[dlsite-play] web login cookie `{}` = `{}`",
-					name, value
-				));
-				cookie_pairs.push(format!("{}={}", name, value));
-			}
-		}
-
-		// Authenticated Play API uses `play_session` on play.dlsite.com (HttpOnly in browser).
-		let has_session = cookies.contains_key("play_session");
-		print(format!(
-			"[dlsite-play] web login summary count={} has_play_session={}",
-			cookies.len(),
-			has_session,
-		));
-
-		settings::set_logged_in(has_session);
-
-		if has_session {
-			let cookie_header = cookie_pairs.join("; ");
-			settings::set_web_cookies(&cookie_header);
-			print(format!(
-				"[dlsite-play] web login stored Cookie header ({} chars)",
-				cookie_header.len()
-			));
-			settings::clear_cached_worknos();
-			settings::clear_cached_page();
-		} else {
-			settings::clear_web_cookies();
-		}
-
-		Ok(has_session)
-	}
-}
-
-impl NotificationHandler for DlsitePlay {
-	fn handle_notification(&self, notification: String) {
-		if notification == "login" && !settings::is_logged_in() {
-			settings::clear_cached_worknos();
-			settings::clear_cached_page();
-		}
 	}
 }
 
@@ -378,8 +320,6 @@ fn extract_work_type_filter(filters: &[FilterValue]) -> Vec<String> {
 register_source!(
 	DlsitePlay,
 	ListingProvider,
-	WebLoginHandler,
-	NotificationHandler,
 	ImageRequestProvider,
 	PageImageProcessor
 );

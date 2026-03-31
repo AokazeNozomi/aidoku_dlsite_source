@@ -2,18 +2,18 @@
 	{
 		"type": "group",
 		"title": "Account",
-		"footer": "Log in with your DLsite account to access purchased works.",
+		"footer": "Enter your DLsite credentials. The source will automatically reauthenticate on 401.",
 		"items": [
 			{
-				"type": "login",
-				"method": "web",
-				"key": "login",
-				"title": "Login",
-				"url": "https://play.dlsite.com/login",
-				"refreshes": [
-					"listings",
-					"content"
-				]
+				"type": "text",
+				"key": "username",
+				"title": "Username"
+			},
+			{
+				"type": "text",
+				"key": "password",
+				"title": "Password",
+				"secure": true
 			}
 		]
 	}

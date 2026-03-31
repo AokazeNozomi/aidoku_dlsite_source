@@ -10,9 +10,13 @@ use core::str;
 
 pub(crate) const PLAY_REFERER: &str = "https://play.dlsite.com/";
 const PLAY_ORIGIN: &str = "https://play.dlsite.com";
+const LOGIN_ORIGIN: &str = "https://login.dlsite.com";
 
 const PLAY_API: &str = "https://play.dlsite.com/api/v3";
 const PLAY_DL_API: &str = "https://play.dl.dlsite.com/api/v3";
+const LOGIN_URL: &str = "https://login.dlsite.com/login";
+const PLAY_LOGIN_URL: &str = "https://play.dlsite.com/login/";
+const PLAY_AUTHORIZE_URL: &str = "https://play.dlsite.com/api/authorize";
 
 fn hex_digit(b: u8) -> Option<u8> {
 	match b {
@@ -55,6 +59,170 @@ fn xsrf_token_for_header(cookie_header: &str) -> Option<String> {
 	None
 }
 
+fn status_is_ok_or_redirect(status: i32) -> bool {
+	(200..400).contains(&status)
+}
+
+fn percent_encode_form_value(input: &str) -> String {
+	let bytes = input.as_bytes();
+	let mut out = String::new();
+	for &b in bytes {
+		match b {
+			b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+				out.push(char::from(b))
+			}
+			b' ' => out.push('+'),
+			_ => {
+				out.push('%');
+				let hi = b >> 4;
+				let lo = b & 0x0F;
+				out.push(char::from(if hi < 10 { b'0' + hi } else { b'A' + (hi - 10) }));
+				out.push(char::from(if lo < 10 { b'0' + lo } else { b'A' + (lo - 10) }));
+			}
+		}
+	}
+	out
+}
+
+fn extract_attr_value(tag: &str, attr: &str) -> Option<String> {
+	let needle = format!("{}=\"", attr);
+	let start = tag.find(needle.as_str())? + needle.len();
+	let rest = tag.get(start..)?;
+	let end = rest.find('"')?;
+	rest.get(..end).map(String::from)
+}
+
+fn parse_login_token(html: &str) -> Option<String> {
+	for segment in html.split("<input") {
+		if !segment.contains("name=\"_token\"") {
+			continue;
+		}
+		let mut tag = String::from("<input");
+		tag.push_str(segment);
+		return extract_attr_value(tag.as_str(), "value");
+	}
+	None
+}
+
+fn upsert_cookie(cookies: &mut Vec<(String, String)>, name: &str, value: &str) {
+	for (n, v) in cookies.iter_mut() {
+		if n.as_str().eq_ignore_ascii_case(name) {
+			*v = String::from(value);
+			return;
+		}
+	}
+	cookies.push((String::from(name), String::from(value)));
+}
+
+fn split_set_cookie_header(header: &str) -> Vec<String> {
+	let bytes = header.as_bytes();
+	let mut parts: Vec<String> = Vec::new();
+	let mut start = 0usize;
+	let mut i = 0usize;
+	while i < bytes.len() {
+		if bytes[i] == b',' {
+			let mut lookahead = i + 1;
+			while lookahead < bytes.len() && bytes[lookahead] == b' ' {
+				lookahead += 1;
+			}
+			let mut bound = lookahead;
+			while bound < bytes.len() && bytes[bound] != b';' && bytes[bound] != b',' {
+				bound += 1;
+			}
+			if let Some(candidate) = header.get(lookahead..bound) {
+				if candidate.contains('=') {
+					if let Some(chunk) = header.get(start..i) {
+						let trimmed = chunk.trim();
+						if !trimmed.is_empty() {
+							parts.push(String::from(trimmed));
+						}
+					}
+					start = i + 1;
+				}
+			}
+		}
+		i += 1;
+	}
+	if let Some(chunk) = header.get(start..) {
+		let trimmed = chunk.trim();
+		if !trimmed.is_empty() {
+			parts.push(String::from(trimmed));
+		}
+	}
+	parts
+}
+
+fn parse_set_cookie_header(header: &str, cookies: &mut Vec<(String, String)>) {
+	for part in split_set_cookie_header(header) {
+		let first = part.split(';').next().unwrap_or_default().trim();
+		let Some((name, value)) = first.split_once('=') else {
+			continue;
+		};
+		let name = name.trim();
+		let value = value.trim();
+		if !name.is_empty() && !value.is_empty() {
+			upsert_cookie(cookies, name, value);
+		}
+	}
+}
+
+fn ingest_response_cookies(resp: &aidoku::imports::net::Response, cookies: &mut Vec<(String, String)>) {
+	if let Some(set_cookie) = resp.get_header("Set-Cookie") {
+		parse_set_cookie_header(set_cookie.as_str(), cookies);
+	}
+	if let Some(set_cookie) = resp.get_header("set-cookie") {
+		parse_set_cookie_header(set_cookie.as_str(), cookies);
+	}
+}
+
+fn build_cookie_header(cookies: &[(String, String)]) -> String {
+	let mut pairs: Vec<(String, String)> = cookies.to_vec();
+	pairs.sort_by(|a, b| a.0.cmp(&b.0));
+	pairs
+		.into_iter()
+		.map(|(k, v)| format!("{}={}", k, v))
+		.collect::<Vec<String>>()
+		.join("; ")
+}
+
+fn build_login_form_body(token: &str, username: &str, password: &str) -> String {
+	format!(
+		"_token={}&login_id={}&password={}",
+		percent_encode_form_value(token),
+		percent_encode_form_value(username),
+		percent_encode_form_value(password),
+	)
+}
+
+fn play_authenticated_get_with_cookie(url: &str, cookie: Option<&str>) -> Result<Request> {
+	let cookie_str = cookie.map(String::from).or_else(settings::get_web_cookies);
+	let xsrf = cookie_str.as_deref().and_then(xsrf_token_for_header);
+	let accept = accept_for_url(url);
+	log_outgoing_request(
+		"GET",
+		url,
+		&[
+			("Referer", PLAY_REFERER),
+			("Accept", accept),
+			("X-Requested-With", "XMLHttpRequest"),
+		],
+		None,
+		cookie_str.as_deref(),
+		xsrf.as_deref(),
+	);
+	let mut req = Request::get(url)?
+		.header("Referer", PLAY_REFERER)
+		.header("Accept", accept)
+		.header("X-Requested-With", "XMLHttpRequest");
+	if let Some(ref x) = xsrf {
+		req = req.header("X-XSRF-TOKEN", x.as_str());
+	}
+	if let Some(ref c) = cookie_str {
+		req = req.header("Cookie", c.as_str());
+	}
+	Ok(req)
+}
+
 fn accept_for_url(url: &str) -> &'static str {
 	if url.contains("/api/") {
 		"application/json"
@@ -93,37 +261,12 @@ pub(crate) fn log_outgoing_request(
 
 /// GET with Referer, Accept, optional Cookie + `X-XSRF-TOKEN` (required by Play’s Laravel stack).
 pub(crate) fn play_authenticated_get(url: &str) -> Result<Request> {
-	let cookie = settings::get_web_cookies();
-	let xsrf = cookie.as_deref().and_then(xsrf_token_for_header);
-	let accept = accept_for_url(url);
-	log_outgoing_request(
-		"GET",
-		url,
-		&[
-			("Referer", PLAY_REFERER),
-			("Accept", accept),
-			("X-Requested-With", "XMLHttpRequest"),
-		],
-		None,
-		cookie.as_deref(),
-		xsrf.as_deref(),
-	);
-	let mut req = Request::get(url)?
-		.header("Referer", PLAY_REFERER)
-		.header("Accept", accept)
-		.header("X-Requested-With", "XMLHttpRequest");
-	if let Some(ref x) = xsrf {
-		req = req.header("X-XSRF-TOKEN", x.as_str());
-	}
-	if let Some(ref c) = cookie {
-		req = req.header("Cookie", c.as_str());
-	}
-	Ok(req)
+	play_authenticated_get_with_cookie(url, None)
 }
 
-fn play_post_json(url: &str, body: &[u8]) -> Result<Request> {
-	let cookie = settings::get_web_cookies();
-	let xsrf = cookie.as_deref().and_then(xsrf_token_for_header);
+fn play_post_json_with_cookie(url: &str, body: &[u8], cookie: Option<&str>) -> Result<Request> {
+	let cookie_str = cookie.map(String::from).or_else(settings::get_web_cookies);
+	let xsrf = cookie_str.as_deref().and_then(xsrf_token_for_header);
 	log_outgoing_request(
 		"POST",
 		url,
@@ -135,7 +278,7 @@ fn play_post_json(url: &str, body: &[u8]) -> Result<Request> {
 			("X-Requested-With", "XMLHttpRequest"),
 		],
 		Some(body.len()),
-		cookie.as_deref(),
+		cookie_str.as_deref(),
 		xsrf.as_deref(),
 	);
 	let mut req = Request::post(url)?
@@ -147,7 +290,7 @@ fn play_post_json(url: &str, body: &[u8]) -> Result<Request> {
 	if let Some(ref x) = xsrf {
 		req = req.header("X-XSRF-TOKEN", x.as_str());
 	}
-	if let Some(ref c) = cookie {
+	if let Some(ref c) = cookie_str {
 		req = req.header("Cookie", c.as_str());
 	}
 	Ok(req.body(body))
@@ -186,12 +329,149 @@ fn ensure_ok(op: &str, status: i32, data: &[u8]) -> Result<()> {
 	bail!("{} HTTP {}: {}", op, status, body_preview(data));
 }
 
+fn send_authenticated_get(url: &str, cookie: Option<&str>) -> Result<(i32, Vec<u8>)> {
+	let resp = play_authenticated_get_with_cookie(url, cookie)?.send()?;
+	let status = resp.status_code();
+	let data = resp.get_data()?;
+	Ok((status, data))
+}
+
+fn send_authenticated_post(url: &str, body: &[u8], cookie: Option<&str>) -> Result<(i32, Vec<u8>)> {
+	let resp = play_post_json_with_cookie(url, body, cookie)?.send()?;
+	let status = resp.status_code();
+	let data = resp.get_data()?;
+	Ok((status, data))
+}
+
+fn with_reauth_retry<F>(op: &str, mut send: F) -> Result<(i32, Vec<u8>)>
+where
+	F: FnMut() -> Result<(i32, Vec<u8>)>,
+{
+	let first = send()?;
+	if first.0 != 401 {
+		return Ok(first);
+	}
+
+	print(format!(
+		"[dlsite-play] {} received HTTP 401, attempting credential reauth",
+		op
+	));
+	settings::set_logged_in(false);
+	settings::clear_web_cookies();
+
+	login_from_settings().map_err(|e| {
+		error!(
+			"{} HTTP 401 and automatic credential reauth failed: {:?}",
+			op, e
+		)
+	})?;
+
+	send()
+}
+
+fn probe_session_cookie(cookie_header: &str) -> Result<()> {
+	let url = format!("{}/content/sales?last=0", PLAY_API);
+	let (status, data) = send_authenticated_get(url.as_str(), Some(cookie_header))?;
+	ensure_ok("probe_session", status, &data)
+}
+
+fn login_from_settings() -> Result<()> {
+	let (username, password) = settings::get_credentials().ok_or_else(|| {
+		error!(
+			"Missing DLsite credentials. Open source settings and run Login first."
+		)
+	})?;
+	login_with_credentials(username.as_str(), password.as_str())
+}
+
+pub fn login_with_credentials(username: &str, password: &str) -> Result<()> {
+	let username = username.trim();
+	let password = password.trim();
+	if username.is_empty() || password.is_empty() {
+		bail!("DLsite username and password are required.");
+	}
+
+	let mut cookies: Vec<(String, String)> = Vec::new();
+
+	let login_page_url = format!("{}?user=self", LOGIN_URL);
+	let login_page = Request::get(login_page_url.as_str())?
+		.header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+		.send()?;
+	ingest_response_cookies(&login_page, &mut cookies);
+	let login_page_status = login_page.status_code();
+	let login_page_data = login_page.get_data()?;
+	ensure_ok("login_page", login_page_status, &login_page_data)?;
+	let login_page_html = str::from_utf8(&login_page_data)
+		.map_err(|_| error!("Failed to decode DLsite login page as utf-8"))?;
+	let token = parse_login_token(login_page_html)
+		.ok_or_else(|| error!("Failed to find DLsite login form token"))?;
+
+	let form_body = build_login_form_body(token.as_str(), username, password);
+	let login_response = Request::post(LOGIN_URL)?
+		.header("Origin", LOGIN_ORIGIN)
+		.header("Referer", login_page_url.as_str())
+		.header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+		.header("Content-Type", "application/x-www-form-urlencoded")
+		.body(form_body.as_bytes())
+		.send()?;
+	ingest_response_cookies(&login_response, &mut cookies);
+	let login_status = login_response.status_code();
+	let login_data = login_response.get_data()?;
+	if !status_is_ok_or_redirect(login_status) {
+		log_http_failure("login_submit", login_status, &login_data);
+		bail!(
+			"DLsite credential login failed (HTTP {}). Verify username/password.",
+			login_status
+		);
+	}
+
+	let play_login = Request::get(PLAY_LOGIN_URL)?
+		.header("Referer", LOGIN_URL)
+		.header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+		.send()?;
+	ingest_response_cookies(&play_login, &mut cookies);
+	let play_login_status = play_login.status_code();
+	let play_login_data = play_login.get_data()?;
+	if !status_is_ok_or_redirect(play_login_status) {
+		log_http_failure("play_login", play_login_status, &play_login_data);
+		bail!("Failed to establish DLsite Play session (HTTP {}).", play_login_status);
+	}
+
+	let authorize = Request::get(PLAY_AUTHORIZE_URL)?
+		.header("Referer", PLAY_REFERER)
+		.header("Accept", "application/json")
+		.send()?;
+	ingest_response_cookies(&authorize, &mut cookies);
+	let authorize_status = authorize.status_code();
+	let authorize_data = authorize.get_data()?;
+	if !status_is_ok_or_redirect(authorize_status) {
+		log_http_failure("play_authorize", authorize_status, &authorize_data);
+		bail!("DLsite Play authorize failed (HTTP {}).", authorize_status);
+	}
+
+	let cookie_header = build_cookie_header(&cookies);
+	if !cookie_header.contains("play_session=") {
+		bail!("DLsite login succeeded but no play_session cookie was returned.");
+	}
+
+	settings::set_web_cookies(cookie_header.as_str());
+	probe_session_cookie(cookie_header.as_str())?;
+	settings::set_logged_in(true);
+	settings::clear_cached_worknos();
+	settings::clear_cached_page();
+	print(format!(
+		"[dlsite-play] credential login stored Cookie header ({} chars)",
+		cookie_header.len()
+	));
+	Ok(())
+}
+
 /// Fetch the list of purchased work IDs (sorted by sales date, newest first).
 pub fn get_sales() -> Result<Vec<SalesEntry>> {
 	let url = format!("{}/content/sales?last=0", PLAY_API);
-	let resp = play_authenticated_get(&url)?.send()?;
-	let status = resp.status_code();
-	let data = resp.get_data()?;
+	let (status, data) = with_reauth_retry("get_sales", || {
+		send_authenticated_get(url.as_str(), None)
+	})?;
 	ensure_ok("get_sales", status, &data)?;
 	let entries: Vec<SalesEntry> = serde_json::from_slice(&data).map_err(|e| {
 		print(format!(
@@ -219,9 +499,9 @@ pub fn get_works(worknos: &[String]) -> Result<Vec<PurchaseWork>> {
 	for (chunk_idx, chunk) in worknos.chunks(100).enumerate() {
 		let url = format!("{}/content/works", PLAY_API);
 		let body = serde_json::to_vec(chunk).map_err(|_| error!("Failed to serialize work IDs"))?;
-		let resp = play_post_json(&url, &body)?.send()?;
-		let status = resp.status_code();
-		let data = resp.get_data()?;
+		let (status, data) = with_reauth_retry("get_works", || {
+			send_authenticated_post(url.as_str(), &body, None)
+		})?;
 		let op = format!("get_works chunk {}", chunk_idx);
 		ensure_ok(&op, status, &data)?;
 		let parsed: WorksResponse = serde_json::from_slice(&data).map_err(|e| {
@@ -249,9 +529,9 @@ pub fn get_works(worknos: &[String]) -> Result<Vec<PurchaseWork>> {
 /// Get a download token for a specific work.
 pub fn download_token(workno: &str) -> Result<DownloadToken> {
 	let url = format!("{}/download/sign/cookie?workno={}", PLAY_DL_API, workno);
-	let resp = play_authenticated_get(&url)?.send()?;
-	let status = resp.status_code();
-	let data = resp.get_data()?;
+	let (status, data) = with_reauth_retry("download_token", || {
+		send_authenticated_get(url.as_str(), None)
+	})?;
 	ensure_ok("download_token", status, &data)?;
 	let token: DownloadToken = serde_json::from_slice(&data).map_err(|e| {
 		print(format!(
@@ -274,9 +554,9 @@ pub fn download_token(workno: &str) -> Result<DownloadToken> {
 /// Fetch the ziptree for a download token.
 pub fn fetch_ziptree(token: &DownloadToken) -> Result<ZipTree> {
 	let url = format!("{}ziptree.json", token.url);
-	let resp = play_authenticated_get(&url)?.send()?;
-	let status = resp.status_code();
-	let data = resp.get_data()?;
+	let (status, data) = with_reauth_retry("fetch_ziptree", || {
+		send_authenticated_get(url.as_str(), None)
+	})?;
 	ensure_ok("fetch_ziptree", status, &data)?;
 	let raw: RawZipTree = serde_json::from_slice(&data).map_err(|e| {
 		print(format!(
