@@ -2,7 +2,7 @@
 
 use aidoku::{
 	alloc::{format, string::ToString, vec, String, Vec},
-	imports::{canvas::ImageRef, net::Request},
+	imports::{canvas::ImageRef, net::Request, std::print},
 	prelude::*,
 	register_source, Chapter, FilterValue, HashMap, ImageRequestProvider, ImageResponse, Listing,
 	ListingProvider, Manga, MangaPageResult, NotificationHandler, Page, PageContent, PageContext,
@@ -129,10 +129,16 @@ impl ListingProvider for DlsitePlay {
 impl WebLoginHandler for DlsitePlay {
 	fn handle_web_login(&self, key: String, cookies: HashMap<String, String>) -> Result<bool> {
 		if key != "login" {
+			print(format!("[dlsite-play] web login rejected invalid key `{key}`"));
 			bail!("Invalid login key: `{key}`");
 		}
 
 		let has_session = cookies.contains_key("PHPSESSID");
+		print(format!(
+			"[dlsite-play] web login cookies={} has_PHPSESSID={}",
+			cookies.len(),
+			has_session
+		));
 
 		settings::set_logged_in(has_session);
 
@@ -301,19 +307,37 @@ fn get_manga_list_inner(
 
 /// Fetch (or use cached) full purchase work ID list, refreshing on page 1.
 fn get_or_fetch_worknos(page: i32) -> Result<Vec<String>> {
+	print(format!(
+		"[dlsite-play] get_or_fetch_worknos page={} logged_in={}",
+		page,
+		settings::is_logged_in()
+	));
 	if page == 1 {
 		let sales = api::get_sales()?;
 		let worknos: Vec<String> = sales.into_iter().map(|s| s.workno).collect();
+		print(format!(
+			"[dlsite-play] refreshed sales list count={}",
+			worknos.len()
+		));
 		settings::set_cached_worknos(&worknos);
 		Ok(worknos)
 	} else {
 		let cached = settings::get_cached_worknos();
 		if cached.is_empty() {
+			print("[dlsite-play] cache empty, fetching sales");
 			let sales = api::get_sales()?;
 			let worknos: Vec<String> = sales.into_iter().map(|s| s.workno).collect();
+			print(format!(
+				"[dlsite-play] sales list count={} (was empty cache)",
+				worknos.len()
+			));
 			settings::set_cached_worknos(&worknos);
 			Ok(worknos)
 		} else {
+			print(format!(
+				"[dlsite-play] using cached worknos count={}",
+				cached.len()
+			));
 			Ok(cached)
 		}
 	}
