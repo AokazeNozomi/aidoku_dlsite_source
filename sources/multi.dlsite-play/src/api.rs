@@ -1,4 +1,5 @@
 use crate::models::{DownloadToken, PurchaseWork, RawZipTree, SalesEntry, WorksResponse, ZipTree};
+use crate::settings;
 use aidoku::{
 	alloc::{format, String, Vec},
 	imports::{net::Request, std::print},
@@ -12,32 +13,47 @@ pub(crate) const PLAY_REFERER: &str = "https://play.dlsite.com/";
 const PLAY_API: &str = "https://play.dlsite.com/api/v3";
 const PLAY_DL_API: &str = "https://play.dl.dlsite.com/api/v3";
 
-/// Log what the source configures on the request. The Aidoku host may add a `Cookie`
-/// header from the web-login cookie jar; that is not visible to WASM here.
+/// Log outgoing request headers. `cookie` is the value we send (from web login), if any.
 pub(crate) fn log_outgoing_request(
 	method: &str,
 	url: &str,
 	headers: &[(&str, &str)],
 	body_len: Option<usize>,
+	cookie: Option<&str>,
 ) {
 	print(format!("[dlsite-play] → {} {}", method, url));
 	for (name, value) in headers {
 		print(format!("[dlsite-play]     {}: {}", name, value));
 	}
-	print(format!(
-		"[dlsite-play]     Cookie: <not set in source; host may inject from web login>"
-	));
+	match cookie {
+		Some(c) if !c.is_empty() => print(format!("[dlsite-play]     Cookie: {}", c)),
+		_ => print(format!(
+			"[dlsite-play]     Cookie: <none stored; complete web login first>"
+		)),
+	}
 	if let Some(n) = body_len {
 		print(format!("[dlsite-play]     body: {} bytes", n));
 	}
 }
 
 fn play_get(url: &str) -> Result<Request> {
-	log_outgoing_request("GET", url, &[("Referer", PLAY_REFERER)], None);
-	Ok(Request::get(url)?.header("Referer", PLAY_REFERER))
+	let cookie = settings::get_web_cookies();
+	log_outgoing_request(
+		"GET",
+		url,
+		&[("Referer", PLAY_REFERER)],
+		None,
+		cookie.as_deref(),
+	);
+	let mut req = Request::get(url)?.header("Referer", PLAY_REFERER);
+	if let Some(ref c) = cookie {
+		req = req.header("Cookie", c.as_str());
+	}
+	Ok(req)
 }
 
 fn play_post_json(url: &str, body: &[u8]) -> Result<Request> {
+	let cookie = settings::get_web_cookies();
 	log_outgoing_request(
 		"POST",
 		url,
@@ -46,11 +62,15 @@ fn play_post_json(url: &str, body: &[u8]) -> Result<Request> {
 			("Content-Type", "application/json"),
 		],
 		Some(body.len()),
+		cookie.as_deref(),
 	);
-	Ok(Request::post(url)?
+	let mut req = Request::post(url)?
 		.header("Referer", PLAY_REFERER)
-		.header("Content-Type", "application/json")
-		.body(body))
+		.header("Content-Type", "application/json");
+	if let Some(ref c) = cookie {
+		req = req.header("Cookie", c.as_str());
+	}
+	Ok(req.body(body))
 }
 
 fn body_preview(data: &[u8]) -> String {

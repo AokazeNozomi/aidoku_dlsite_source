@@ -134,12 +134,14 @@ impl WebLoginHandler for DlsitePlay {
 
 		let mut keys: Vec<&str> = cookies.keys().map(|s| s.as_str()).collect();
 		keys.sort();
-		for name in keys {
-			if let Some(value) = cookies.get(name) {
+		let mut cookie_pairs: Vec<String> = Vec::new();
+		for name in &keys {
+			if let Some(value) = cookies.get(*name) {
 				print(format!(
 					"[dlsite-play] web login cookie `{}` = `{}`",
 					name, value
 				));
+				cookie_pairs.push(format!("{}={}", name, value));
 			}
 		}
 
@@ -154,8 +156,16 @@ impl WebLoginHandler for DlsitePlay {
 		settings::set_logged_in(has_session);
 
 		if has_session {
+			let cookie_header = cookie_pairs.join("; ");
+			settings::set_web_cookies(&cookie_header);
+			print(format!(
+				"[dlsite-play] web login stored Cookie header ({} chars)",
+				cookie_header.len()
+			));
 			settings::clear_cached_worknos();
 			settings::clear_cached_page();
+		} else {
+			settings::clear_web_cookies();
 		}
 
 		Ok(has_session)
@@ -173,8 +183,19 @@ impl NotificationHandler for DlsitePlay {
 
 impl ImageRequestProvider for DlsitePlay {
 	fn get_image_request(&self, url: String, _context: Option<PageContext>) -> Result<Request> {
-		api::log_outgoing_request("GET", &url, &[("Referer", api::PLAY_REFERER)], None);
-		Ok(Request::get(&url)?.header("Referer", api::PLAY_REFERER))
+		let cookie = settings::get_web_cookies();
+		api::log_outgoing_request(
+			"GET",
+			&url,
+			&[("Referer", api::PLAY_REFERER)],
+			None,
+			cookie.as_deref(),
+		);
+		let mut req = Request::get(&url)?.header("Referer", api::PLAY_REFERER);
+		if let Some(ref c) = cookie {
+			req = req.header("Cookie", c.as_str());
+		}
+		Ok(req)
 	}
 }
 

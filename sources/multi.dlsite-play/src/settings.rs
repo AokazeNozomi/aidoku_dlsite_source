@@ -5,6 +5,7 @@ use aidoku::{
 
 const CACHED_WORKNOS_KEY: &str = "cached_worknos";
 const LOGGED_IN_KEY: &str = "logged_in";
+const WEB_COOKIES_KEY: &str = "web_cookies";
 
 pub fn is_logged_in() -> bool {
 	defaults_get::<bool>(LOGGED_IN_KEY).unwrap_or(false)
@@ -34,4 +35,21 @@ pub fn clear_cached_worknos() {
 
 pub fn clear_cached_page() {
 	defaults_set("cached_page", DefaultValue::Null);
+}
+
+/// Full `Cookie` header value for `play.dlsite.com` / `play.dl.dlsite.com` requests.
+/// Populated from web login; Aidoku does not attach WebView cookies to WASM `Request`s.
+pub fn set_web_cookies(header_value: &str) {
+	defaults_set(
+		WEB_COOKIES_KEY,
+		DefaultValue::String(String::from(header_value)),
+	);
+}
+
+pub fn get_web_cookies() -> Option<String> {
+	defaults_get::<String>(WEB_COOKIES_KEY).filter(|s| !s.is_empty())
+}
+
+pub fn clear_web_cookies() {
+	defaults_set(WEB_COOKIES_KEY, DefaultValue::Null);
 }
