@@ -163,6 +163,12 @@ impl WebLoginHandler for DlsitePlay {
 				"[dlsite-play] web login stored Cookie header ({} chars)",
 				cookie_header.len()
 			));
+			if let Err(e) = api::authorize_play_session() {
+				print(format!(
+					"[dlsite-play] authorize_play_session after web login: {:?}",
+					e
+				));
+			}
 			settings::clear_cached_worknos();
 			settings::clear_cached_page();
 		} else {

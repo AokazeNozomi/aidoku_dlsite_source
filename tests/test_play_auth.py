@@ -1,13 +1,11 @@
 """
-Reproduce the play_session invalidation bug and verify the fix.
+Test DLsite Play auth flows to identify which steps are needed.
 
 Usage:
     python tests/test_play_auth.py --xsrf-token TOKEN --play-session SESSION
-
-Get these values from your browser:
-    1. Log in to https://play.dlsite.com
-    2. Open DevTools → Application → Cookies → play.dlsite.com
-    3. Copy the XSRF-TOKEN and play_session values
+    python tests/test_play_auth.py --test authorize-only ...
+    python tests/test_play_auth.py --test direct ...
+    python tests/test_play_auth.py --test bug ...
 """
 
 import argparse
@@ -75,19 +73,91 @@ def get_authorize(cookie_header: str) -> tuple[int, dict[str, str]]:
     return resp.status_code, set_cookies
 
 
-def test_bug(xsrf: str, session: str) -> bool:
-    """Reproduce the bug: prime_play_api_session invalidates the WebView session."""
+def test_direct(xsrf: str, session: str) -> bool:
+    """Use WebView cookies directly — no bootstrap at all."""
     print("=" * 60)
-    print("TEST: Reproducing the bug (old code path)")
+    print("TEST: Direct API call (no bootstrap)")
     print("=" * 60)
 
     cookie_header = make_cookie_header(xsrf, session)
-    print(f"\n1. Original cookies from WebView:")
+    print(f"\n1. Cookies:")
     print(f"   XSRF-TOKEN = {xsrf[:20]}...")
     print(f"   play_session = {session[:20]}...")
 
-    # Step 1: GET /login/ (like prime_play_api_session did)
-    print(f"\n2. GET /login/ (bootstrap step 1)...")
+    print(f"\n2. GET /api/v3/content/sales...")
+    status, body = get_sales(cookie_header)
+    print(f"   HTTP {status}")
+    if status == 200:
+        try:
+            entries = json.loads(body)
+            print(f"   {len(entries)} sales entries")
+        except json.JSONDecodeError:
+            print(f"   {body[:100]}...")
+        print(f"\n   PASS: direct API call works")
+        return True
+    else:
+        print(f"   {body}")
+        print(f"\n   FAIL: direct API call returned {status}")
+        return False
+
+
+def test_authorize_only(xsrf: str, session: str) -> bool:
+    """Call /api/authorize (skip /login/), persist Set-Cookie, then API call."""
+    print("=" * 60)
+    print("TEST: Authorize only (skip /login/)")
+    print("=" * 60)
+
+    cookie_header = make_cookie_header(xsrf, session)
+    print(f"\n1. Cookies:")
+    print(f"   XSRF-TOKEN = {xsrf[:20]}...")
+    print(f"   play_session = {session[:20]}...")
+
+    print(f"\n2. GET /api/authorize...")
+    status, new_cookies = get_authorize(cookie_header)
+    print(f"   HTTP {status}")
+    if new_cookies:
+        print(f"   Set-Cookie: {list(new_cookies.keys())}")
+    else:
+        print(f"   Set-Cookie: (none)")
+
+    current_xsrf = new_cookies.get("XSRF-TOKEN", xsrf)
+    current_session = new_cookies.get("play_session", session)
+    if current_xsrf != xsrf:
+        print(f"   XSRF-TOKEN rotated")
+    if current_session != session:
+        print(f"   play_session rotated")
+
+    cookie_header = make_cookie_header(current_xsrf, current_session)
+
+    print(f"\n3. GET /api/v3/content/sales...")
+    status, body = get_sales(cookie_header)
+    print(f"   HTTP {status}")
+    if status == 200:
+        try:
+            entries = json.loads(body)
+            print(f"   {len(entries)} sales entries")
+        except json.JSONDecodeError:
+            print(f"   {body[:100]}...")
+        print(f"\n   PASS: authorize-only flow works")
+        return True
+    else:
+        print(f"   {body}")
+        print(f"\n   FAIL: API call returned {status}")
+        return False
+
+
+def test_bug(xsrf: str, session: str) -> bool:
+    """Full bootstrap: /login/ + /api/authorize + API call."""
+    print("=" * 60)
+    print("TEST: Full bootstrap (old code - /login/ + /authorize)")
+    print("=" * 60)
+
+    cookie_header = make_cookie_header(xsrf, session)
+    print(f"\n1. Cookies:")
+    print(f"   XSRF-TOKEN = {xsrf[:20]}...")
+    print(f"   play_session = {session[:20]}...")
+
+    print(f"\n2. GET /login/...")
     status, new_cookies = get_login_page(cookie_header)
     print(f"   HTTP {status}")
     if new_cookies:
@@ -95,18 +165,16 @@ def test_bug(xsrf: str, session: str) -> bool:
     else:
         print(f"   Set-Cookie: (none)")
 
-    # Apply Set-Cookie like old code did
     current_xsrf = new_cookies.get("XSRF-TOKEN", xsrf)
     current_session = new_cookies.get("play_session", session)
     if current_xsrf != xsrf:
-        print(f"   XSRF-TOKEN rotated: {xsrf[:20]}... → {current_xsrf[:20]}...")
+        print(f"   XSRF-TOKEN rotated")
     if current_session != session:
-        print(f"   play_session rotated: {session[:20]}... → {current_session[:20]}...")
+        print(f"   play_session rotated")
 
     cookie_header = make_cookie_header(current_xsrf, current_session)
 
-    # Step 2: GET /api/authorize (like prime_play_api_session did)
-    print(f"\n3. GET /api/authorize (bootstrap step 2)...")
+    print(f"\n3. GET /api/authorize...")
     status, new_cookies = get_authorize(cookie_header)
     print(f"   HTTP {status}")
     if new_cookies:
@@ -117,105 +185,81 @@ def test_bug(xsrf: str, session: str) -> bool:
     current_xsrf = new_cookies.get("XSRF-TOKEN", current_xsrf)
     current_session = new_cookies.get("play_session", current_session)
     if "play_session" in new_cookies:
-        print(f"   play_session rotated again: → {current_session[:20]}...")
+        print(f"   play_session rotated again")
 
     cookie_header = make_cookie_header(current_xsrf, current_session)
 
-    # Step 3: GET /api/v3/content/sales (the actual request)
-    print(f"\n4. GET /api/v3/content/sales (data request)...")
+    print(f"\n4. GET /api/v3/content/sales...")
     status, body = get_sales(cookie_header)
     print(f"   HTTP {status}")
     if status == 401:
-        print(f"   Response: {body}")
-        print(f"\n   BUG REPRODUCED: bootstrap invalidated the session")
+        print(f"   {body}")
+        print(f"\n   BUG REPRODUCED: full bootstrap kills session")
         return True
     else:
-        print(f"   Response: {body[:100]}...")
-        print(f"\n   Bug NOT reproduced (session survived bootstrap)")
-        return False
-
-
-def test_fix(xsrf: str, session: str) -> bool:
-    """Verify the fix: use WebView cookies directly without priming."""
-    print("\n" + "=" * 60)
-    print("TEST: Verifying the fix (new code path)")
-    print("=" * 60)
-
-    cookie_header = make_cookie_header(xsrf, session)
-    print(f"\n1. Original cookies from WebView:")
-    print(f"   XSRF-TOKEN = {xsrf[:20]}...")
-    print(f"   play_session = {session[:20]}...")
-
-    # Skip bootstrap entirely, go straight to API call
-    print(f"\n2. GET /api/v3/content/sales (direct, no bootstrap)...")
-    status, body = get_sales(cookie_header)
-    print(f"   HTTP {status}")
-    if status == 200:
-        try:
-            entries = json.loads(body)
-            print(f"   Response: {len(entries)} sales entries")
-        except json.JSONDecodeError:
-            print(f"   Response: {body[:100]}...")
-        print(f"\n   FIX VERIFIED: direct API call works without bootstrap")
-        return True
-    else:
-        print(f"   Response: {body}")
-        print(f"\n   Fix FAILED: direct API call also returns {status}")
-        print(f"   (Cookies may be expired — try fresh ones from the browser)")
+        print(f"   {body[:100]}...")
+        print(f"\n   Bug NOT reproduced")
         return False
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Test DLsite Play auth flow: reproduce bug and verify fix"
+        description="Test DLsite Play auth flows"
     )
     parser.add_argument("--xsrf-token", required=True, help="XSRF-TOKEN cookie value")
     parser.add_argument(
         "--play-session", required=True, help="play_session cookie value"
     )
     parser.add_argument(
-        "--fix-only",
-        action="store_true",
-        help="Only test the fix (skip bug reproduction to preserve session)",
+        "--test",
+        choices=["direct", "authorize-only", "bug", "all"],
+        default="all",
+        help="Which test to run (default: all)",
     )
     args = parser.parse_args()
 
-    if args.fix_only:
-        ok = test_fix(args.xsrf_token, args.play_session)
+    xsrf = args.xsrf_token
+    session = args.play_session
+
+    if args.test == "direct":
+        ok = test_direct(xsrf, session)
         sys.exit(0 if ok else 1)
 
-    # Test the fix FIRST (non-destructive) then reproduce the bug (destructive)
-    print("Running fix test first (non-destructive)...")
-    print("Then reproducing the bug (will invalidate these cookies).\n")
+    if args.test == "authorize-only":
+        ok = test_authorize_only(xsrf, session)
+        sys.exit(0 if ok else 1)
 
-    fix_ok = test_fix(args.xsrf_token, args.play_session)
+    if args.test == "bug":
+        test_bug(xsrf, session)
+        sys.exit(0)
 
-    if not fix_ok:
-        print("\nSkipping bug reproduction — cookies appear invalid.")
-        sys.exit(1)
+    # all: run non-destructive tests first, then destructive
+    print("Running tests in order: direct → authorize-only → bug")
+    print("(Each test uses FRESH cookies from args, but server-side")
+    print("rotation from one test may affect the next.)\n")
 
-    print("\n" + "-" * 60)
-    print("NOTE: The next test will INVALIDATE your cookies.")
-    print("You will need to log in again after this test.")
-    print("-" * 60)
-
-    bug_reproduced = test_bug(args.xsrf_token, args.play_session)
+    r1 = test_direct(xsrf, session)
+    print()
+    r2 = test_authorize_only(xsrf, session)
+    print()
+    r3 = test_bug(xsrf, session)
 
     print("\n" + "=" * 60)
     print("RESULTS")
     print("=" * 60)
-    print(f"  Fix works (direct API call):     {'PASS' if fix_ok else 'FAIL'}")
-    print(f"  Bug reproduced (bootstrap kills): {'YES' if bug_reproduced else 'NO'}")
+    print(f"  Direct API call:       {'PASS' if r1 else 'FAIL'}")
+    print(f"  Authorize-only + API:  {'PASS' if r2 else 'FAIL'}")
+    print(f"  Full bootstrap + API:  {'BUG (401)' if r3 else 'OK'}")
 
-    if fix_ok and bug_reproduced:
-        print("\nConclusion: Root cause confirmed. The bootstrap (GET /login/)")
-        print("invalidates the WebView session. Removing it fixes the 401.")
-    elif fix_ok and not bug_reproduced:
-        print("\nConclusion: Fix works but bug didn't reproduce.")
-        print("Session may have survived rotation — the fix is still correct")
-        print("as it avoids unnecessary requests and rotation risk.")
+    if not r1 and r2:
+        print("\nConclusion: WebView cookies need /api/authorize before API use.")
+        print("Fix: call /api/authorize after web login, persist Set-Cookie.")
+    elif r1:
+        print("\nConclusion: WebView cookies work directly (session already bound).")
+    elif not r1 and not r2:
+        print("\nConclusion: Cookies may be expired or invalid.")
 
-    sys.exit(0 if fix_ok else 1)
+    sys.exit(0 if (r1 or r2) else 1)
 
 
 if __name__ == "__main__":
