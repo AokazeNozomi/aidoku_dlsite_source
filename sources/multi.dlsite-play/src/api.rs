@@ -266,6 +266,23 @@ fn looks_like_challenge_page(html: &str) -> bool {
 		|| html.contains("Access denied")
 }
 
+fn extract_login_error_message(html: &str) -> Option<String> {
+	let markers = [
+		"ログインIDまたはパスワードが違います",
+		"ログインに失敗しました",
+		"パスワードが違います",
+		"アカウントがロック",
+		"認証コード",
+		"二段階認証",
+	];
+	for marker in markers {
+		if html.contains(marker) {
+			return Some(String::from(marker));
+		}
+	}
+	None
+}
+
 fn build_login_form_body(token: &str, username: &str, password: &str) -> String {
 	format!(
 		"_token={}&login_id={}&password={}",
@@ -513,6 +530,9 @@ pub fn login_with_credentials(username: &str, password: &str) -> Result<()> {
 			bail!(
 				"DLsite blocked automatic credential login with a challenge (captcha/verification)."
 			);
+		}
+		if let Some(msg) = extract_login_error_message(login_text) {
+			bail!("DLsite credential login failed: {}", msg);
 		}
 		if looks_like_login_page(login_text) {
 			bail!("DLsite credential login failed. Check login ID/password.");
