@@ -173,7 +173,8 @@ impl NotificationHandler for DlsitePlay {
 
 impl ImageRequestProvider for DlsitePlay {
 	fn get_image_request(&self, url: String, _context: Option<PageContext>) -> Result<Request> {
-		Ok(Request::get(url)?.header("Referer", "https://play.dlsite.com/"))
+		api::log_outgoing_request("GET", &url, &[("Referer", api::PLAY_REFERER)], None);
+		Ok(Request::get(&url)?.header("Referer", api::PLAY_REFERER))
 	}
 }
 

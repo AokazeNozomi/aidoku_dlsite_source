@@ -7,18 +7,50 @@ use aidoku::{
 };
 use core::str;
 
+pub(crate) const PLAY_REFERER: &str = "https://play.dlsite.com/";
+
 const PLAY_API: &str = "https://play.dlsite.com/api/v3";
 const PLAY_DL_API: &str = "https://play.dl.dlsite.com/api/v3";
-const REFERER: &str = "https://play.dlsite.com/";
 
-fn play_get(url: &str) -> Result<Request> {
-	Ok(Request::get(url)?.header("Referer", REFERER))
+/// Log what the source configures on the request. The Aidoku host may add a `Cookie`
+/// header from the web-login cookie jar; that is not visible to WASM here.
+pub(crate) fn log_outgoing_request(
+	method: &str,
+	url: &str,
+	headers: &[(&str, &str)],
+	body_len: Option<usize>,
+) {
+	print(format!("[dlsite-play] → {} {}", method, url));
+	for (name, value) in headers {
+		print(format!("[dlsite-play]     {}: {}", name, value));
+	}
+	print(format!(
+		"[dlsite-play]     Cookie: <not set in source; host may inject from web login>"
+	));
+	if let Some(n) = body_len {
+		print(format!("[dlsite-play]     body: {} bytes", n));
+	}
 }
 
-fn play_post(url: &str) -> Result<Request> {
+fn play_get(url: &str) -> Result<Request> {
+	log_outgoing_request("GET", url, &[("Referer", PLAY_REFERER)], None);
+	Ok(Request::get(url)?.header("Referer", PLAY_REFERER))
+}
+
+fn play_post_json(url: &str, body: &[u8]) -> Result<Request> {
+	log_outgoing_request(
+		"POST",
+		url,
+		&[
+			("Referer", PLAY_REFERER),
+			("Content-Type", "application/json"),
+		],
+		Some(body.len()),
+	);
 	Ok(Request::post(url)?
-		.header("Referer", REFERER)
-		.header("Content-Type", "application/json"))
+		.header("Referer", PLAY_REFERER)
+		.header("Content-Type", "application/json")
+		.body(body))
 }
 
 fn body_preview(data: &[u8]) -> String {
@@ -81,7 +113,7 @@ pub fn get_works(worknos: &[String]) -> Result<Vec<PurchaseWork>> {
 	for (chunk_idx, chunk) in worknos.chunks(100).enumerate() {
 		let url = format!("{}/content/works", PLAY_API);
 		let body = serde_json::to_vec(chunk).map_err(|_| error!("Failed to serialize work IDs"))?;
-		let resp = play_post(&url)?.body(&body).send()?;
+		let resp = play_post_json(&url, &body)?.send()?;
 		let status = resp.status_code();
 		let data = resp.get_data()?;
 		if !(200..300).contains(&status) {
