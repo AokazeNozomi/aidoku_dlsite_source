@@ -16,6 +16,7 @@ const PLAY_API: &str = "https://play.dlsite.com/api/v3";
 const PLAY_DL_API: &str = "https://play.dl.dlsite.com/api/v3";
 const LOGIN_URL: &str = "https://login.dlsite.com/login";
 const PLAY_LOGIN_URL: &str = "https://play.dlsite.com/login/";
+const PLAY_HOME_URL: &str = "https://play.dlsite.com/";
 const PLAY_AUTHORIZE_URL: &str = "https://play.dlsite.com/api/authorize";
 const LOGIN_HOST: &str = "login.dlsite.com";
 const PLAY_HOST: &str = "play.dlsite.com";
@@ -276,6 +277,33 @@ fn build_cookie_header_for_host(cookies: &[CookieEntry], host: &str, request_pat
 		.map(|(k, v)| format!("{}={}", k, v))
 		.collect::<Vec<String>>()
 		.join("; ")
+}
+
+fn select_cookie_value_for_host(
+	cookies: &[CookieEntry],
+	host: &str,
+	request_path: &str,
+	name: &str,
+) -> Option<String> {
+	let mut best: Option<(String, i32)> = None;
+	for c in cookies.iter().filter(|c| {
+		c.name.as_str().eq_ignore_ascii_case(name)
+			&& domain_matches(host, c.domain.as_str())
+			&& path_matches(request_path, c.path.as_str())
+	}) {
+		let score = cookie_specificity(host, c);
+		match best {
+			Some((_, best_score)) if best_score > score => {}
+			_ => best = Some((c.value.clone(), score)),
+		}
+	}
+	best.map(|(v, _)| v)
+}
+
+fn build_play_auth_cookie_header(cookies: &[CookieEntry]) -> Option<String> {
+	let xsrf = select_cookie_value_for_host(cookies, PLAY_HOST, "/", "XSRF-TOKEN")?;
+	let session = select_cookie_value_for_host(cookies, PLAY_HOST, "/", "play_session")?;
+	Some(format!("XSRF-TOKEN={}; play_session={}", xsrf, session))
 }
 
 fn looks_like_login_page(html: &str) -> bool {
@@ -583,6 +611,22 @@ pub fn login_with_credentials(username: &str, password: &str) -> Result<()> {
 		bail!("Failed to establish DLsite Play session (HTTP {}).", play_login_status);
 	}
 
+	let play_home_cookie = build_cookie_header_for_host(&cookies, PLAY_HOST, "/");
+	let mut play_home_req = Request::get(PLAY_HOME_URL)?
+		.header("Referer", PLAY_LOGIN_URL)
+		.header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+	if !play_home_cookie.is_empty() {
+		play_home_req = play_home_req.header("Cookie", play_home_cookie.as_str());
+	}
+	let play_home = play_home_req.send()?;
+	ingest_response_cookies(&play_home, PLAY_HOST, &mut cookies);
+	let play_home_status = play_home.status_code();
+	let play_home_data = play_home.get_data()?;
+	if !status_is_ok_or_redirect(play_home_status) {
+		log_http_failure("play_home", play_home_status, &play_home_data);
+		bail!("Failed to open DLsite Play home (HTTP {}).", play_home_status);
+	}
+
 	let authorize_cookie = build_cookie_header_for_host(&cookies, PLAY_HOST, "/api/authorize");
 	let mut authorize_req = Request::get(PLAY_AUTHORIZE_URL)?
 		.header("Referer", PLAY_REFERER)
@@ -599,13 +643,8 @@ pub fn login_with_credentials(username: &str, password: &str) -> Result<()> {
 		bail!("DLsite Play authorize failed (HTTP {}).", authorize_status);
 	}
 
-	let cookie_header = build_cookie_header_for_host(&cookies, PLAY_HOST, "/");
-	if !cookie_header.contains("play_session=") {
-		bail!("DLsite login succeeded but no play_session cookie was returned.");
-	}
-	if !cookie_header.contains("XSRF-TOKEN=") {
-		bail!("DLsite login succeeded but no XSRF-TOKEN cookie was returned.");
-	}
+	let cookie_header = build_play_auth_cookie_header(&cookies)
+		.ok_or_else(|| error!("DLsite login succeeded but Play auth cookies were not returned."))?;
 
 	settings::set_web_cookies(cookie_header.as_str());
 	probe_session_cookie(cookie_header.as_str())?;
