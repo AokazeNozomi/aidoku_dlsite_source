@@ -258,6 +258,14 @@ fn looks_like_login_page(html: &str) -> bool {
 		|| html.contains("password")
 }
 
+fn looks_like_challenge_page(html: &str) -> bool {
+	html.contains("recaptcha")
+		|| html.contains("g-recaptcha")
+		|| html.contains("captcha")
+		|| html.contains("Cloudflare")
+		|| html.contains("Access denied")
+}
+
 fn build_login_form_body(token: &str, username: &str, password: &str) -> String {
 	format!(
 		"_token={}&login_id={}&password={}",
@@ -458,8 +466,6 @@ fn login_from_settings() -> Result<()> {
 }
 
 pub fn login_with_credentials(username: &str, password: &str) -> Result<()> {
-	let username = username.trim();
-	let password = password.trim();
 	if username.is_empty() || password.is_empty() {
 		bail!("DLsite username and password are required.");
 	}
@@ -501,9 +507,20 @@ pub fn login_with_credentials(username: &str, password: &str) -> Result<()> {
 			login_status
 		);
 	}
-	let login_html = str::from_utf8(&login_data).unwrap_or_default();
-	if looks_like_login_page(login_html) {
-		bail!("DLsite credential login did not complete. Verify username/password.");
+	let login_text = str::from_utf8(&login_data).unwrap_or_default();
+	if !login_text.contains("ログイン中です") {
+		if looks_like_challenge_page(login_text) {
+			bail!(
+				"DLsite blocked automatic credential login with a challenge (captcha/verification)."
+			);
+		}
+		if looks_like_login_page(login_text) {
+			bail!("DLsite credential login failed. Check login ID/password.");
+		}
+		bail!(
+			"DLsite login did not return the expected success page. Body: {}",
+			body_preview(&login_data)
+		);
 	}
 
 	let play_cookie = build_cookie_header_for_host(&cookies, PLAY_HOST, "/login");

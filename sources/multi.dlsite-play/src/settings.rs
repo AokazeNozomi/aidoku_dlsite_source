@@ -57,11 +57,7 @@ pub fn clear_web_cookies() {
 }
 
 pub fn get_credentials() -> Option<(String, String)> {
-	let username = defaults_get::<String>(USERNAME_KEY)
-		.map(|s| s.trim().into())
-		.filter(|s: &String| !s.is_empty())?;
-	let password = defaults_get::<String>(PASSWORD_KEY)
-		.map(|s| s.trim().into())
-		.filter(|s: &String| !s.is_empty())?;
+	let username = defaults_get::<String>(USERNAME_KEY).filter(|s| !s.is_empty())?;
+	let password = defaults_get::<String>(PASSWORD_KEY).filter(|s| !s.is_empty())?;
 	Some((username, password))
 }
