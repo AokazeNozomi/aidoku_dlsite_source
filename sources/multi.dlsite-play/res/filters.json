@@ -19,7 +19,7 @@
     "id": "work_type",
     "title": "Work Type",
     "type": "multi-select",
-    "canExclude": false,
+    "canExclude": true,
     "usesTagStyle": true,
     "options": [
       "Manga",
@@ -88,7 +88,7 @@
     "id": "genre_focus",
     "title": "Focus / Appeals",
     "type": "multi-select",
-    "canExclude": false,
+    "canExclude": true,
     "usesTagStyle": true,
     "options": [
       "3D Works",
@@ -221,7 +221,7 @@
     "id": "genre_items",
     "title": "Featured Items / Tools",
     "type": "multi-select",
-    "canExclude": false,
+    "canExclude": true,
     "usesTagStyle": true,
     "options": [
       "Collar / Chain / Restraints",
@@ -252,7 +252,7 @@
     "id": "genre_characters",
     "title": "Characters",
     "type": "multi-select",
-    "canExclude": false,
+    "canExclude": true,
     "usesTagStyle": true,
     "options": [
       "Angel / Demon",
@@ -455,7 +455,7 @@
     "id": "genre_outfits",
     "title": "Outfits / Occupations",
     "type": "multi-select",
-    "canExclude": false,
+    "canExclude": true,
     "usesTagStyle": true,
     "options": [
       "Apron",
@@ -528,7 +528,7 @@
     "id": "genre_situations",
     "title": "Situations / Tastes",
     "type": "multi-select",
-    "canExclude": false,
+    "canExclude": true,
     "usesTagStyle": true,
     "options": [
       "Age Disparity",
@@ -729,7 +729,7 @@
     "id": "genre_actions",
     "title": "Actions / Sexual Tendencies",
     "type": "multi-select",
-    "canExclude": false,
+    "canExclude": true,
     "usesTagStyle": true,
     "options": [
       "Ahegao / Gapeface",
@@ -902,7 +902,7 @@
     "id": "genre_physical",
     "title": "Physical Characteristics",
     "type": "multi-select",
-    "canExclude": false,
+    "canExclude": true,
     "usesTagStyle": true,
     "options": [
       "Animal Ears",
@@ -979,7 +979,7 @@
     "id": "genre_extreme",
     "title": "R-18G / Extreme",
     "type": "multi-select",
-    "canExclude": false,
+    "canExclude": true,
     "usesTagStyle": true,
     "options": [
       "Bizarre / Eccentric",
@@ -1012,7 +1012,7 @@
     "id": "genre_books",
     "title": "Books / General",
     "type": "multi-select",
-    "canExclude": false,
+    "canExclude": true,
     "usesTagStyle": true,
     "options": [
       "Accounting/Bookkeeping",
