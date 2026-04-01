@@ -1014,17 +1014,17 @@ fn extract_translation_filter(filters: &[FilterValue]) -> Option<String> {
 }
 
 fn extract_genre_filter(filters: &[FilterValue]) -> Vec<u32> {
+	let mut result = Vec::new();
 	for f in filters {
 		if let FilterValue::MultiSelect { id, included, .. } = f {
-			if id == "genre" && !included.is_empty() {
-				return included
-					.iter()
-					.filter_map(|s| s.parse::<u32>().ok())
-					.collect();
+			if id.starts_with("genre_") && !included.is_empty() {
+				result.extend(
+					included.iter().filter_map(|s| s.parse::<u32>().ok()),
+				);
 			}
 		}
 	}
-	Vec::new()
+	result
 }
 
 fn extract_work_type_filter(filters: &[FilterValue]) -> Vec<String> {
