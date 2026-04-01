@@ -465,7 +465,7 @@ impl PurchaseWork {
 }
 
 /// Returns days since 1970-01-01 for a civil date.
-fn days_from_civil(year: i32, month: u32, day: u32) -> Option<i64> {
+pub(crate) fn days_from_civil(year: i32, month: u32, day: u32) -> Option<i64> {
 	if !(1..=12).contains(&month) || day == 0 || day > 31 {
 		return None;
 	}
@@ -481,7 +481,7 @@ fn days_from_civil(year: i32, month: u32, day: u32) -> Option<i64> {
 	Some(days)
 }
 
-fn format_size(bytes: u64) -> String {
+pub(crate) fn format_size(bytes: u64) -> String {
 	if bytes >= 1_073_741_824 {
 		format!("{:.1} GB", bytes as f64 / 1_073_741_824.0)
 	} else {
@@ -766,11 +766,30 @@ pub fn derive_series_name(works: &[PurchaseWork]) -> Option<String> {
 	let prefix = core::str::from_utf8(prefix)
 		.unwrap_or_else(|e| core::str::from_utf8(&prefix[..e.valid_up_to()]).unwrap_or(""));
 
-	// Strip trailing whitespace, punctuation, and common separators
-	let trimmed = prefix
-		.trim_end()
-		.trim_end_matches(|c: char| matches!(c, '-' | '–' | '—' | ':' | '/' | '(' | '[' | '【'))
-		.trim_end();
+	// Strip trailing whitespace, punctuation, separators, and volume indicators.
+	// Loop because stripping a volume suffix may reveal more punctuation.
+	let mut trimmed = prefix;
+	loop {
+		let before = trimmed;
+		trimmed = trimmed
+			.trim_end()
+			.trim_end_matches(|c: char| {
+				matches!(c, '-' | '–' | '—' | ':' | '/' | '.' | '#' | '(' | '[' | '【')
+			})
+			.trim_end();
+
+		// Strip trailing volume indicators (case-insensitive)
+		for suffix in &["Volume", "Vol", "volume", "vol", "V", "v", "第"] {
+			if let Some(rest) = trimmed.strip_suffix(suffix) {
+				trimmed = rest;
+			}
+		}
+
+		trimmed = trimmed.trim_end();
+		if trimmed == before {
+			break;
+		}
+	}
 
 	if trimmed.is_empty() {
 		// No common prefix — fall back to first work's title
@@ -926,5 +945,280 @@ pub fn series_manga(
 		viewer,
 		url,
 		..Default::default()
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use aidoku::alloc::string::ToString;
+	use aidoku_test::aidoku_test;
+
+	// -- days_from_civil tests --
+
+	#[aidoku_test]
+	fn days_from_civil_unix_epoch() {
+		assert_eq!(days_from_civil(1970, 1, 1), Some(0));
+	}
+
+	#[aidoku_test]
+	fn days_from_civil_known_date() {
+		// 2024-01-01 = 19723 days since epoch
+		assert_eq!(days_from_civil(2024, 1, 1), Some(19723));
+	}
+
+	#[aidoku_test]
+	fn days_from_civil_leap_year() {
+		// 2024-02-29 should be valid
+		assert!(days_from_civil(2024, 2, 29).is_some());
+	}
+
+	#[aidoku_test]
+	fn days_from_civil_invalid_month() {
+		assert_eq!(days_from_civil(2024, 0, 1), None);
+		assert_eq!(days_from_civil(2024, 13, 1), None);
+	}
+
+	#[aidoku_test]
+	fn days_from_civil_invalid_day() {
+		assert_eq!(days_from_civil(2024, 1, 0), None);
+	}
+
+	// -- format_size tests --
+
+	#[aidoku_test]
+	fn format_size_megabytes() {
+		let result = format_size(10_485_760); // 10 MB
+		assert_eq!(result, "10.0 MB");
+	}
+
+	#[aidoku_test]
+	fn format_size_gigabytes() {
+		let result = format_size(2_147_483_648); // 2 GB
+		assert_eq!(result, "2.0 GB");
+	}
+
+	#[aidoku_test]
+	fn format_size_small() {
+		let result = format_size(1_048_576); // 1 MB
+		assert_eq!(result, "1.0 MB");
+	}
+
+	// -- PlayFile tests --
+
+	fn make_playfile(opt_name: Option<&str>, crypt: Option<bool>, w: Option<i32>, h: Option<i32>) -> PlayFile {
+		PlayFile {
+			length: 100,
+			file_type: "image".into(),
+			files: PlayFileFiles {
+				optimized: Some(OptimizedInfo {
+					name: opt_name.map(|s| s.into()),
+					length: Some(50),
+					width: w,
+					height: h,
+					crypt,
+				}),
+				page: None,
+			},
+			hashname: "hash".into(),
+		}
+	}
+
+	#[aidoku_test]
+	fn playfile_optimized_name_present() {
+		let pf = make_playfile(Some("opt.webp"), None, None, None);
+		assert_eq!(pf.optimized_name(), Some("opt.webp"));
+	}
+
+	#[aidoku_test]
+	fn playfile_optimized_name_missing() {
+		let pf = PlayFile {
+			length: 100,
+			file_type: "image".into(),
+			files: PlayFileFiles {
+				optimized: None,
+				page: None,
+			},
+			hashname: "hash".into(),
+		};
+		assert_eq!(pf.optimized_name(), None);
+	}
+
+	#[aidoku_test]
+	fn playfile_is_crypt_true() {
+		let pf = make_playfile(Some("x.webp"), Some(true), None, None);
+		assert!(pf.is_crypt());
+	}
+
+	#[aidoku_test]
+	fn playfile_is_crypt_false() {
+		let pf = make_playfile(Some("x.webp"), Some(false), None, None);
+		assert!(!pf.is_crypt());
+	}
+
+	#[aidoku_test]
+	fn playfile_is_crypt_none() {
+		let pf = make_playfile(Some("x.webp"), None, None, None);
+		assert!(!pf.is_crypt());
+	}
+
+	#[aidoku_test]
+	fn playfile_crypt_dimensions() {
+		let pf = make_playfile(Some("x.webp"), Some(true), Some(800), Some(600));
+		assert_eq!(pf.crypt_dimensions(), Some((800, 600)));
+	}
+
+	#[aidoku_test]
+	fn playfile_crypt_dimensions_missing() {
+		let pf = make_playfile(Some("x.webp"), Some(true), None, None);
+		assert_eq!(pf.crypt_dimensions(), None);
+	}
+
+	// -- derive_series_name tests --
+
+	#[aidoku_test]
+	fn derive_series_name_common_prefix_parens() {
+		let works = vec![
+			make_purchase_work("RJ001", Some("My Series (1)")),
+			make_purchase_work("RJ002", Some("My Series (2)")),
+		];
+		assert_eq!(derive_series_name(&works), Some("My Series".to_string()));
+	}
+
+	#[aidoku_test]
+	fn derive_series_name_strips_vol_dot() {
+		let works = vec![
+			make_purchase_work("RJ001", Some("My Series Vol. 1")),
+			make_purchase_work("RJ002", Some("My Series Vol. 2")),
+			make_purchase_work("RJ003", Some("My Series Vol. 3")),
+		];
+		assert_eq!(derive_series_name(&works), Some("My Series".to_string()));
+	}
+
+	#[aidoku_test]
+	fn derive_series_name_strips_volume() {
+		let works = vec![
+			make_purchase_work("RJ001", Some("Cool Title Volume 1")),
+			make_purchase_work("RJ002", Some("Cool Title Volume 2")),
+		];
+		assert_eq!(derive_series_name(&works), Some("Cool Title".to_string()));
+	}
+
+	#[aidoku_test]
+	fn derive_series_name_strips_dash_separator() {
+		let works = vec![
+			make_purchase_work("RJ001", Some("My Series - 1")),
+			make_purchase_work("RJ002", Some("My Series - 2")),
+		];
+		assert_eq!(derive_series_name(&works), Some("My Series".to_string()));
+	}
+
+	#[aidoku_test]
+	fn derive_series_name_single_work() {
+		let works = vec![make_purchase_work("RJ001", Some("Only Work"))];
+		let result = derive_series_name(&works);
+		assert_eq!(result, Some("Only Work".to_string()));
+	}
+
+	#[aidoku_test]
+	fn derive_series_name_empty() {
+		let works: Vec<PurchaseWork> = Vec::new();
+		let result = derive_series_name(&works);
+		assert_eq!(result, None);
+	}
+
+	#[aidoku_test]
+	fn derive_series_name_no_common_prefix() {
+		let works = vec![
+			make_purchase_work("RJ001", Some("Alpha")),
+			make_purchase_work("RJ002", Some("Beta")),
+		];
+		let result = derive_series_name(&works);
+		// Falls back to first work's title
+		assert_eq!(result, Some("Alpha".to_string()));
+	}
+
+	// -- PurchaseWork helpers --
+
+	#[aidoku_test]
+	fn purchase_work_has_translator() {
+		let mut w = make_purchase_work("RJ001", Some("Test"));
+		assert!(!w.has_translator());
+		w.translator = Some(TranslatorInfo {
+			id: "t1".into(),
+			name: None,
+			name_phonetic: None,
+		});
+		assert!(w.has_translator());
+	}
+
+	#[aidoku_test]
+	fn purchase_work_cover_url_protocol_relative() {
+		let mut w = make_purchase_work("RJ001", Some("Test"));
+		w.work_files = Some(WorkFilesInfo {
+			main: Some("//img.dlsite.jp/work/123.jpg".into()),
+			sam: None,
+		});
+		assert_eq!(w.cover_url(), Some("https://img.dlsite.jp/work/123.jpg".to_string()));
+	}
+
+	#[aidoku_test]
+	fn purchase_work_cover_url_absolute() {
+		let mut w = make_purchase_work("RJ001", Some("Test"));
+		w.work_files = Some(WorkFilesInfo {
+			main: Some("https://img.dlsite.jp/work/123.jpg".into()),
+			sam: None,
+		});
+		assert_eq!(w.cover_url(), Some("https://img.dlsite.jp/work/123.jpg".to_string()));
+	}
+
+	#[aidoku_test]
+	fn purchase_work_release_date_timestamp() {
+		let mut w = make_purchase_work("RJ001", Some("Test"));
+		w.regist_date = Some("2024-01-01T00:00:00".into());
+		let ts = w.release_date_timestamp();
+		assert_eq!(ts, Some(19723 * 86_400));
+	}
+
+	fn make_purchase_work(workno: &str, title: Option<&str>) -> PurchaseWork {
+		PurchaseWork {
+			workno: workno.into(),
+			name: title.map(|t| LocalizedName {
+				ja_JP: None,
+				en_US: Some(t.into()),
+				zh_CN: None,
+				zh_TW: None,
+				ko_KR: None,
+			}),
+			name_phonetic: None,
+			maker: None,
+			translator: None,
+			author_name: None,
+			work_type: None,
+			file_type: None,
+			age_category: None,
+			dl_format: None,
+			site_id: None,
+			content_length: None,
+			content_count: None,
+			content_size: None,
+			touch_content_count: None,
+			touch_site_id: None,
+			os: None,
+			work_files: None,
+			is_playwork: None,
+			downloadable: None,
+			encodable: None,
+			app_type: None,
+			viewer_type: None,
+			tags: None,
+			regist_date: None,
+			upgrade_date: None,
+			sales_date: None,
+			genre_ids: Vec::new(),
+			series: None,
+			purchase_type: None,
+			download_start_date: None,
+		}
 	}
 }

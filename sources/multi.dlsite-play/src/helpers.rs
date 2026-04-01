@@ -260,7 +260,7 @@ fn expand_pdf_pages(path: &str, playfile: &PlayFile) -> Vec<(String, PlayFile)> 
 	result
 }
 
-fn parent_folder_path(path: &str) -> String {
+pub(crate) fn parent_folder_path(path: &str) -> String {
 	match path.rsplit_once('/') {
 		Some((parent, _)) if !parent.is_empty() => parent.into(),
 		_ => "root".into(),
@@ -300,7 +300,7 @@ fn natural_chunks(s: &str) -> Vec<NatChunk<'_>> {
 	chunks
 }
 
-fn natural_cmp(a: &str, b: &str) -> core::cmp::Ordering {
+pub(crate) fn natural_cmp(a: &str, b: &str) -> core::cmp::Ordering {
 	let ca = natural_chunks(a);
 	let cb = natural_chunks(b);
 
@@ -317,4 +317,229 @@ fn natural_cmp(a: &str, b: &str) -> core::cmp::Ordering {
 	}
 
 	ca.len().cmp(&cb.len())
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use aidoku::alloc::string::ToString;
+	use aidoku_test::aidoku_test;
+	use core::cmp::Ordering;
+
+	// -- mt_tiles tests --
+
+	#[aidoku_test]
+	fn mt_tiles_deterministic() {
+		let a = mt_tiles(12345, 8);
+		let b = mt_tiles(12345, 8);
+		assert_eq!(a, b);
+	}
+
+	#[aidoku_test]
+	fn mt_tiles_is_permutation() {
+		let tiles = mt_tiles(42, 16);
+		assert_eq!(tiles.len(), 16);
+		let mut sorted = tiles.clone();
+		sorted.sort();
+		let expected: Vec<usize> = (0..16).collect();
+		assert_eq!(sorted, expected);
+	}
+
+	#[aidoku_test]
+	fn mt_tiles_length_one() {
+		let tiles = mt_tiles(999, 1);
+		assert_eq!(tiles, vec![0]);
+	}
+
+	#[aidoku_test]
+	fn mt_tiles_different_seeds_differ() {
+		let a = mt_tiles(1, 10);
+		let b = mt_tiles(2, 10);
+		assert_ne!(a, b);
+	}
+
+	// -- natural_cmp tests --
+
+	#[aidoku_test]
+	fn natural_cmp_numeric_order() {
+		assert_eq!(natural_cmp("file1.txt", "file2.txt"), Ordering::Less);
+		assert_eq!(natural_cmp("file2.txt", "file10.txt"), Ordering::Less);
+		assert_eq!(natural_cmp("file10.txt", "file1.txt"), Ordering::Greater);
+	}
+
+	#[aidoku_test]
+	fn natural_cmp_equal() {
+		assert_eq!(natural_cmp("abc", "abc"), Ordering::Equal);
+		assert_eq!(natural_cmp("page001", "page001"), Ordering::Equal);
+	}
+
+	#[aidoku_test]
+	fn natural_cmp_case_insensitive() {
+		assert_eq!(natural_cmp("Chapter", "chapter"), Ordering::Equal);
+		assert_eq!(natural_cmp("ABC", "abc"), Ordering::Equal);
+	}
+
+	#[aidoku_test]
+	fn natural_cmp_pure_numbers() {
+		assert_eq!(natural_cmp("1", "2"), Ordering::Less);
+		assert_eq!(natural_cmp("10", "2"), Ordering::Greater);
+		assert_eq!(natural_cmp("100", "100"), Ordering::Equal);
+	}
+
+	#[aidoku_test]
+	fn natural_cmp_mixed_prefix() {
+		assert_eq!(natural_cmp("img001", "img002"), Ordering::Less);
+		assert_eq!(natural_cmp("img010", "img2"), Ordering::Greater);
+	}
+
+	#[aidoku_test]
+	fn natural_cmp_different_lengths() {
+		assert_eq!(natural_cmp("a", "a1"), Ordering::Less);
+		assert_eq!(natural_cmp("a1", "a"), Ordering::Greater);
+	}
+
+	// -- parent_folder_path tests --
+
+	#[aidoku_test]
+	fn parent_folder_of_nested_path() {
+		assert_eq!(parent_folder_path("folder/sub/file.jpg"), "folder/sub".to_string());
+	}
+
+	#[aidoku_test]
+	fn parent_folder_of_single_level() {
+		assert_eq!(parent_folder_path("folder/file.jpg"), "folder".to_string());
+	}
+
+	#[aidoku_test]
+	fn parent_folder_of_root_file() {
+		assert_eq!(parent_folder_path("file.jpg"), "root".to_string());
+	}
+
+	#[aidoku_test]
+	fn parent_folder_no_slash() {
+		assert_eq!(parent_folder_path("filename"), "root".to_string());
+	}
+
+	// -- extract_chapter_groups tests --
+
+	#[aidoku_test]
+	fn extract_chapter_groups_images_grouped_by_folder() {
+		use crate::models::*;
+		use aidoku::alloc::collections::BTreeMap;
+
+		let mut playfiles = BTreeMap::new();
+		playfiles.insert(
+			"hash1".into(),
+			PlayFile {
+				length: 100,
+				file_type: "image".into(),
+				files: PlayFileFiles {
+					optimized: Some(OptimizedInfo {
+						name: Some("opt1.webp".into()),
+						length: Some(50),
+						width: Some(800),
+						height: Some(600),
+						crypt: None,
+					}),
+					page: None,
+				},
+				hashname: "hash1".into(),
+			},
+		);
+		playfiles.insert(
+			"hash2".into(),
+			PlayFile {
+				length: 200,
+				file_type: "image".into(),
+				files: PlayFileFiles {
+					optimized: Some(OptimizedInfo {
+						name: Some("opt2.webp".into()),
+						length: Some(60),
+						width: Some(800),
+						height: Some(600),
+						crypt: None,
+					}),
+					page: None,
+				},
+				hashname: "hash2".into(),
+			},
+		);
+
+		let tree = ZipTree {
+			hash: "abc".into(),
+			playfiles,
+			tree: vec![
+				RawTreeEntry {
+					entry_type: "folder".into(),
+					name: Some("chapter1".into()),
+					path: Some("chapter1".into()),
+					hashname: None,
+					children: Some(vec![
+						RawTreeEntry {
+							entry_type: "file".into(),
+							name: Some("page1.jpg".into()),
+							path: None,
+							hashname: Some("hash1".into()),
+							children: None,
+						},
+						RawTreeEntry {
+							entry_type: "file".into(),
+							name: Some("page2.jpg".into()),
+							path: None,
+							hashname: Some("hash2".into()),
+							children: None,
+						},
+					]),
+				},
+			],
+		};
+
+		let groups = extract_chapter_groups(&tree);
+		assert_eq!(groups.len(), 1);
+		assert_eq!(groups[0].key, "img:chapter1");
+		assert_eq!(groups[0].pages.len(), 2);
+	}
+
+	#[aidoku_test]
+	fn extract_chapter_groups_root_level_images() {
+		use crate::models::*;
+		use aidoku::alloc::collections::BTreeMap;
+
+		let mut playfiles = BTreeMap::new();
+		playfiles.insert(
+			"h1".into(),
+			PlayFile {
+				length: 100,
+				file_type: "image".into(),
+				files: PlayFileFiles {
+					optimized: Some(OptimizedInfo {
+						name: Some("o1.webp".into()),
+						length: None,
+						width: None,
+						height: None,
+						crypt: None,
+					}),
+					page: None,
+				},
+				hashname: "h1".into(),
+			},
+		);
+
+		let tree = ZipTree {
+			hash: "def".into(),
+			playfiles,
+			tree: vec![RawTreeEntry {
+				entry_type: "file".into(),
+				name: Some("cover.jpg".into()),
+				path: None,
+				hashname: Some("h1".into()),
+				children: None,
+			}],
+		};
+
+		let groups = extract_chapter_groups(&tree);
+		assert_eq!(groups.len(), 1);
+		assert_eq!(groups[0].key, "img:root");
+		assert_eq!(groups[0].title, "root");
+	}
 }

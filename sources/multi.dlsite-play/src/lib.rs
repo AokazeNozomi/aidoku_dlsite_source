@@ -892,3 +892,282 @@ register_source!(
 	ImageRequestProvider,
 	PageImageProcessor
 );
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use aidoku::alloc::{collections::BTreeMap, string::ToString};
+	use aidoku_test::aidoku_test;
+
+	// -- split_series_chapter_key tests --
+
+	#[aidoku_test]
+	fn split_series_chapter_key_standard() {
+		let (workno, key) = split_series_chapter_key("RJ274802:img:root");
+		assert_eq!(workno, "RJ274802");
+		assert_eq!(key, "img:root");
+	}
+
+	#[aidoku_test]
+	fn split_series_chapter_key_no_colon() {
+		let (workno, key) = split_series_chapter_key("RJ274802");
+		assert_eq!(workno, "RJ274802");
+		assert_eq!(key, "");
+	}
+
+	#[aidoku_test]
+	fn split_series_chapter_key_multiple_colons() {
+		let (workno, key) = split_series_chapter_key("BJ295623:pdf:path/to/file.pdf#0001");
+		assert_eq!(workno, "BJ295623");
+		assert_eq!(key, "pdf:path/to/file.pdf#0001");
+	}
+
+	// -- percent_encode_path tests --
+
+	#[aidoku_test]
+	fn percent_encode_unreserved_chars() {
+		assert_eq!(percent_encode_path("abc123"), "abc123");
+		assert_eq!(percent_encode_path("file-name_v2.txt"), "file-name_v2.txt");
+	}
+
+	#[aidoku_test]
+	fn percent_encode_spaces_and_special() {
+		assert_eq!(percent_encode_path("hello world"), "hello%20world");
+		assert_eq!(percent_encode_path("a/b"), "a%2Fb");
+		assert_eq!(percent_encode_path("a+b"), "a%2Bb");
+	}
+
+	#[aidoku_test]
+	fn percent_encode_empty() {
+		assert_eq!(percent_encode_path(""), "");
+	}
+
+	// -- play_viewer_url tests --
+
+	#[aidoku_test]
+	fn play_viewer_url_simple() {
+		let url = play_viewer_url("RJ274802", "images/page1.jpg");
+		assert_eq!(url, "https://play.dlsite.com/work/RJ274802/view/images%2Fpage1.jpg");
+	}
+
+	// -- sort_works_by_volume tests --
+
+	#[aidoku_test]
+	fn sort_works_by_volume_number() {
+		let mut works = vec![
+			make_work_with_volume("RJ003", Some(3), None),
+			make_work_with_volume("RJ001", Some(1), None),
+			make_work_with_volume("RJ002", Some(2), None),
+		];
+		sort_works_by_volume(&mut works);
+		assert_eq!(works[0].workno, "RJ001");
+		assert_eq!(works[1].workno, "RJ002");
+		assert_eq!(works[2].workno, "RJ003");
+	}
+
+	#[aidoku_test]
+	fn sort_works_by_volume_with_fallback_to_date() {
+		let mut works = vec![
+			make_work_with_volume("RJ002", None, Some("2024-02-01")),
+			make_work_with_volume("RJ001", None, Some("2024-01-01")),
+		];
+		sort_works_by_volume(&mut works);
+		assert_eq!(works[0].workno, "RJ001");
+		assert_eq!(works[1].workno, "RJ002");
+	}
+
+	#[aidoku_test]
+	fn sort_works_volume_number_before_none() {
+		let mut works = vec![
+			make_work_with_volume("RJ_no_vol", None, Some("2020-01-01")),
+			make_work_with_volume("RJ_vol1", Some(1), None),
+		];
+		sort_works_by_volume(&mut works);
+		assert_eq!(works[0].workno, "RJ_vol1");
+		assert_eq!(works[1].workno, "RJ_no_vol");
+	}
+
+	// -- work_passes_filter tests --
+
+	#[aidoku_test]
+	fn work_passes_filter_no_filters() {
+		let w = make_filter_work("RJ001", "Test Work", "MNG", false);
+		let genre_names = BTreeMap::new();
+		assert!(work_passes_filter(&w, None, None, &[], None, None, &genre_names, None));
+	}
+
+	#[aidoku_test]
+	fn work_passes_filter_query_match_name() {
+		let w = make_filter_work("RJ001", "My Great Manga", "MNG", false);
+		let genre_names = BTreeMap::new();
+		assert!(work_passes_filter(
+			&w, Some("great"), Some("great"), &[], None, None, &genre_names, None
+		));
+	}
+
+	#[aidoku_test]
+	fn work_passes_filter_query_no_match() {
+		let w = make_filter_work("RJ001", "My Manga", "MNG", false);
+		let genre_names = BTreeMap::new();
+		assert!(!work_passes_filter(
+			&w, Some("zzzzz"), Some("zzzzz"), &[], None, None, &genre_names, None
+		));
+	}
+
+	#[aidoku_test]
+	fn work_passes_filter_query_match_workno() {
+		let w = make_filter_work("RJ123456", "Title", "MNG", false);
+		let genre_names = BTreeMap::new();
+		assert!(work_passes_filter(
+			&w, Some("rj123456"), Some("RJ123456"), &[], None, None, &genre_names, None
+		));
+	}
+
+	#[aidoku_test]
+	fn work_passes_filter_work_type() {
+		let w = make_filter_work("RJ001", "Test", "MNG", false);
+		let genre_names = BTreeMap::new();
+		assert!(work_passes_filter(
+			&w, None, None, &["MNG".to_string()], None, None, &genre_names, None
+		));
+		assert!(!work_passes_filter(
+			&w, None, None, &["CG".to_string()], None, None, &genre_names, None
+		));
+	}
+
+	#[aidoku_test]
+	fn work_passes_filter_translation() {
+		let w_no_trans = make_filter_work("RJ001", "Test", "MNG", false);
+		let w_trans = make_filter_work("RJ002", "Test", "MNG", true);
+		let genre_names = BTreeMap::new();
+
+		assert!(work_passes_filter(
+			&w_trans, None, None, &[], Some("translated"), None, &genre_names, None
+		));
+		assert!(!work_passes_filter(
+			&w_no_trans, None, None, &[], Some("translated"), None, &genre_names, None
+		));
+		assert!(work_passes_filter(
+			&w_no_trans, None, None, &[], Some("original"), None, &genre_names, None
+		));
+		assert!(!work_passes_filter(
+			&w_trans, None, None, &[], Some("original"), None, &genre_names, None
+		));
+	}
+
+	#[aidoku_test]
+	fn work_passes_filter_genre() {
+		let mut w = make_filter_work("RJ001", "Test", "MNG", false);
+		w.genre_ids = vec![100, 200];
+		let mut genre_names = BTreeMap::new();
+		genre_names.insert(100, "Fantasy".to_string());
+		genre_names.insert(200, "Romance".to_string());
+
+		assert!(work_passes_filter(
+			&w, None, None, &[], None, Some("fantasy"), &genre_names, None
+		));
+		assert!(!work_passes_filter(
+			&w, None, None, &[], None, Some("horror"), &genre_names, None
+		));
+	}
+
+	// -- test helpers --
+
+	fn make_work_with_volume(
+		workno: &str,
+		volume: Option<u32>,
+		regist_date: Option<&str>,
+	) -> models::PurchaseWork {
+		models::PurchaseWork {
+			workno: workno.into(),
+			name: None,
+			name_phonetic: None,
+			maker: None,
+			translator: None,
+			author_name: None,
+			work_type: None,
+			file_type: None,
+			age_category: None,
+			dl_format: None,
+			site_id: None,
+			content_length: None,
+			content_count: None,
+			content_size: None,
+			touch_content_count: None,
+			touch_site_id: None,
+			os: None,
+			work_files: None,
+			is_playwork: None,
+			downloadable: None,
+			encodable: None,
+			app_type: None,
+			viewer_type: None,
+			tags: None,
+			regist_date: regist_date.map(|s| s.into()),
+			upgrade_date: None,
+			sales_date: None,
+			genre_ids: Vec::new(),
+			series: volume.map(|v| models::WorkSeries {
+				title_id: "S001".into(),
+				volume_number: Some(v),
+			}),
+			purchase_type: None,
+			download_start_date: None,
+		}
+	}
+
+	fn make_filter_work(
+		workno: &str,
+		title: &str,
+		work_type: &str,
+		has_translator: bool,
+	) -> models::PurchaseWork {
+		models::PurchaseWork {
+			workno: workno.into(),
+			name: Some(models::LocalizedName {
+				ja_JP: None,
+				en_US: Some(title.into()),
+				zh_CN: None,
+				zh_TW: None,
+				ko_KR: None,
+			}),
+			name_phonetic: None,
+			maker: None,
+			translator: if has_translator {
+				Some(models::TranslatorInfo {
+					id: "t1".into(),
+					name: None,
+					name_phonetic: None,
+				})
+			} else {
+				None
+			},
+			author_name: None,
+			work_type: Some(work_type.into()),
+			file_type: None,
+			age_category: None,
+			dl_format: None,
+			site_id: None,
+			content_length: None,
+			content_count: None,
+			content_size: None,
+			touch_content_count: None,
+			touch_site_id: None,
+			os: None,
+			work_files: None,
+			is_playwork: None,
+			downloadable: None,
+			encodable: None,
+			app_type: None,
+			viewer_type: None,
+			tags: None,
+			regist_date: None,
+			upgrade_date: None,
+			sales_date: None,
+			genre_ids: Vec::new(),
+			series: None,
+			purchase_type: None,
+			download_start_date: None,
+		}
+	}
+}
