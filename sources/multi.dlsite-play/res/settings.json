@@ -91,7 +91,7 @@
 				"key": "default_sort_ascending",
 				"title": "Ascending",
 				"subtitle": "Sort in ascending order instead of descending.",
-				"default": "false",
+				"default": "true",
 				"refreshes": [
 					"listings",
 					"content"
