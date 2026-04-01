@@ -18,12 +18,7 @@ const PAGE_SIZE: usize = 20;
 /// Skip duplicate `/content/sales` calls when Aidoku requests page 1 several times in a row.
 const SALES_CACHE_MAX_AGE_SEC: i64 = 120;
 
-/// Sort option indices matching the order in filters.json
-const SORT_RECENTLY_OPENED: i32 = 0;
-const SORT_PURCHASE_DATE: i32 = 1;
-const SORT_RELEASE_DATE: i32 = 2;
-const SORT_WRITER_CIRCLE: i32 = 3;
-const SORT_TITLE: i32 = 4;
+use settings::SortOption;
 
 struct SortKey {
 	/// Position in the original worknos array (purchase order).
@@ -56,8 +51,8 @@ impl Source for DlsitePlay {
 		let work_types = extract_work_type_filter(&filters);
 		let translation_filter = extract_translation_filter(&filters);
 		let genre_filter = extract_genre_filter(&filters);
-		let (sort_index, sort_ascending) = extract_sort_filter(&filters);
-		get_manga_list_inner(query, page, work_types, translation_filter, genre_filter, sort_index, sort_ascending)
+		let (sort_option, sort_ascending) = extract_sort_filter(&filters);
+		get_manga_list_inner(query, page, work_types, translation_filter, genre_filter, sort_option, sort_ascending)
 	}
 
 	fn get_manga_update(
@@ -335,9 +330,9 @@ impl ListingProvider for DlsitePlay {
 			"purchases" => Vec::new(),
 			wt => vec![wt.to_string()],
 		};
-		let sort_index = settings::get_default_sort();
+		let sort_option = settings::get_default_sort();
 		let sort_ascending = settings::get_default_sort_ascending();
-		get_manga_list_inner(None, page, work_types, None, None, sort_index, sort_ascending)
+		get_manga_list_inner(None, page, work_types, None, None, sort_option, sort_ascending)
 	}
 }
 
@@ -667,7 +662,7 @@ fn get_manga_list_inner(
 	work_types: Vec<String>,
 	translation_filter: Option<String>,
 	genre_filter: Option<String>,
-	sort_index: i32,
+	sort_option: SortOption,
 	sort_ascending: bool,
 ) -> Result<MangaPageResult> {
 	let worknos = get_or_fetch_worknos(page)?;
@@ -687,12 +682,12 @@ fn get_manga_list_inner(
 	let series_names = build_series_lookup(&resp.series);
 
 	print(format!(
-		"[dlsite-play] get_manga_list_inner sort_index={} ascending={}",
-		sort_index, sort_ascending
+		"[dlsite-play] get_manga_list_inner sort={} ascending={}",
+		sort_option as i32, sort_ascending
 	));
 
 	// Fetch view histories for "recently opened" sort.
-	let view_history_map: BTreeMap<String, String> = if sort_index == SORT_RECENTLY_OPENED {
+	let view_history_map: BTreeMap<String, String> = if sort_option == SortOption::RecentlyOpened {
 		api::get_view_histories()
 			.unwrap_or_default()
 			.into_iter()
@@ -807,7 +802,7 @@ fn get_manga_list_inner(
 	}
 
 	// --- Sort ---
-	apply_sort(&mut all_entries, sort_index, sort_ascending);
+	apply_sort(&mut all_entries, sort_option, sort_ascending);
 
 	// --- Paginate ---
 	let page_idx = (page - 1).max(0) as usize;
@@ -902,15 +897,15 @@ fn build_series_sort_key(
 }
 
 /// Sort entries by the selected sort option and direction.
-fn apply_sort(entries: &mut Vec<(SortKey, Manga)>, sort_index: i32, ascending: bool) {
+fn apply_sort(entries: &mut Vec<(SortKey, Manga)>, sort_option: SortOption, ascending: bool) {
 	// Purchase date descending is the natural API order — skip sort.
-	if sort_index == SORT_PURCHASE_DATE && !ascending {
+	if sort_option == SortOption::PurchaseDate && !ascending {
 		return;
 	}
 
 	entries.sort_by(|(a, _), (b, _)| {
-		let ord = match sort_index {
-			SORT_RECENTLY_OPENED => {
+		let ord = match sort_option {
+			SortOption::RecentlyOpened => {
 				// Works with view history sort by accessed_at.
 				// Works without fall back to purchase order (lower position = newer).
 				match (a.recently_opened.is_empty(), b.recently_opened.is_empty()) {
@@ -920,11 +915,10 @@ fn apply_sort(entries: &mut Vec<(SortKey, Manga)>, sort_index: i32, ascending: b
 					(true, true) => b.original_position.cmp(&a.original_position),
 				}
 			}
-			SORT_PURCHASE_DATE => a.purchase_date.cmp(&b.purchase_date),
-			SORT_RELEASE_DATE => a.release_date.cmp(&b.release_date),
-			SORT_WRITER_CIRCLE => a.writer_name.cmp(&b.writer_name),
-			SORT_TITLE => a.title.cmp(&b.title),
-			_ => a.original_position.cmp(&b.original_position),
+			SortOption::PurchaseDate => a.purchase_date.cmp(&b.purchase_date),
+			SortOption::ReleaseDate => a.release_date.cmp(&b.release_date),
+			SortOption::WriterCircle => a.writer_name.cmp(&b.writer_name),
+			SortOption::Title => a.title.cmp(&b.title),
 		};
 		if ascending { ord } else { ord.reverse() }
 	});
@@ -1043,14 +1037,12 @@ fn extract_work_type_filter(filters: &[FilterValue]) -> Vec<String> {
 	Vec::new()
 }
 
-/// Extract sort option from filters. Returns `(sort_index, ascending)`.
+/// Extract sort option from filters. Returns `(SortOption, ascending)`.
 /// Falls back to settings defaults if no sort filter is present.
-fn extract_sort_filter(filters: &[FilterValue]) -> (i32, bool) {
+fn extract_sort_filter(filters: &[FilterValue]) -> (SortOption, bool) {
 	for f in filters {
-		if let FilterValue::Sort { id, index, ascending } = f {
-			if id == "sort" {
-				return (*index, *ascending);
-			}
+		if let FilterValue::Sort { index, ascending, .. } = f {
+			return (SortOption::from_index(*index), *ascending);
 		}
 	}
 	(settings::get_default_sort(), settings::get_default_sort_ascending())

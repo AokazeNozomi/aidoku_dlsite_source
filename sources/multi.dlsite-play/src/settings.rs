@@ -3,6 +3,66 @@ use aidoku::{
 	imports::defaults::{DefaultValue, defaults_get, defaults_set},
 };
 
+// ---------------------------------------------------------------------------
+// Enums for select settings
+// ---------------------------------------------------------------------------
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum Language {
+	English = 0,
+	Japanese = 1,
+	ChineseSimplified = 2,
+	ChineseTraditional = 3,
+	Korean = 4,
+}
+
+impl Language {
+	fn from_setting(s: Option<&str>) -> Self {
+		match s {
+			Some("Japanese") => Self::Japanese,
+			Some("Chinese (Simplified)") => Self::ChineseSimplified,
+			Some("Chinese (Traditional)") => Self::ChineseTraditional,
+			Some("Korean") => Self::Korean,
+			_ => Self::English,
+		}
+	}
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum SortOption {
+	RecentlyOpened = 0,
+	PurchaseDate = 1,
+	ReleaseDate = 2,
+	WriterCircle = 3,
+	Title = 4,
+}
+
+impl SortOption {
+	pub fn from_index(index: i32) -> Self {
+		match index {
+			1 => Self::PurchaseDate,
+			2 => Self::ReleaseDate,
+			3 => Self::WriterCircle,
+			4 => Self::Title,
+			_ => Self::RecentlyOpened,
+		}
+	}
+
+	fn from_setting(s: Option<&str>) -> Self {
+		match s {
+			Some("Purchase Date") => Self::PurchaseDate,
+			Some("Release Date") => Self::ReleaseDate,
+			Some("Writer/Circle Name") => Self::WriterCircle,
+			Some("Title") => Self::Title,
+			_ => Self::RecentlyOpened,
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Settings getters
+// ---------------------------------------------------------------------------
+
 const PREFERRED_LANGUAGE_KEY: &str = "preferred_language";
 const SERIES_PREFIX_KEY: &str = "series_prefix";
 const CACHED_WORKNOS_KEY: &str = "cached_worknos";
@@ -10,9 +70,8 @@ const LOGGED_IN_KEY: &str = "logged_in";
 const WEB_COOKIES_KEY: &str = "web_cookies";
 const SALES_FETCHED_AT_KEY: &str = "sales_fetched_at_unix";
 
-/// 0 = English, 1 = Japanese, 2 = Chinese (Simplified), 3 = Chinese (Traditional), 4 = Korean
-pub fn get_preferred_language() -> i32 {
-	defaults_get::<i32>(PREFERRED_LANGUAGE_KEY).unwrap_or(0)
+pub fn get_preferred_language() -> Language {
+	Language::from_setting(defaults_get::<String>(PREFERRED_LANGUAGE_KEY).as_deref())
 }
 
 pub fn show_series_prefix() -> bool {
@@ -91,7 +150,7 @@ pub fn set_cached_genres(value: &str) {
 	);
 	defaults_set(
 		CACHED_GENRES_LANG_KEY,
-		DefaultValue::String(format!("{}", get_preferred_language())),
+		DefaultValue::String(format!("{}", get_preferred_language() as i32)),
 	);
 }
 
@@ -101,7 +160,7 @@ pub fn get_cached_genres() -> Option<String> {
 	let cached_lang = defaults_get::<String>(CACHED_GENRES_LANG_KEY)
 		.and_then(|s| s.parse::<i32>().ok())
 		.unwrap_or(-1);
-	if cached_lang != get_preferred_language() {
+	if cached_lang != get_preferred_language() as i32 {
 		return None;
 	}
 	defaults_get::<String>(CACHED_GENRES_KEY).filter(|s| !s.is_empty())
@@ -175,10 +234,8 @@ pub fn set_cached_languages(workno: &str, value: &str) {
 // Sort settings
 // ---------------------------------------------------------------------------
 
-/// 0 = Recently Opened, 1 = Purchase Date, 2 = Release Date,
-/// 3 = Writer/Circle Name, 4 = Title
-pub fn get_default_sort() -> i32 {
-	defaults_get::<i32>("default_sort").unwrap_or(0)
+pub fn get_default_sort() -> SortOption {
+	SortOption::from_setting(defaults_get::<String>("default_sort").as_deref())
 }
 
 pub fn get_default_sort_ascending() -> bool {

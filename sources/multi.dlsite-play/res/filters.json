@@ -1,6 +1,5 @@
 [
 	{
-		"id": "sort",
 		"title": "Sort",
 		"type": "sort",
 		"canAscend": true,

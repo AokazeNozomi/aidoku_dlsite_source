@@ -239,14 +239,13 @@ pub struct LocalizedName {
 
 impl LocalizedName {
 	pub fn best(&self) -> String {
-		let preferred = crate::settings::get_preferred_language();
-		let primary = match preferred {
-			0 => self.en_US.as_deref(),
-			1 => self.ja_JP.as_deref(),
-			2 => self.zh_CN.as_deref(),
-			3 => self.zh_TW.as_deref(),
-			4 => self.ko_KR.as_deref(),
-			_ => self.en_US.as_deref(),
+		use crate::settings::Language;
+		let primary = match crate::settings::get_preferred_language() {
+			Language::English => self.en_US.as_deref(),
+			Language::Japanese => self.ja_JP.as_deref(),
+			Language::ChineseSimplified => self.zh_CN.as_deref(),
+			Language::ChineseTraditional => self.zh_TW.as_deref(),
+			Language::Korean => self.ko_KR.as_deref(),
 		};
 		primary
 			.or(self.en_US.as_deref())
