@@ -325,7 +325,7 @@ impl ListingProvider for DlsitePlay {
 		};
 		let sort_option = settings::get_default_sort();
 		let sort_ascending = settings::get_default_sort_ascending();
-		get_manga_list_inner(None, page, work_types, None, None, sort_option, sort_ascending)
+		get_manga_list_inner(None, page, work_types, None, Vec::new(), sort_option, sort_ascending)
 	}
 }
 
@@ -599,8 +599,7 @@ fn work_passes_filter(
 	q_raw: Option<&str>,
 	work_types: &[String],
 	translation_filter: Option<&str>,
-	genre_filter_lower: Option<&str>,
-	genre_names: &BTreeMap<u32, String>,
+	genre_filter: &[u32],
 	series_name: Option<&str>,
 ) -> bool {
 	if let Some(q) = q_lower {
@@ -643,13 +642,10 @@ fn work_passes_filter(
 			_ => {}
 		}
 	}
-	if let Some(gf) = genre_filter_lower {
-		let has_genre = w.genre_ids.iter().any(|gid| {
-			genre_names
-				.get(gid)
-				.map(|name| name.to_lowercase().contains(gf))
-				.unwrap_or(false)
-		});
+	if !genre_filter.is_empty() {
+		let has_genre = genre_filter
+			.iter()
+			.all(|gid| w.genre_ids.contains(gid));
 		if !has_genre {
 			return false;
 		}
@@ -666,7 +662,7 @@ fn get_manga_list_inner(
 	page: i32,
 	work_types: Vec<String>,
 	translation_filter: Option<String>,
-	genre_filter: Option<String>,
+	genre_filter: Vec<u32>,
 	sort_option: SortOption,
 	sort_ascending: bool,
 ) -> Result<MangaPageResult> {
@@ -744,11 +740,10 @@ fn get_manga_list_inner(
 
 	// --- Build Manga entries with sort keys, applying filters ---
 	let q_lower = query.as_ref().map(|q| q.to_lowercase());
-	let genre_filter_lower = genre_filter.as_ref().map(|g| g.to_lowercase());
 	let has_filter = query.is_some()
 		|| !work_types.is_empty()
 		|| translation_filter.is_some()
-		|| genre_filter.is_some();
+		|| !genre_filter.is_empty();
 
 	let mut all_entries: Vec<(SortKey, Manga)> = Vec::new();
 
@@ -771,8 +766,7 @@ fn get_manga_list_inner(
 						query.as_deref(),
 						&work_types,
 						translation_filter.as_deref(),
-						genre_filter_lower.as_deref(),
-						&genre_names,
+						&genre_filter,
 						sname,
 					)
 				});
@@ -792,8 +786,7 @@ fn get_manga_list_inner(
 					query.as_deref(),
 					&work_types,
 					translation_filter.as_deref(),
-					genre_filter_lower.as_deref(),
-					&genre_names,
+					&genre_filter,
 					None,
 				) {
 					continue;
@@ -1020,15 +1013,18 @@ fn extract_translation_filter(filters: &[FilterValue]) -> Option<String> {
 	None
 }
 
-fn extract_genre_filter(filters: &[FilterValue]) -> Option<String> {
+fn extract_genre_filter(filters: &[FilterValue]) -> Vec<u32> {
 	for f in filters {
-		if let FilterValue::Text { id, value } = f {
-			if id == "genre" && !value.is_empty() {
-				return Some(value.clone());
+		if let FilterValue::MultiSelect { id, included, .. } = f {
+			if id == "genre" && !included.is_empty() {
+				return included
+					.iter()
+					.filter_map(|s| s.parse::<u32>().ok())
+					.collect();
 			}
 		}
 	}
-	None
+	Vec::new()
 }
 
 fn extract_work_type_filter(filters: &[FilterValue]) -> Vec<String> {
@@ -1065,7 +1061,7 @@ register_source!(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use aidoku::alloc::{collections::BTreeMap, string::ToString};
+	use aidoku::alloc::string::ToString;
 	use aidoku_test::aidoku_test;
 
 	// -- split_series_chapter_key tests --
@@ -1161,46 +1157,41 @@ mod tests {
 	#[aidoku_test]
 	fn work_passes_filter_no_filters() {
 		let w = make_filter_work("RJ001", "Test Work", "MNG", false);
-		let genre_names = BTreeMap::new();
-		assert!(work_passes_filter(&w, None, None, &[], None, None, &genre_names, None));
+		assert!(work_passes_filter(&w, None, None, &[], None, &[], None));
 	}
 
 	#[aidoku_test]
 	fn work_passes_filter_query_match_name() {
 		let w = make_filter_work("RJ001", "My Great Manga", "MNG", false);
-		let genre_names = BTreeMap::new();
 		assert!(work_passes_filter(
-			&w, Some("great"), Some("great"), &[], None, None, &genre_names, None
+			&w, Some("great"), Some("great"), &[], None, &[], None
 		));
 	}
 
 	#[aidoku_test]
 	fn work_passes_filter_query_no_match() {
 		let w = make_filter_work("RJ001", "My Manga", "MNG", false);
-		let genre_names = BTreeMap::new();
 		assert!(!work_passes_filter(
-			&w, Some("zzzzz"), Some("zzzzz"), &[], None, None, &genre_names, None
+			&w, Some("zzzzz"), Some("zzzzz"), &[], None, &[], None
 		));
 	}
 
 	#[aidoku_test]
 	fn work_passes_filter_query_match_workno() {
 		let w = make_filter_work("RJ123456", "Title", "MNG", false);
-		let genre_names = BTreeMap::new();
 		assert!(work_passes_filter(
-			&w, Some("rj123456"), Some("RJ123456"), &[], None, None, &genre_names, None
+			&w, Some("rj123456"), Some("RJ123456"), &[], None, &[], None
 		));
 	}
 
 	#[aidoku_test]
 	fn work_passes_filter_work_type() {
 		let w = make_filter_work("RJ001", "Test", "MNG", false);
-		let genre_names = BTreeMap::new();
 		assert!(work_passes_filter(
-			&w, None, None, &["MNG".to_string()], None, None, &genre_names, None
+			&w, None, None, &["MNG".to_string()], None, &[], None
 		));
 		assert!(!work_passes_filter(
-			&w, None, None, &["CG".to_string()], None, None, &genre_names, None
+			&w, None, None, &["CG".to_string()], None, &[], None
 		));
 	}
 
@@ -1208,19 +1199,18 @@ mod tests {
 	fn work_passes_filter_translation() {
 		let w_no_trans = make_filter_work("RJ001", "Test", "MNG", false);
 		let w_trans = make_filter_work("RJ002", "Test", "MNG", true);
-		let genre_names = BTreeMap::new();
 
 		assert!(work_passes_filter(
-			&w_trans, None, None, &[], Some("translated"), None, &genre_names, None
+			&w_trans, None, None, &[], Some("translated"), &[], None
 		));
 		assert!(!work_passes_filter(
-			&w_no_trans, None, None, &[], Some("translated"), None, &genre_names, None
+			&w_no_trans, None, None, &[], Some("translated"), &[], None
 		));
 		assert!(work_passes_filter(
-			&w_no_trans, None, None, &[], Some("original"), None, &genre_names, None
+			&w_no_trans, None, None, &[], Some("original"), &[], None
 		));
 		assert!(!work_passes_filter(
-			&w_trans, None, None, &[], Some("original"), None, &genre_names, None
+			&w_trans, None, None, &[], Some("original"), &[], None
 		));
 	}
 
@@ -1228,15 +1218,22 @@ mod tests {
 	fn work_passes_filter_genre() {
 		let mut w = make_filter_work("RJ001", "Test", "MNG", false);
 		w.genre_ids = vec![100, 200];
-		let mut genre_names = BTreeMap::new();
-		genre_names.insert(100, "Fantasy".to_string());
-		genre_names.insert(200, "Romance".to_string());
 
+		// Work has genre 100 — filter for 100 should pass
 		assert!(work_passes_filter(
-			&w, None, None, &[], None, Some("fantasy"), &genre_names, None
+			&w, None, None, &[], None, &[100], None
 		));
+		// Work does not have genre 300 — filter for 300 should fail
 		assert!(!work_passes_filter(
-			&w, None, None, &[], None, Some("horror"), &genre_names, None
+			&w, None, None, &[], None, &[300], None
+		));
+		// Filter for both 100 and 200 — work has both, should pass
+		assert!(work_passes_filter(
+			&w, None, None, &[], None, &[100, 200], None
+		));
+		// Filter for 100 and 300 — work missing 300, should fail
+		assert!(!work_passes_filter(
+			&w, None, None, &[], None, &[100, 300], None
 		));
 	}
 
