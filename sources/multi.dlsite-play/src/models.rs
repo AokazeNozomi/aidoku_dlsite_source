@@ -939,7 +939,7 @@ pub fn series_manga(
 		.unwrap_or(Viewer::RightToLeft);
 
 	let url = Some(format!(
-		"https://www.dlsite.com/maniax/fsr/=/title_id/{}/order/release_d",
+		"https://www.dlsite.com/maniax/title/title_id/{}.html",
 		title_id
 	));
 
