@@ -53,6 +53,54 @@
 	},
 	{
 		"type": "group",
+		"title": "View History",
+		"items": [
+			{
+				"type": "switch",
+				"key": "update_view_history",
+				"title": "Update View History",
+				"subtitle": "Update DLsite Play's recently opened list when reading.",
+				"default": "false"
+			}
+		]
+	},
+	{
+		"type": "group",
+		"title": "Sort",
+		"footer": "Sort order for library listings.",
+		"items": [
+			{
+				"type": "select",
+				"key": "default_sort",
+				"title": "Library Sort",
+				"values": [
+					"Recently Opened",
+					"Purchase Date",
+					"Release Date",
+					"Writer/Circle Name",
+					"Title"
+				],
+				"default": "Purchase Date",
+				"refreshes": [
+					"listings",
+					"content"
+				]
+			},
+			{
+				"type": "switch",
+				"key": "default_sort_ascending",
+				"title": "Ascending",
+				"subtitle": "Sort in ascending order instead of descending.",
+				"default": "false",
+				"refreshes": [
+					"listings",
+					"content"
+				]
+			}
+		]
+	},
+	{
+		"type": "group",
 		"title": "Work Types",
 		"items": [
 			{
@@ -99,48 +147,6 @@
 				"titles": ["Miscellaneous", "Voiced Comic", "Publication"],
 				"default": [],
 				"refreshes": ["listings", "content"]
-			}
-		]
-	},
-	{
-		"type": "group",
-		"title": "Sort",
-		"footer": "Sort order for library listings.",
-		"items": [
-			{
-				"type": "select",
-				"key": "default_sort",
-				"title": "Library Sort",
-				"values": [
-					"Recently Opened",
-					"Purchase Date",
-					"Release Date",
-					"Writer/Circle Name",
-					"Title"
-				],
-				"default": "Purchase Date",
-				"refreshes": [
-					"listings",
-					"content"
-				]
-			},
-			{
-				"type": "switch",
-				"key": "default_sort_ascending",
-				"title": "Ascending",
-				"subtitle": "Sort in ascending order instead of descending.",
-				"default": "false",
-				"refreshes": [
-					"listings",
-					"content"
-				]
-			},
-			{
-				"type": "switch",
-				"key": "update_view_history",
-				"title": "Update View History",
-				"subtitle": "Update DLsite Play's recently opened list when reading.",
-				"default": "false"
 			}
 		]
 	}
