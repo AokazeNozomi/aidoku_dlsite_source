@@ -238,7 +238,7 @@ pub fn set_cached_languages(workno: &str, value: &str) {
 /// Returns the list of enabled work type codes.
 pub fn get_work_type_setting() -> Vec<String> {
 	let keys = [
-		"wt_images", "wt_novel", "wt_av", "wt_game", "wt_tools", "wt_misc",
+		"wt_images", "wt_av", "wt_game", "wt_tools", "wt_misc",
 	];
 	let mut selected = Vec::new();
 	for key in &keys {

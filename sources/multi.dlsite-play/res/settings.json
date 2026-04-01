@@ -59,18 +59,9 @@
 				"type": "multi-select",
 				"key": "wt_images",
 				"title": "Images",
-				"values": ["MNG", "SCM", "WBT", "ICG"],
-				"titles": ["Manga", "Gekiga", "Webtoon", "CG / Illustrations"],
-				"default": ["MNG", "SCM", "WBT", "ICG"],
-				"refreshes": ["listings", "content"]
-			},
-			{
-				"type": "multi-select",
-				"key": "wt_novel",
-				"title": "Novel",
-				"values": ["NRE", "DNV"],
-				"titles": ["Novel", "Digital Novel"],
-				"default": ["NRE", "DNV"],
+				"values": ["MNG", "SCM", "WBT", "ICG", "NRE", "DNV"],
+				"titles": ["Manga", "Gekiga", "Webtoon", "CG / Illustrations", "Novel", "Digital Novel"],
+				"default": ["MNG", "SCM", "WBT", "ICG", "NRE", "DNV"],
 				"refreshes": ["listings", "content"]
 			},
 			{
