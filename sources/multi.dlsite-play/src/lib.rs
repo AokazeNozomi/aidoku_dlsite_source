@@ -2,7 +2,7 @@
 
 use aidoku::{
 	alloc::{collections::BTreeMap, format, string::ToString, vec, String, Vec},
-	imports::{canvas::ImageRef, net::Request, std::{current_date, print}},
+	imports::{canvas::ImageRef, net::{Request, set_rate_limit, TimeUnit}, std::{current_date, print}},
 	prelude::*,
 	register_source, Chapter, FilterValue, HashMap, Home, HomeComponent, HomeComponentValue,
 	HomeLayout, ImageRequestProvider, ImageResponse, Link, Listing, ListingKind, ListingProvider,
@@ -540,9 +540,15 @@ impl WebLoginHandler for DlsitePlay {
 
 impl NotificationHandler for DlsitePlay {
 	fn handle_notification(&self, notification: String) {
-		if notification == "login" && !settings::is_logged_in() {
-			settings::clear_cached_worknos();
-			settings::clear_cached_page();
+		match notification.as_str() {
+			"login" if !settings::is_logged_in() => {
+				settings::clear_cached_worknos();
+				settings::clear_cached_page();
+			}
+			"fetch_languages" => {
+				fetch_all_languages();
+			}
+			_ => {}
 		}
 	}
 }
@@ -1187,6 +1193,33 @@ fn get_or_fetch_languages(workno: &str) -> Option<String> {
 	let value = pairs.join(",");
 	settings::set_cached_languages(workno, &value);
 	Some(value)
+}
+
+/// Batch-fetch language editions for all works in the library.
+/// Respects rate limits and skips already-cached works.
+fn fetch_all_languages() {
+	let worknos = settings::get_cached_worknos();
+	if worknos.is_empty() {
+		return;
+	}
+
+	set_rate_limit(3, 1, TimeUnit::Seconds);
+
+	let total = worknos.len();
+	for (i, workno) in worknos.iter().enumerate() {
+		print(format!(
+			"[dlsite-play] Fetching languages ({}/{}): {}",
+			i + 1,
+			total,
+			workno
+		));
+		let _ = get_or_fetch_languages(workno);
+	}
+
+	print(format!(
+		"[dlsite-play] Language fetch complete ({} works processed)",
+		total
+	));
 }
 
 fn extract_translation_filter(filters: &[FilterValue]) -> Option<String> {
