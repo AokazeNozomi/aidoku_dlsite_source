@@ -63,18 +63,6 @@ impl Source for DlsitePlay {
 	) -> Result<Manga> {
 		let is_series = manga.key.starts_with("series:");
 
-		// Update "recently opened" on DLsite (fire-and-forget).
-		let touch_workno = if is_series {
-			// For series, touch the first member work.
-			let title_id = manga.key.strip_prefix("series:").unwrap_or(&manga.key);
-			settings::get_cached_series_map(title_id).into_iter().next()
-		} else {
-			Some(manga.key.clone())
-		};
-		if let Some(ref wno) = touch_workno {
-			let _ = api::post_view_history(wno);
-		}
-
 		if is_series {
 			self.update_series_manga(&mut manga, needs_details, needs_chapters)?;
 		} else {
@@ -141,6 +129,11 @@ impl Source for DlsitePlay {
 				..Default::default()
 			}
 		}));
+
+		// Update "recently opened" on DLsite (fire-and-forget).
+		// Throttle: skip if we already touched this workno recently
+		// (avoids spamming during bulk downloads).
+		touch_view_history(workno);
 
 		Ok(result)
 	}
@@ -459,6 +452,18 @@ impl PageImageProcessor for DlsitePlay {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/// Post view history, but only if enabled and a different work than last time.
+fn touch_view_history(workno: &str) {
+	if !settings::update_view_history_enabled() {
+		return;
+	}
+	if settings::get_last_viewed_workno().as_deref() == Some(workno) {
+		return;
+	}
+	settings::set_last_viewed_workno(workno);
+	let _ = api::post_view_history(workno);
+}
 
 /// Split a series chapter key `"{workno}:{internal_key}"` into its components.
 /// The workno is the leading segment matching `[A-Z]+[0-9]+` (e.g. `RJ274802`),

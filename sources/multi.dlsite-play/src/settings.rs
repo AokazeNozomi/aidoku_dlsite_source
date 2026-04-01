@@ -234,6 +234,31 @@ pub fn set_cached_languages(workno: &str, value: &str) {
 // Sort settings
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// View history throttle cache
+// ---------------------------------------------------------------------------
+
+const LAST_VIEWED_KEY: &str = "last_viewed_workno";
+
+pub fn get_last_viewed_workno() -> Option<String> {
+	defaults_get::<String>(LAST_VIEWED_KEY).filter(|s| !s.is_empty())
+}
+
+pub fn set_last_viewed_workno(workno: &str) {
+	defaults_set(
+		LAST_VIEWED_KEY,
+		DefaultValue::String(String::from(workno)),
+	);
+}
+
+pub fn update_view_history_enabled() -> bool {
+	defaults_get::<bool>("update_view_history").unwrap_or(false)
+}
+
+// ---------------------------------------------------------------------------
+// Sort settings
+// ---------------------------------------------------------------------------
+
 pub fn get_default_sort() -> SortOption {
 	SortOption::from_setting(defaults_get::<String>("default_sort").as_deref())
 }

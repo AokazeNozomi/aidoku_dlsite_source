@@ -83,6 +83,13 @@
 					"listings",
 					"content"
 				]
+			},
+			{
+				"type": "switch",
+				"key": "update_view_history",
+				"title": "Update View History",
+				"subtitle": "Update DLsite Play's recently opened list when reading.",
+				"default": "false"
 			}
 		]
 	}
