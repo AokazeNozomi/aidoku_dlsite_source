@@ -26,8 +26,8 @@
       "Gekiga",
       "Webtoon",
       "CG / Illustrations",
-      "Novel: Novel",
-      "Novel: Digital Novel",
+      "Novel",
+      "Digital Novel",
       "Video",
       "Voice / ASMR",
       "Music",
@@ -41,12 +41,12 @@
       "Game: Shooting",
       "Game: Puzzle",
       "Game: Miscellaneous",
-      "Tools: Tools / Accessories",
-      "Tools: Illustration Materials",
-      "Tools: Music Materials",
-      "Misc: Miscellaneous",
-      "Misc: Voiced Comic",
-      "Misc: Publication"
+      "Tools / Accessories",
+      "Illustration Materials",
+      "Music Materials",
+      "Miscellaneous",
+      "Voiced Comic",
+      "Publication"
     ],
     "ids": [
       "MNG",
@@ -81,16 +81,8 @@
     "title": "Translation",
     "type": "select",
     "usesTagStyle": true,
-    "options": [
-      "All",
-      "Translated Only",
-      "Original Only"
-    ],
-    "ids": [
-      "all",
-      "translated",
-      "original"
-    ]
+    "options": ["All", "Translated Only", "Original Only"],
+    "ids": ["all", "translated", "original"]
   },
   {
     "id": "genre_focus",
