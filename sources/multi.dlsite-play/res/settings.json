@@ -39,7 +39,7 @@
 				"key": "series_prefix",
 				"title": "Show [SERIES] prefix",
 				"subtitle": "Prepend [SERIES] to series manga titles for easy identification.",
-				"default": false
+				"default": "false"
 			}
 		]
 	}
