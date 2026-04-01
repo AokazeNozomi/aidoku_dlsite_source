@@ -1,5 +1,13 @@
 [
   {
+    "id": "search_mode",
+    "title": "Search Mode",
+    "type": "select",
+    "usesTagStyle": true,
+    "options": ["Play Library", "Explore"],
+    "ids": ["library", "explore"]
+  },
+  {
     "title": "Sort",
     "type": "sort",
     "canAscend": true,

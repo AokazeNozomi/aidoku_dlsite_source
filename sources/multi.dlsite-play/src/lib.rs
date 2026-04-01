@@ -48,6 +48,25 @@ impl Source for DlsitePlay {
 		page: i32,
 		filters: Vec<FilterValue>,
 	) -> Result<MangaPageResult> {
+		if extract_search_mode(&filters) == "explore" {
+			let (work_types, _) = extract_work_type_filter(&filters);
+			let content_rating_filter = extract_content_rating_filter(&filters);
+			let (genre_include, _) = extract_genre_filter(&filters);
+			let sort = settings::get_explore_sort();
+			let result = explore::api::search_explore(
+				query.as_deref(),
+				page,
+				sort,
+				&work_types,
+				content_rating_filter.as_deref(),
+				&genre_include,
+			)?;
+			return Ok(MangaPageResult {
+				entries: result.works.into_iter().map(|w| w.into_manga()).collect(),
+				has_next_page: result.has_next_page,
+			});
+		}
+
 		let (work_types, work_type_exclude) = extract_work_type_filter(&filters);
 		let translation_filter = extract_translation_filter(&filters);
 		let (genre_filter, genre_exclude) = extract_genre_filter(&filters);
@@ -354,6 +373,7 @@ impl ListingProvider for DlsitePlay {
 					sort,
 					&work_types,
 					content_rating_filter.as_deref(),
+					&[],
 				)?;
 				Ok(MangaPageResult {
 					entries: result.works.into_iter().map(|w| w.into_manga()).collect(),
@@ -1295,6 +1315,17 @@ fn fetch_all_languages() {
 	));
 }
 
+fn extract_search_mode(filters: &[FilterValue]) -> &'static str {
+	for f in filters {
+		if let FilterValue::Select { id, value } = f {
+			if id == "search_mode" && value == "explore" {
+				return "explore";
+			}
+		}
+	}
+	"library"
+}
+
 fn extract_translation_filter(filters: &[FilterValue]) -> Option<String> {
 	for f in filters {
 		if let FilterValue::Select { id, value } = f {
@@ -1377,7 +1408,7 @@ register_source!(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use aidoku::alloc::string::ToString;
+	use aidoku::alloc::{string::ToString, vec};
 	use aidoku_test::aidoku_test;
 
 	// -- split_series_chapter_key tests --

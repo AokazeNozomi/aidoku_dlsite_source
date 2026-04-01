@@ -20,6 +20,7 @@ fn build_search_url(
 	sort: ExploreSort,
 	work_types: &[String],
 	content_rating: Option<&str>,
+	genres: &[u32],
 ) -> String {
 	let mut path = String::from("/fsr/ajax/=/language/jp");
 
@@ -34,6 +35,11 @@ fn build_search_url(
 	// Work types — use indexed array params
 	for (i, wt) in work_types.iter().enumerate() {
 		path.push_str(&format!("/work_type%5B{}%5D/{}", i, wt));
+	}
+
+	// Genres — use indexed array params
+	for (i, gid) in genres.iter().enumerate() {
+		path.push_str(&format!("/genre%5B{}%5D/{}", i, gid));
 	}
 
 	// Keyword
@@ -178,8 +184,9 @@ pub fn search_explore(
 	sort: ExploreSort,
 	work_types: &[String],
 	content_rating: Option<&str>,
+	genres: &[u32],
 ) -> Result<ExploreResult> {
-	let url = build_search_url(keyword, page, sort, work_types, content_rating);
+	let url = build_search_url(keyword, page, sort, work_types, content_rating, genres);
 	print(format!("[dlsite-play] explore → GET {}", url));
 
 	let resp = Request::get(&url)?
@@ -338,7 +345,7 @@ mod tests {
 
 	#[aidoku_test]
 	fn build_search_url_basic() {
-		let url = build_search_url(None, 1, ExploreSort::Newest, &[], None);
+		let url = build_search_url(None, 1, ExploreSort::Newest, &[], None, &[]);
 		assert_eq!(
 			url,
 			"https://www.dlsite.com/maniax/fsr/ajax/=/language/jp/order%5B0%5D/release_d/page/1"
@@ -348,12 +355,19 @@ mod tests {
 	#[aidoku_test]
 	fn build_search_url_with_filters() {
 		let types = vec!["MNG".into(), "WBT".into()];
-		let url = build_search_url(Some("test"), 2, ExploreSort::Trending, &types, Some("r18"));
+		let url = build_search_url(Some("test"), 2, ExploreSort::Trending, &types, Some("r18"), &[]);
 		assert!(url.contains("/age_category%5B0%5D/adult"));
 		assert!(url.contains("/work_type%5B0%5D/MNG"));
 		assert!(url.contains("/work_type%5B1%5D/WBT"));
 		assert!(url.contains("/keyword/test"));
 		assert!(url.contains("/order%5B0%5D/trend"));
 		assert!(url.contains("/page/2"));
+	}
+
+	#[aidoku_test]
+	fn build_search_url_with_genres() {
+		let url = build_search_url(None, 1, ExploreSort::Newest, &[], None, &[509, 66]);
+		assert!(url.contains("/genre%5B0%5D/509"));
+		assert!(url.contains("/genre%5B1%5D/66"));
 	}
 }
