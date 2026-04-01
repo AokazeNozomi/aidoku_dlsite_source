@@ -349,7 +349,7 @@ impl Home for DlsitePlay {
 
 		// --- Recently Released carousel ---
 		// Individual works sorted by regist_date descending, deduplicated by
-		// series title_id, top 10.
+		// series title_id, top 20.
 		let work_refs: Vec<&models::PurchaseWork> = resp.works.iter().collect();
 		let genre_names = resolve_genre_names(&work_refs);
 		let series_names = build_series_lookup(&resp.series);
@@ -373,7 +373,7 @@ impl Home for DlsitePlay {
 		let mut seen_series: Vec<String> = Vec::new();
 		let mut carousel_entries: Vec<Link> = Vec::new();
 		for w in &recent {
-			if carousel_entries.len() >= 10 {
+			if carousel_entries.len() >= 20 {
 				break;
 			}
 			if let Some(ref ws) = w.series {
@@ -383,6 +383,35 @@ impl Home for DlsitePlay {
 				seen_series.push(ws.title_id.clone());
 			}
 			carousel_entries.push((*w).clone().into_manga(&genre_names, &series_names).into());
+		}
+
+		// --- Recently Read carousel ---
+		// Works sorted by view history accessed_at descending, top 20,
+		// respecting work type filter.
+		let mut read_entries: Vec<Link> = Vec::new();
+		if let Ok(view_hist) = api::get_view_histories() {
+			let mut hist_sorted = view_hist;
+			hist_sorted.sort_by(|a, b| {
+				let aa = a.accessed_at.as_deref().unwrap_or("");
+				let ba = b.accessed_at.as_deref().unwrap_or("");
+				ba.cmp(aa)
+			});
+			for entry in &hist_sorted {
+				if read_entries.len() >= 20 {
+					break;
+				}
+				if let Some(w) = resp.works.iter().find(|w| w.workno == entry.workno) {
+					if !work_types.is_empty() {
+						if !w.work_type.as_deref()
+							.map(|wt| work_types.iter().any(|t| t == wt))
+							.unwrap_or(false)
+						{
+							continue;
+						}
+					}
+					read_entries.push(w.clone().into_manga(&genre_names, &series_names).into());
+				}
+			}
 		}
 
 		// --- Library preview ---
@@ -406,6 +435,17 @@ impl Home for DlsitePlay {
 				subtitle: None,
 				value: HomeComponentValue::Scroller {
 					entries: carousel_entries,
+					listing: None,
+				},
+			});
+		}
+
+		if !read_entries.is_empty() {
+			components.push(HomeComponent {
+				title: Some(String::from("Recently Read")),
+				subtitle: None,
+				value: HomeComponentValue::Scroller {
+					entries: read_entries,
 					listing: None,
 				},
 			});
