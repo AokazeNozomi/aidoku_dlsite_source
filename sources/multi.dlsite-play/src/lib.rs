@@ -4,9 +4,10 @@ use aidoku::{
 	alloc::{collections::BTreeMap, format, string::ToString, vec, String, Vec},
 	imports::{canvas::ImageRef, net::Request, std::{current_date, print}},
 	prelude::*,
-	register_source, Chapter, FilterValue, HashMap, ImageRequestProvider, ImageResponse, Listing,
-	ListingProvider, Manga, MangaPageResult, NotificationHandler, Page, PageContent, PageContext,
-	PageImageProcessor, Result, Source, WebLoginHandler,
+	register_source, Chapter, FilterValue, HashMap, Home, HomeComponent, HomeComponentValue,
+	HomeLayout, ImageRequestProvider, ImageResponse, Link, Listing, ListingKind, ListingProvider,
+	Manga, MangaPageResult, NotificationHandler, Page, PageContent, PageContext, PageImageProcessor,
+	Result, Source, WebLoginHandler,
 };
 
 mod api;
@@ -319,13 +320,115 @@ impl DlsitePlay {
 
 impl ListingProvider for DlsitePlay {
 	fn get_manga_list(&self, listing: Listing, page: i32) -> Result<MangaPageResult> {
-		let work_types = match listing.id.as_str() {
-			"purchases" => Vec::new(),
-			wt => vec![wt.to_string()],
-		};
+		match listing.id.as_str() {
+			"library" => {
+				let work_types = settings::get_work_type_setting();
+				let sort_option = settings::get_default_sort();
+				let sort_ascending = settings::get_default_sort_ascending();
+				get_manga_list_inner(None, page, work_types, None, Vec::new(), sort_option, sort_ascending)
+			}
+			// Explore stub — will be implemented later.
+			_ => Ok(MangaPageResult {
+				entries: Vec::new(),
+				has_next_page: false,
+			}),
+		}
+	}
+}
+
+impl Home for DlsitePlay {
+	fn get_home(&self) -> Result<HomeLayout> {
+		let work_types = settings::get_work_type_setting();
+		let worknos = get_or_fetch_worknos(1)?;
+
+		if worknos.is_empty() {
+			return Ok(HomeLayout { components: Vec::new() });
+		}
+
+		let resp = api::get_works(&worknos)?;
+
+		// --- Recently Released carousel ---
+		// Individual works sorted by regist_date descending, deduplicated by
+		// series title_id, top 10.
+		let work_refs: Vec<&models::PurchaseWork> = resp.works.iter().collect();
+		let genre_names = resolve_genre_names(&work_refs);
+		let series_names = build_series_lookup(&resp.series);
+
+		let mut recent: Vec<&models::PurchaseWork> = resp.works.iter()
+			.filter(|w| {
+				if work_types.is_empty() {
+					return true;
+				}
+				w.work_type.as_deref()
+					.map(|wt| work_types.iter().any(|t| t == wt))
+					.unwrap_or(false)
+			})
+			.collect();
+		recent.sort_by(|a, b| {
+			let ad = a.regist_date.as_deref().unwrap_or("");
+			let bd = b.regist_date.as_deref().unwrap_or("");
+			bd.cmp(ad)
+		});
+
+		let mut seen_series: Vec<String> = Vec::new();
+		let mut carousel_entries: Vec<Link> = Vec::new();
+		for w in &recent {
+			if carousel_entries.len() >= 10 {
+				break;
+			}
+			if let Some(ref ws) = w.series {
+				if seen_series.contains(&ws.title_id) {
+					continue;
+				}
+				seen_series.push(ws.title_id.clone());
+			}
+			carousel_entries.push((*w).clone().into_manga(&genre_names, &series_names).into());
+		}
+
+		// --- Library preview ---
 		let sort_option = settings::get_default_sort();
 		let sort_ascending = settings::get_default_sort_ascending();
-		get_manga_list_inner(None, page, work_types, None, Vec::new(), sort_option, sort_ascending)
+		let library_entries = build_sorted_entries(
+			&worknos, resp, None, work_types, None, Vec::new(),
+			sort_option, sort_ascending,
+		);
+		let library_links: Vec<Link> = library_entries
+			.into_iter()
+			.take(PAGE_SIZE)
+			.map(|(_, manga)| manga.into())
+			.collect();
+
+		let mut components = Vec::new();
+
+		if !carousel_entries.is_empty() {
+			components.push(HomeComponent {
+				title: Some(String::from("Recently Released")),
+				subtitle: None,
+				value: HomeComponentValue::Scroller {
+					entries: carousel_entries,
+					listing: None,
+				},
+			});
+		}
+
+		if !library_links.is_empty() {
+			components.push(HomeComponent {
+				title: Some(String::from("Library")),
+				subtitle: None,
+				value: HomeComponentValue::MangaList {
+					ranking: false,
+					page_size: None,
+					entries: library_links,
+					listing: Some(Listing {
+						id: String::from("library"),
+						name: String::from("Library"),
+						kind: ListingKind::default(),
+					}),
+				},
+			});
+		}
+
+		Ok(HomeLayout { components })
 	}
 }
 
@@ -653,37 +756,27 @@ fn work_passes_filter(
 	true
 }
 
-/// Core listing/search implementation shared by search and listing providers.
+/// Groups works by series, applies filters, sorts, and returns sorted entries.
 ///
-/// Fetches all works, groups them by series `title_id`, and returns paginated
-/// results where each series is a single Manga entry.
-fn get_manga_list_inner(
+/// This is the core processing logic shared by `get_manga_list_inner` and
+/// `get_home`. Accepts pre-fetched data so callers can reuse a single API
+/// response for multiple purposes (e.g. carousel + library preview).
+fn build_sorted_entries(
+	worknos: &[String],
+	resp: models::WorksResponse,
 	query: Option<String>,
-	page: i32,
 	work_types: Vec<String>,
 	translation_filter: Option<String>,
 	genre_filter: Vec<u32>,
 	sort_option: SortOption,
 	sort_ascending: bool,
-) -> Result<MangaPageResult> {
-	let worknos = get_or_fetch_worknos(page)?;
-
-	if worknos.is_empty() {
-		return Ok(MangaPageResult {
-			entries: Vec::new(),
-			has_next_page: false,
-		});
-	}
-
-	// Always fetch all works to enable cross-page series grouping.
-	let resp = api::get_works(&worknos)?;
-
+) -> Vec<(SortKey, Manga)> {
 	let work_refs: Vec<&models::PurchaseWork> = resp.works.iter().collect();
 	let genre_names = resolve_genre_names(&work_refs);
 	let series_names = build_series_lookup(&resp.series);
 
 	print(format!(
-		"[dlsite-play] get_manga_list_inner sort={} ascending={}",
+		"[dlsite-play] build_sorted_entries sort={} ascending={}",
 		sort_option as i32, sort_ascending
 	));
 
@@ -775,7 +868,7 @@ fn get_manga_list_inner(
 				}
 			}
 			let name = sname.unwrap_or(key.as_str());
-			let sort_key = build_series_sort_key(works, name, &worknos, &view_history_map);
+			let sort_key = build_series_sort_key(works, name, worknos, &view_history_map);
 			all_entries.push((sort_key, models::series_manga(key, name, works, &genre_names)));
 		} else if let Some(pos) = standalone.iter().position(|(k, _)| k == key) {
 			let (_, w) = &standalone[pos];
@@ -792,7 +885,7 @@ fn get_manga_list_inner(
 					continue;
 				}
 			}
-			let sort_key = build_work_sort_key(w, &worknos, &view_history_map);
+			let sort_key = build_work_sort_key(w, worknos, &view_history_map);
 			// Move out of standalone to convert
 			let (_, w) = standalone.remove(pos);
 			all_entries.push((sort_key, w.into_manga(&genre_names, &series_names)));
@@ -801,6 +894,37 @@ fn get_manga_list_inner(
 
 	// --- Sort ---
 	apply_sort(&mut all_entries, sort_option, sort_ascending);
+
+	all_entries
+}
+
+/// Core listing/search implementation shared by search and listing providers.
+///
+/// Fetches all works, groups them by series `title_id`, and returns paginated
+/// results where each series is a single Manga entry.
+fn get_manga_list_inner(
+	query: Option<String>,
+	page: i32,
+	work_types: Vec<String>,
+	translation_filter: Option<String>,
+	genre_filter: Vec<u32>,
+	sort_option: SortOption,
+	sort_ascending: bool,
+) -> Result<MangaPageResult> {
+	let worknos = get_or_fetch_worknos(page)?;
+
+	if worknos.is_empty() {
+		return Ok(MangaPageResult {
+			entries: Vec::new(),
+			has_next_page: false,
+		});
+	}
+
+	let resp = api::get_works(&worknos)?;
+	let all_entries = build_sorted_entries(
+		&worknos, resp, query, work_types, translation_filter,
+		genre_filter, sort_option, sort_ascending,
+	);
 
 	// --- Paginate ---
 	let page_idx = (page - 1).max(0) as usize;
@@ -1052,6 +1176,7 @@ fn extract_sort_filter(filters: &[FilterValue]) -> (SortOption, bool) {
 register_source!(
 	DlsitePlay,
 	ListingProvider,
+	Home,
 	WebLoginHandler,
 	NotificationHandler,
 	ImageRequestProvider,

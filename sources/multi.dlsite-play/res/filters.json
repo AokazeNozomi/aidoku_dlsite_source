@@ -23,15 +23,42 @@
     "usesTagStyle": true,
     "options": [
       "Manga",
+      "Gekiga",
       "Webtoon",
-      "CG / Illustration",
-      "Sound / Voice",
-      "Video",
+      "CG / Illustrations",
       "Novel",
-      "Game",
-      "Other"
+      "Digital Novel",
+      "Action",
+      "Quiz",
+      "Adventure",
+      "Role-playing",
+      "Table",
+      "Simulation",
+      "Typing",
+      "Shooting",
+      "Puzzle",
+      "Miscellaneous Game",
+      "Video",
+      "Voice / ASMR",
+      "Music",
+      "Tools / Accessories",
+      "Illustration Materials",
+      "Music Materials",
+      "Miscellaneous",
+      "Voiced Comic",
+      "Publication"
     ],
-    "ids": ["MNG", "WBT", "CG", "SOU", "MOV", "NOV", "GAM", "ETC"]
+    "ids": [
+      "MNG", "SCM", "WBT",
+      "ICG",
+      "NRE", "DNV",
+      "ACN", "QIZ", "ADV", "RPG", "TBL", "SLN", "TYP", "STG", "PZL", "ETC",
+      "MOV",
+      "SOU",
+      "MUS",
+      "TOL", "IMT", "AMT",
+      "ET3", "VCM", "PBC"
+    ]
   },
   {
     "id": "translation",

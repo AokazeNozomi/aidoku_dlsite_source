@@ -53,6 +53,235 @@
 	},
 	{
 		"type": "group",
+		"title": "Work Type — Manga",
+		"items": [
+			{
+				"type": "switch",
+				"key": "wt_MNG",
+				"title": "Manga",
+				"default": "true",
+				"refreshes": ["listings", "content"]
+			},
+			{
+				"type": "switch",
+				"key": "wt_SCM",
+				"title": "Gekiga",
+				"default": "true",
+				"refreshes": ["listings", "content"]
+			},
+			{
+				"type": "switch",
+				"key": "wt_WBT",
+				"title": "Webtoon",
+				"default": "true",
+				"refreshes": ["listings", "content"]
+			}
+		]
+	},
+	{
+		"type": "group",
+		"title": "Work Type — CG + Illustrations",
+		"items": [
+			{
+				"type": "switch",
+				"key": "wt_ICG",
+				"title": "CG / Illustrations",
+				"default": "true",
+				"refreshes": ["listings", "content"]
+			}
+		]
+	},
+	{
+		"type": "group",
+		"title": "Work Type — Novel",
+		"items": [
+			{
+				"type": "switch",
+				"key": "wt_NRE",
+				"title": "Novel",
+				"default": "true",
+				"refreshes": ["listings", "content"]
+			},
+			{
+				"type": "switch",
+				"key": "wt_DNV",
+				"title": "Digital Novel",
+				"default": "true",
+				"refreshes": ["listings", "content"]
+			}
+		]
+	},
+	{
+		"type": "group",
+		"title": "Work Type — Game",
+		"items": [
+			{
+				"type": "switch",
+				"key": "wt_ACN",
+				"title": "Action",
+				"default": "false",
+				"refreshes": ["listings", "content"]
+			},
+			{
+				"type": "switch",
+				"key": "wt_QIZ",
+				"title": "Quiz",
+				"default": "false",
+				"refreshes": ["listings", "content"]
+			},
+			{
+				"type": "switch",
+				"key": "wt_ADV",
+				"title": "Adventure",
+				"default": "false",
+				"refreshes": ["listings", "content"]
+			},
+			{
+				"type": "switch",
+				"key": "wt_RPG",
+				"title": "Role-playing",
+				"default": "false",
+				"refreshes": ["listings", "content"]
+			},
+			{
+				"type": "switch",
+				"key": "wt_TBL",
+				"title": "Table",
+				"default": "false",
+				"refreshes": ["listings", "content"]
+			},
+			{
+				"type": "switch",
+				"key": "wt_SLN",
+				"title": "Simulation",
+				"default": "false",
+				"refreshes": ["listings", "content"]
+			},
+			{
+				"type": "switch",
+				"key": "wt_TYP",
+				"title": "Typing",
+				"default": "false",
+				"refreshes": ["listings", "content"]
+			},
+			{
+				"type": "switch",
+				"key": "wt_STG",
+				"title": "Shooting",
+				"default": "false",
+				"refreshes": ["listings", "content"]
+			},
+			{
+				"type": "switch",
+				"key": "wt_PZL",
+				"title": "Puzzle",
+				"default": "false",
+				"refreshes": ["listings", "content"]
+			},
+			{
+				"type": "switch",
+				"key": "wt_ETC",
+				"title": "Miscellaneous Game",
+				"default": "false",
+				"refreshes": ["listings", "content"]
+			}
+		]
+	},
+	{
+		"type": "group",
+		"title": "Work Type — Video / Anime",
+		"items": [
+			{
+				"type": "switch",
+				"key": "wt_MOV",
+				"title": "Video",
+				"default": "false",
+				"refreshes": ["listings", "content"]
+			}
+		]
+	},
+	{
+		"type": "group",
+		"title": "Work Type — Voice / ASMR",
+		"items": [
+			{
+				"type": "switch",
+				"key": "wt_SOU",
+				"title": "Voice / ASMR",
+				"default": "false",
+				"refreshes": ["listings", "content"]
+			}
+		]
+	},
+	{
+		"type": "group",
+		"title": "Work Type — Music",
+		"items": [
+			{
+				"type": "switch",
+				"key": "wt_MUS",
+				"title": "Music",
+				"default": "false",
+				"refreshes": ["listings", "content"]
+			}
+		]
+	},
+	{
+		"type": "group",
+		"title": "Work Type — Tools / Accessories",
+		"items": [
+			{
+				"type": "switch",
+				"key": "wt_TOL",
+				"title": "Tools / Accessories",
+				"default": "false",
+				"refreshes": ["listings", "content"]
+			},
+			{
+				"type": "switch",
+				"key": "wt_IMT",
+				"title": "Illustration Materials",
+				"default": "true",
+				"refreshes": ["listings", "content"]
+			},
+			{
+				"type": "switch",
+				"key": "wt_AMT",
+				"title": "Music Materials",
+				"default": "false",
+				"refreshes": ["listings", "content"]
+			}
+		]
+	},
+	{
+		"type": "group",
+		"title": "Work Type — Miscellaneous",
+		"items": [
+			{
+				"type": "switch",
+				"key": "wt_ET3",
+				"title": "Miscellaneous",
+				"default": "false",
+				"refreshes": ["listings", "content"]
+			},
+			{
+				"type": "switch",
+				"key": "wt_VCM",
+				"title": "Voiced Comic",
+				"default": "false",
+				"refreshes": ["listings", "content"]
+			},
+			{
+				"type": "switch",
+				"key": "wt_PBC",
+				"title": "Publication",
+				"default": "false",
+				"refreshes": ["listings", "content"]
+			}
+		]
+	},
+	{
+		"type": "group",
 		"title": "Sort",
 		"footer": "Default sort order for library listings.",
 		"items": [
