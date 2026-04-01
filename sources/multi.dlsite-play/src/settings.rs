@@ -3,10 +3,16 @@ use aidoku::{
 	imports::defaults::{DefaultValue, defaults_get, defaults_set},
 };
 
+const PREFERRED_LANGUAGE_KEY: &str = "preferred_language";
 const CACHED_WORKNOS_KEY: &str = "cached_worknos";
 const LOGGED_IN_KEY: &str = "logged_in";
 const WEB_COOKIES_KEY: &str = "web_cookies";
 const SALES_FETCHED_AT_KEY: &str = "sales_fetched_at_unix";
+
+/// 0 = English, 1 = Japanese, 2 = Chinese (Simplified), 3 = Chinese (Traditional), 4 = Korean
+pub fn get_preferred_language() -> i32 {
+	defaults_get::<i32>(PREFERRED_LANGUAGE_KEY).unwrap_or(0)
+}
 
 pub fn is_logged_in() -> bool {
 	defaults_get::<bool>(LOGGED_IN_KEY).unwrap_or(false)
@@ -70,18 +76,29 @@ pub fn clear_web_cookies() {
 }
 
 const CACHED_GENRES_KEY: &str = "cached_genres";
+const CACHED_GENRES_LANG_KEY: &str = "cached_genres_lang";
 
-/// Store resolved genre ID→name pairs as `"id:name,id:name,..."`.
+/// Store resolved genre ID→name pairs as `"id:name\nid:name\n..."`.
 pub fn set_cached_genres(value: &str) {
 	defaults_set(
 		CACHED_GENRES_KEY,
 		DefaultValue::String(String::from(value)),
 	);
+	defaults_set(
+		CACHED_GENRES_LANG_KEY,
+		DefaultValue::String(format!("{}", get_preferred_language())),
+	);
 }
 
 /// Retrieve cached genre ID→name pairs.
-/// Returns empty string if no cache exists.
+/// Returns `None` if no cache exists or if the language setting has changed.
 pub fn get_cached_genres() -> Option<String> {
+	let cached_lang = defaults_get::<String>(CACHED_GENRES_LANG_KEY)
+		.and_then(|s| s.parse::<i32>().ok())
+		.unwrap_or(-1);
+	if cached_lang != get_preferred_language() {
+		return None;
+	}
 	defaults_get::<String>(CACHED_GENRES_KEY).filter(|s| !s.is_empty())
 }
 

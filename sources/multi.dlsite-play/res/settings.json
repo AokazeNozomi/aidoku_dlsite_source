@@ -16,5 +16,24 @@
 				]
 			}
 		]
+	},
+	{
+		"type": "group",
+		"title": "Display",
+		"items": [
+			{
+				"type": "select",
+				"key": "preferred_language",
+				"title": "Preferred Title and Genre Language",
+				"values": [
+					"English",
+					"Japanese",
+					"Chinese (Simplified)",
+					"Chinese (Traditional)",
+					"Korean"
+				],
+				"default": 0
+			}
+		]
 	}
 ]
