@@ -1,5 +1,16 @@
 [
 	{
+		"id": "sort",
+		"title": "Sort",
+		"type": "sort",
+		"canAscend": true,
+		"options": ["Recently Opened", "Purchase Date", "Release Date", "Writer/Circle Name", "Title"],
+		"default": {
+			"index": 0,
+			"ascending": false
+		}
+	},
+	{
 		"id": "work_type",
 		"title": "Work Type",
 		"type": "multi-select",

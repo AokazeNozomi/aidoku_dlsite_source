@@ -18,6 +18,28 @@ const PAGE_SIZE: usize = 20;
 /// Skip duplicate `/content/sales` calls when Aidoku requests page 1 several times in a row.
 const SALES_CACHE_MAX_AGE_SEC: i64 = 120;
 
+/// Sort option indices matching the order in filters.json
+const SORT_RECENTLY_OPENED: i32 = 0;
+const SORT_PURCHASE_DATE: i32 = 1;
+const SORT_RELEASE_DATE: i32 = 2;
+const SORT_WRITER_CIRCLE: i32 = 3;
+const SORT_TITLE: i32 = 4;
+
+struct SortKey {
+	/// Position in the original worknos array (purchase order).
+	original_position: usize,
+	/// `accessed_at` from view_histories (empty if not in history).
+	recently_opened: String,
+	/// `sales_date` from the work.
+	purchase_date: String,
+	/// `regist_date` from the work.
+	release_date: String,
+	/// Maker/circle name (lowercased for case-insensitive sort).
+	writer_name: String,
+	/// Title (lowercased for case-insensitive sort).
+	title: String,
+}
+
 struct DlsitePlay;
 
 impl Source for DlsitePlay {
@@ -34,7 +56,8 @@ impl Source for DlsitePlay {
 		let work_types = extract_work_type_filter(&filters);
 		let translation_filter = extract_translation_filter(&filters);
 		let genre_filter = extract_genre_filter(&filters);
-		get_manga_list_inner(query, page, work_types, translation_filter, genre_filter)
+		let (sort_index, sort_ascending) = extract_sort_filter(&filters);
+		get_manga_list_inner(query, page, work_types, translation_filter, genre_filter, sort_index, sort_ascending)
 	}
 
 	fn get_manga_update(
@@ -44,6 +67,18 @@ impl Source for DlsitePlay {
 		needs_chapters: bool,
 	) -> Result<Manga> {
 		let is_series = manga.key.starts_with("series:");
+
+		// Update "recently opened" on DLsite (fire-and-forget).
+		let touch_workno = if is_series {
+			// For series, touch the first member work.
+			let title_id = manga.key.strip_prefix("series:").unwrap_or(&manga.key);
+			settings::get_cached_series_map(title_id).into_iter().next()
+		} else {
+			Some(manga.key.clone())
+		};
+		if let Some(ref wno) = touch_workno {
+			let _ = api::post_view_history(wno);
+		}
 
 		if is_series {
 			self.update_series_manga(&mut manga, needs_details, needs_chapters)?;
@@ -300,7 +335,9 @@ impl ListingProvider for DlsitePlay {
 			"purchases" => Vec::new(),
 			wt => vec![wt.to_string()],
 		};
-		get_manga_list_inner(None, page, work_types, None, None)
+		let sort_index = settings::get_default_sort();
+		let sort_ascending = settings::get_default_sort_ascending();
+		get_manga_list_inner(None, page, work_types, None, None, sort_index, sort_ascending)
 	}
 }
 
@@ -630,6 +667,8 @@ fn get_manga_list_inner(
 	work_types: Vec<String>,
 	translation_filter: Option<String>,
 	genre_filter: Option<String>,
+	sort_index: i32,
+	sort_ascending: bool,
 ) -> Result<MangaPageResult> {
 	let worknos = get_or_fetch_worknos(page)?;
 
@@ -646,6 +685,20 @@ fn get_manga_list_inner(
 	let work_refs: Vec<&models::PurchaseWork> = resp.works.iter().collect();
 	let genre_names = resolve_genre_names(&work_refs);
 	let series_names = build_series_lookup(&resp.series);
+
+	// Fetch view histories for "recently opened" sort.
+	let view_history_map: BTreeMap<String, String> = if sort_index == SORT_RECENTLY_OPENED {
+		api::get_view_histories()
+			.unwrap_or_default()
+			.into_iter()
+			.filter_map(|e| {
+				let at = e.accessed_at?;
+				Some((e.workno, at))
+			})
+			.collect()
+	} else {
+		BTreeMap::new()
+	};
 
 	// --- Group works by series title_id ---
 	// Insertion order: first occurrence of each title_id / standalone work
@@ -684,7 +737,7 @@ fn get_manga_list_inner(
 	}
 	settings::set_cached_series_title_ids(&cached_title_ids);
 
-	// --- Build Manga entries in display order, applying filters ---
+	// --- Build Manga entries with sort keys, applying filters ---
 	let q_lower = query.as_ref().map(|q| q.to_lowercase());
 	let genre_filter_lower = genre_filter.as_ref().map(|g| g.to_lowercase());
 	let has_filter = query.is_some()
@@ -692,7 +745,7 @@ fn get_manga_list_inner(
 		|| translation_filter.is_some()
 		|| genre_filter.is_some();
 
-	let mut all_entries: Vec<Manga> = Vec::new();
+	let mut all_entries: Vec<(SortKey, Manga)> = Vec::new();
 
 	for key in &group_order {
 		if let Some(works) = series_groups.get(key.as_str()) {
@@ -723,7 +776,8 @@ fn get_manga_list_inner(
 				}
 			}
 			let name = sname.unwrap_or(key.as_str());
-			all_entries.push(models::series_manga(key, name, works, &genre_names));
+			let sort_key = build_series_sort_key(works, name, &worknos, &view_history_map);
+			all_entries.push((sort_key, models::series_manga(key, name, works, &genre_names)));
 		} else if let Some(pos) = standalone.iter().position(|(k, _)| k == key) {
 			let (_, w) = &standalone[pos];
 			if has_filter {
@@ -740,11 +794,15 @@ fn get_manga_list_inner(
 					continue;
 				}
 			}
+			let sort_key = build_work_sort_key(w, &worknos, &view_history_map);
 			// Move out of standalone to convert
 			let (_, w) = standalone.remove(pos);
-			all_entries.push(w.into_manga(&genre_names, &series_names));
+			all_entries.push((sort_key, w.into_manga(&genre_names, &series_names)));
 		}
 	}
+
+	// --- Sort ---
+	apply_sort(&mut all_entries, sort_index, sort_ascending);
 
 	// --- Paginate ---
 	let page_idx = (page - 1).max(0) as usize;
@@ -763,12 +821,99 @@ fn get_manga_list_inner(
 		.into_iter()
 		.skip(start)
 		.take(end - start)
+		.map(|(_, manga)| manga)
 		.collect();
 
 	Ok(MangaPageResult {
 		entries,
 		has_next_page: end < total,
 	})
+}
+
+/// Build a `SortKey` for a standalone work.
+fn build_work_sort_key(
+	w: &models::PurchaseWork,
+	worknos: &[String],
+	view_history: &BTreeMap<String, String>,
+) -> SortKey {
+	SortKey {
+		original_position: worknos.iter().position(|id| id == &w.workno).unwrap_or(usize::MAX),
+		recently_opened: view_history.get(&w.workno).cloned().unwrap_or_default(),
+		purchase_date: w.sales_date.clone().unwrap_or_default(),
+		release_date: w.regist_date.clone().unwrap_or_default(),
+		writer_name: w
+			.maker
+			.as_ref()
+			.and_then(|m| m.name.as_ref())
+			.map(|n| n.best().to_lowercase())
+			.unwrap_or_default(),
+		title: w
+			.name
+			.as_ref()
+			.map(|n| n.best().to_lowercase())
+			.unwrap_or_default(),
+	}
+}
+
+/// Build a `SortKey` for a series group.
+fn build_series_sort_key(
+	works: &[models::PurchaseWork],
+	series_name: &str,
+	worknos: &[String],
+	view_history: &BTreeMap<String, String>,
+) -> SortKey {
+	SortKey {
+		original_position: works
+			.iter()
+			.filter_map(|w| worknos.iter().position(|id| id == &w.workno))
+			.min()
+			.unwrap_or(usize::MAX),
+		recently_opened: works
+			.iter()
+			.filter_map(|w| view_history.get(&w.workno))
+			.max()
+			.cloned()
+			.unwrap_or_default(),
+		purchase_date: works
+			.iter()
+			.filter_map(|w| w.sales_date.as_deref())
+			.max()
+			.unwrap_or("")
+			.into(),
+		release_date: works
+			.iter()
+			.filter_map(|w| w.regist_date.as_deref())
+			.min()
+			.unwrap_or("")
+			.into(),
+		writer_name: works
+			.first()
+			.and_then(|w| w.maker.as_ref())
+			.and_then(|m| m.name.as_ref())
+			.map(|n| n.best().to_lowercase())
+			.unwrap_or_default(),
+		title: series_name.to_lowercase(),
+	}
+}
+
+/// Sort entries by the selected sort option and direction.
+fn apply_sort(entries: &mut Vec<(SortKey, Manga)>, sort_index: i32, ascending: bool) {
+	// Purchase date descending is the natural API order — skip sort.
+	if sort_index == SORT_PURCHASE_DATE && !ascending {
+		return;
+	}
+
+	entries.sort_by(|(a, _), (b, _)| {
+		let ord = match sort_index {
+			SORT_RECENTLY_OPENED => a.recently_opened.cmp(&b.recently_opened),
+			SORT_PURCHASE_DATE => a.purchase_date.cmp(&b.purchase_date),
+			SORT_RELEASE_DATE => a.release_date.cmp(&b.release_date),
+			SORT_WRITER_CIRCLE => a.writer_name.cmp(&b.writer_name),
+			SORT_TITLE => a.title.cmp(&b.title),
+			_ => a.original_position.cmp(&b.original_position),
+		};
+		if ascending { ord } else { ord.reverse() }
+	});
 }
 
 /// Fetch (or use cached) full purchase work ID list, refreshing on page 1.
@@ -882,6 +1027,19 @@ fn extract_work_type_filter(filters: &[FilterValue]) -> Vec<String> {
 		}
 	}
 	Vec::new()
+}
+
+/// Extract sort option from filters. Returns `(sort_index, ascending)`.
+/// Falls back to settings defaults if no sort filter is present.
+fn extract_sort_filter(filters: &[FilterValue]) -> (i32, bool) {
+	for f in filters {
+		if let FilterValue::Sort { id, index, ascending } = f {
+			if id == "sort" {
+				return (*index, *ascending);
+			}
+		}
+	}
+	(settings::get_default_sort(), settings::get_default_sort_ascending())
 }
 
 register_source!(

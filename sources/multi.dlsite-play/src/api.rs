@@ -1,6 +1,6 @@
 use crate::models::{
 	DownloadToken, GenreInfo, GenresResponse, LanguageEdition, ProductInfo, PurchaseWork,
-	RawZipTree, SalesEntry, WorksResponse, ZipTree,
+	RawZipTree, SalesEntry, ViewHistoryEntry, WorksResponse, ZipTree,
 };
 use crate::settings;
 use aidoku::{
@@ -343,6 +343,44 @@ pub fn get_language_editions(workno: &str) -> Result<Vec<LanguageEdition>> {
 		.next()
 		.map(|p| p.language_editions)
 		.unwrap_or_default())
+}
+
+const PLAY_BASE: &str = "https://play.dlsite.com";
+
+/// Fetch the user's recently viewed works with timestamps.
+/// `GET /api/view_histories` → `[{workno, accessed_at}, ...]`
+pub fn get_view_histories() -> Result<Vec<ViewHistoryEntry>> {
+	let url = format!("{}/api/view_histories", PLAY_BASE);
+	let resp = play_authenticated_get(url.as_str())?.send()?;
+	let status = resp.status_code();
+	let data = resp.get_data()?;
+	ensure_ok("get_view_histories", status, &data)?;
+	let entries: Vec<ViewHistoryEntry> = serde_json::from_slice(&data).map_err(|e| {
+		print(format!(
+			"[dlsite-play] get_view_histories parse error: {} status={} preview: {}",
+			e,
+			status,
+			body_preview(&data)
+		));
+		error!(
+			"Failed to parse view histories: {} ({} bytes)",
+			e,
+			data.len()
+		)
+	})?;
+	Ok(entries)
+}
+
+/// Update the "recently opened" timestamp for a work.
+/// `POST /api/view_histories` with `{"workno": "RJ..."}` → 204
+pub fn post_view_history(workno: &str) -> Result<()> {
+	let url = format!("{}/api/view_histories", PLAY_BASE);
+	let body = format!("{{\"workno\":\"{}\"}}", workno);
+	let resp = play_post_json(url.as_str(), body.as_bytes())?.send()?;
+	let status = resp.status_code();
+	let data = resp.get_data()?;
+	ensure_ok("post_view_history", status, &data)?;
+	Ok(())
 }
 
 /// Build the URL for downloading an optimized file.

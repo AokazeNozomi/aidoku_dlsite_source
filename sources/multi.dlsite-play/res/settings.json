@@ -42,5 +42,32 @@
 				"default": "false"
 			}
 		]
+	},
+	{
+		"type": "group",
+		"title": "Sort",
+		"footer": "Default sort order for library listings.",
+		"items": [
+			{
+				"type": "select",
+				"key": "default_sort",
+				"title": "Default Sort",
+				"values": [
+					"Recently Opened",
+					"Purchase Date",
+					"Release Date",
+					"Writer/Circle Name",
+					"Title"
+				],
+				"default": "Recently Opened"
+			},
+			{
+				"type": "switch",
+				"key": "default_sort_ascending",
+				"title": "Ascending",
+				"subtitle": "Sort in ascending order instead of descending.",
+				"default": "false"
+			}
+		]
 	}
 ]

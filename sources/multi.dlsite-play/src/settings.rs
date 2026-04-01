@@ -170,3 +170,17 @@ pub fn set_cached_languages(workno: &str, value: &str) {
 		DefaultValue::String(String::from(value)),
 	);
 }
+
+// ---------------------------------------------------------------------------
+// Sort settings
+// ---------------------------------------------------------------------------
+
+/// 0 = Recently Opened, 1 = Purchase Date, 2 = Release Date,
+/// 3 = Writer/Circle Name, 4 = Title
+pub fn get_default_sort() -> i32 {
+	defaults_get::<i32>("default_sort").unwrap_or(0)
+}
+
+pub fn get_default_sort_ascending() -> bool {
+	defaults_get::<bool>("default_sort_ascending").unwrap_or(false)
+}

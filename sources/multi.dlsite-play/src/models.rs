@@ -675,6 +675,17 @@ impl PurchaseWork {
 }
 
 // ---------------------------------------------------------------------------
+// View history from GET /api/view_histories
+// ---------------------------------------------------------------------------
+
+#[derive(Deserialize, Clone)]
+pub struct ViewHistoryEntry {
+	pub workno: String,
+	#[serde(default)]
+	pub accessed_at: Option<String>,
+}
+
+// ---------------------------------------------------------------------------
 // Sales entry from GET /api/v3/content/sales
 // ---------------------------------------------------------------------------
 
