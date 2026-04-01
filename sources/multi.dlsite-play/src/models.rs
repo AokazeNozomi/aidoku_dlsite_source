@@ -720,3 +720,151 @@ pub struct ProductInfo {
 	#[serde(default)]
 	pub language_editions: Vec<LanguageEdition>,
 }
+
+// ---------------------------------------------------------------------------
+// Series Manga builder
+// ---------------------------------------------------------------------------
+
+/// Build a single [`Manga`] entry representing a series, merging metadata from
+/// all member works. `works` must be pre-sorted by volume order.
+pub fn series_manga(
+	title_id: &str,
+	series_name: &str,
+	works: &[PurchaseWork],
+	genre_names: &BTreeMap<u32, String>,
+) -> Manga {
+	let first = works.first();
+
+	// -- Title --
+	let title = series_name.into();
+
+	// -- Cover: from the first (earliest) work --
+	let cover = first.and_then(|w| w.cover_url());
+
+	// -- Circle --
+	let circle_name = first
+		.and_then(|w| w.maker.as_ref())
+		.and_then(|m| m.name.as_ref())
+		.map(|n| n.best());
+
+	// -- Authors / Artists: merge across works, deduplicated --
+	let mut authors: Vec<String> = Vec::new();
+	let mut artists: Vec<String> = Vec::new();
+	for w in works {
+		if let Some(ref name) = w.author_name {
+			for part in name.split('/') {
+				let trimmed = part.trim();
+				if !trimmed.is_empty() && !authors.contains(&String::from(trimmed)) {
+					authors.push(trimmed.into());
+				}
+			}
+		}
+		for name in w.tags_by_class("created_by") {
+			if !authors.contains(&name) {
+				authors.push(name);
+			}
+		}
+		for name in w.tags_by_class("scenario_by") {
+			if !authors.contains(&name) {
+				authors.push(name);
+			}
+		}
+		for name in w.tags_by_class("illust_by") {
+			if !artists.contains(&name) {
+				artists.push(name);
+			}
+		}
+	}
+	let authors = if authors.is_empty() {
+		circle_name.as_deref().map(|c| vec![c.into()])
+	} else {
+		Some(authors)
+	};
+	let artists = if artists.is_empty() { None } else { Some(artists) };
+
+	// -- Tags: merge across works --
+	let mut tag_list: Vec<String> = Vec::new();
+	for w in works {
+		if let Some(label) = w.work_type_label() {
+			let s: String = label.into();
+			if !tag_list.contains(&s) {
+				tag_list.push(s);
+			}
+		}
+		if w.has_translator() && !tag_list.contains(&String::from("Translated")) {
+			tag_list.push("Translated".into());
+		}
+		for gid in &w.genre_ids {
+			if let Some(name) = genre_names.get(gid) {
+				if !tag_list.contains(name) {
+					tag_list.push(name.clone());
+				}
+			}
+		}
+	}
+	let tags = if tag_list.is_empty() { None } else { Some(tag_list) };
+
+	// -- Description --
+	let mut desc_lines: Vec<String> = Vec::new();
+	if let Some(ref circle) = circle_name {
+		desc_lines.push(format!("Circle: {}", circle));
+	}
+	desc_lines.push(format!("Volumes owned: {}", works.len()));
+	for w in works {
+		let name = w
+			.name
+			.as_ref()
+			.map(|n| n.best())
+			.unwrap_or_else(|| w.workno.clone());
+		let vol_label = w
+			.series
+			.as_ref()
+			.and_then(|s| s.volume_number)
+			.map(|v| format!("Vol. {}", v))
+			.unwrap_or_else(|| w.workno.clone());
+		desc_lines.push(format!("  {} — {}", vol_label, name));
+	}
+	let description = Some(desc_lines.join("\n"));
+
+	// -- Content rating: highest across works --
+	let content_rating = works
+		.iter()
+		.map(|w| match w.age_category.as_deref() {
+			Some("R18") | Some("r18") => ContentRating::NSFW,
+			Some("R15") | Some("r15") => ContentRating::Suggestive,
+			_ => ContentRating::Safe,
+		})
+		.max_by_key(|r| *r as u8)
+		.unwrap_or(ContentRating::Safe);
+
+	// -- Viewer: from first work --
+	let viewer = first
+		.map(|w| match w.viewer_type.as_deref() {
+			Some("ebook_fixed_v2") => Viewer::RightToLeft,
+			Some("play") => match w.work_type.as_deref() {
+				Some("WBT") => Viewer::Webtoon,
+				_ => Viewer::RightToLeft,
+			},
+			_ => Viewer::LeftToRight,
+		})
+		.unwrap_or(Viewer::RightToLeft);
+
+	let url = Some(format!(
+		"https://www.dlsite.com/maniax/fsr/=/title_id/{}/order/release_d",
+		title_id
+	));
+
+	Manga {
+		key: format!("series:{}", title_id),
+		title,
+		cover,
+		authors,
+		artists,
+		description,
+		tags,
+		content_rating,
+		viewer,
+		url,
+		..Default::default()
+	}
+}

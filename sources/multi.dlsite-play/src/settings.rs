@@ -33,6 +33,7 @@ pub fn get_cached_worknos() -> Vec<String> {
 pub fn clear_cached_worknos() {
 	defaults_set(CACHED_WORKNOS_KEY, DefaultValue::Null);
 	defaults_set(SALES_FETCHED_AT_KEY, DefaultValue::Null);
+	clear_cached_series_maps();
 }
 
 /// Unix time when `/content/sales` last succeeded and populated [Self::get_cached_worknos].
@@ -83,6 +84,55 @@ pub fn set_cached_genres(value: &str) {
 pub fn get_cached_genres() -> Option<String> {
 	defaults_get::<String>(CACHED_GENRES_KEY).filter(|s| !s.is_empty())
 }
+
+// ---------------------------------------------------------------------------
+// Series mapping cache: title_id → worknos
+// ---------------------------------------------------------------------------
+
+fn series_map_key(title_id: &str) -> String {
+	format!("series_map_{}", title_id)
+}
+
+const SERIES_TITLE_IDS_KEY: &str = "series_title_ids";
+
+/// Store the worknos belonging to a series.
+pub fn set_cached_series_map(title_id: &str, worknos: &[String]) {
+	let joined: String = worknos.join(",");
+	defaults_set(
+		&series_map_key(title_id),
+		DefaultValue::String(joined),
+	);
+}
+
+/// Retrieve cached worknos for a series.
+pub fn get_cached_series_map(title_id: &str) -> Vec<String> {
+	defaults_get::<String>(&series_map_key(title_id))
+		.filter(|s| !s.is_empty())
+		.map(|s| s.split(',').map(|w| w.into()).collect())
+		.unwrap_or_default()
+}
+
+/// Store the list of known series title_ids (for bulk clearing).
+pub fn set_cached_series_title_ids(title_ids: &[String]) {
+	let joined: String = title_ids.join(",");
+	defaults_set(SERIES_TITLE_IDS_KEY, DefaultValue::String(joined));
+}
+
+/// Clear all cached series mappings.
+pub fn clear_cached_series_maps() {
+	let title_ids: Vec<String> = defaults_get::<String>(SERIES_TITLE_IDS_KEY)
+		.filter(|s| !s.is_empty())
+		.map(|s| s.split(',').map(|w| w.into()).collect())
+		.unwrap_or_default();
+	for tid in &title_ids {
+		defaults_set(&series_map_key(tid), DefaultValue::Null);
+	}
+	defaults_set(SERIES_TITLE_IDS_KEY, DefaultValue::Null);
+}
+
+// ---------------------------------------------------------------------------
+// Language cache
+// ---------------------------------------------------------------------------
 
 fn lang_cache_key(workno: &str) -> String {
 	format!("lang_{}", workno)

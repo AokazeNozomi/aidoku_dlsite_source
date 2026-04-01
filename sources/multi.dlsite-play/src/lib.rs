@@ -43,6 +43,72 @@ impl Source for DlsitePlay {
 		needs_details: bool,
 		needs_chapters: bool,
 	) -> Result<Manga> {
+		let is_series = manga.key.starts_with("series:");
+
+		if is_series {
+			self.update_series_manga(&mut manga, needs_details, needs_chapters)?;
+		} else {
+			self.update_single_manga(&mut manga, needs_details, needs_chapters)?;
+		}
+
+		Ok(manga)
+	}
+
+	fn get_page_list(&self, manga: Manga, chapter: Chapter) -> Result<Vec<Page>> {
+		// For series chapters, the key is "{workno}:{internal_key}".
+		// For non-series chapters, the key is just the internal key and
+		// the workno comes from manga.key.
+		let (workno, chapter_key) = if manga.key.starts_with("series:") {
+			split_series_chapter_key(&chapter.key)
+		} else {
+			(manga.key.as_str(), chapter.key.as_str())
+		};
+
+		let token = api::download_token(workno)?;
+		let ziptree = api::fetch_ziptree(&token)?;
+		let chapter_groups = helpers::extract_chapter_groups(&ziptree);
+		let pages = chapter_groups
+			.into_iter()
+			.find(|group| group.key == chapter_key)
+			.map(|group| group.pages)
+			.ok_or_else(|| error!("Unable to find chapter pages for key '{}'", chapter.key))?;
+
+		let result: Vec<Page> = pages
+			.into_iter()
+			.map(|(_path, pf)| {
+				let opt_name = pf.optimized_name().unwrap_or_default().to_string();
+				let url = api::optimized_url(&token, &opt_name);
+
+				let mut context = PageContext::new();
+				context.insert("optimized_name".into(), opt_name);
+
+				if pf.is_crypt() {
+					context.insert("crypt".into(), "true".into());
+					if let Some((w, h)) = pf.crypt_dimensions() {
+						context.insert("width".into(), w.to_string());
+						context.insert("height".into(), h.to_string());
+					}
+				}
+
+				Page {
+					content: PageContent::url_context(url, context),
+					..Default::default()
+				}
+			})
+			.collect();
+
+		Ok(result)
+	}
+}
+
+impl DlsitePlay {
+	/// Update a single (non-series) manga entry.
+	fn update_single_manga(
+		&self,
+		manga: &mut Manga,
+		needs_details: bool,
+		needs_chapters: bool,
+	) -> Result<()> {
 		let mut release_date: Option<i64> = None;
 
 		if needs_details || needs_chapters {
@@ -56,7 +122,6 @@ impl Source for DlsitePlay {
 					let updated = work.into_manga(&genre_names, &series_names);
 					manga.copy_from(updated);
 
-					// Enrich with language editions from public API (cached)
 					if let Some(lang_str) = get_or_fetch_languages(&manga.key) {
 						let mut tags = manga.tags.take().unwrap_or_default();
 						for part in lang_str.split(',') {
@@ -92,56 +157,124 @@ impl Source for DlsitePlay {
 			let chapters: Vec<Chapter> = chapter_groups
 				.into_iter()
 				.enumerate()
-				.map(|(idx, group)| Chapter {
-					key: group.key,
-					title: Some(format!("{} ({} pages)", group.title, group.pages.len())),
-					chapter_number: Some((idx + 1) as f32),
-					date_uploaded: release_date,
-					..Default::default()
+				.map(|(idx, group)| {
+					let url = group
+						.pages
+						.first()
+						.map(|(path, _)| play_viewer_url(&manga.key, path));
+					Chapter {
+						key: group.key,
+						title: Some(format!("{} ({} pages)", group.title, group.pages.len())),
+						chapter_number: Some((idx + 1) as f32),
+						date_uploaded: release_date,
+						url,
+						..Default::default()
+					}
 				})
 				.collect();
 
 			manga.chapters = Some(chapters);
 		}
 
-		Ok(manga)
+		Ok(())
 	}
 
-	fn get_page_list(&self, manga: Manga, chapter: Chapter) -> Result<Vec<Page>> {
-		let token = api::download_token(&manga.key)?;
-		let ziptree = api::fetch_ziptree(&token)?;
-		let chapter_groups = helpers::extract_chapter_groups(&ziptree);
-		let pages = chapter_groups
-			.into_iter()
-			.find(|group| group.key == chapter.key)
-			.map(|group| group.pages)
-			.ok_or_else(|| error!("Unable to find chapter pages for key '{}'", chapter.key))?;
+	/// Update a series manga entry: fetch all member works, build chapters.
+	fn update_series_manga(
+		&self,
+		manga: &mut Manga,
+		needs_details: bool,
+		needs_chapters: bool,
+	) -> Result<()> {
+		let title_id = manga
+			.key
+			.strip_prefix("series:")
+			.unwrap_or(&manga.key)
+			.to_string();
 
-		let result: Vec<Page> = pages
-			.into_iter()
-			.map(|(_path, pf)| {
-				let opt_name = pf.optimized_name().unwrap_or_default().to_string();
-				let url = api::optimized_url(&token, &opt_name);
+		let member_worknos = settings::get_cached_series_map(&title_id);
+		if member_worknos.is_empty() {
+			print(format!(
+				"[dlsite-play] series {} has no cached members",
+				title_id
+			));
+			return Ok(());
+		}
 
-				let mut context = PageContext::new();
-				context.insert("optimized_name".into(), opt_name);
+		let resp = api::get_works(&member_worknos)?;
+		let mut works = resp.works;
+		sort_works_by_volume(&mut works);
 
-				if pf.is_crypt() {
-					context.insert("crypt".into(), "true".into());
-					if let Some((w, h)) = pf.crypt_dimensions() {
-						context.insert("width".into(), w.to_string());
-						context.insert("height".into(), h.to_string());
-					}
+		if needs_details {
+			let work_refs: Vec<&models::PurchaseWork> = works.iter().collect();
+			let genre_names = resolve_genre_names(&work_refs);
+			let series_names = build_series_lookup(&resp.series);
+			let sname = series_names
+				.get(&title_id)
+				.cloned()
+				.unwrap_or_else(|| title_id.clone());
+			let updated = models::series_manga(&title_id, &sname, &works, &genre_names);
+			manga.copy_from(updated);
+		}
+
+		if needs_chapters {
+			let mut chapters: Vec<Chapter> = Vec::new();
+
+			for (vol_idx, work) in works.iter().enumerate() {
+				let vol_num = work
+					.series
+					.as_ref()
+					.and_then(|s| s.volume_number)
+					.map(|v| v as f32)
+					.unwrap_or((vol_idx + 1) as f32);
+				let release_date = work.release_date_timestamp();
+				let work_title = work
+					.name
+					.as_ref()
+					.map(|n| n.best())
+					.unwrap_or_else(|| work.workno.clone());
+
+				let token = api::download_token(&work.workno)?;
+				let ziptree = api::fetch_ziptree(&token)?;
+				let chapter_groups = helpers::extract_chapter_groups(&ziptree);
+				let num_groups = chapter_groups.len();
+
+				for (ch_idx, group) in chapter_groups.into_iter().enumerate() {
+					let title = if num_groups == 1 {
+						// For works with a single chapter group, just use the
+						// work title as the chapter title — the `volume_number`
+						// already carries the volume information.
+						format!("{} ({} pages)", work_title, group.pages.len())
+					} else {
+						format!(
+							"{} — {} ({} pages)",
+							work_title,
+							group.title,
+							group.pages.len()
+						)
+					};
+
+					let url = group
+						.pages
+						.first()
+						.map(|(path, _)| play_viewer_url(&work.workno, path));
+
+					chapters.push(Chapter {
+						key: format!("{}:{}", work.workno, group.key),
+						title: Some(title),
+						volume_number: Some(vol_num),
+						chapter_number: Some((ch_idx + 1) as f32),
+						date_uploaded: release_date,
+						url,
+						..Default::default()
+					});
 				}
+			}
 
-				Page {
-					content: PageContent::url_context(url, context),
-					..Default::default()
-				}
-			})
-			.collect();
+			manga.chapters = Some(chapters);
+		}
 
-		Ok(result)
+		Ok(())
 	}
 }
 
@@ -279,6 +412,48 @@ impl PageImageProcessor for DlsitePlay {
 // Helpers
 // ---------------------------------------------------------------------------
 
+/// Split a series chapter key `"{workno}:{internal_key}"` into its components.
+/// The workno is the leading segment matching `[A-Z]+[0-9]+` (e.g. `RJ274802`),
+/// and the internal key is everything after the first `:` (e.g. `img:root`).
+fn split_series_chapter_key(key: &str) -> (&str, &str) {
+	// Find the first ':' that follows the workno prefix.
+	// Worknos are like RJ274802, BJ295623, VJ01006082 — letters then digits.
+	if let Some(pos) = key.find(':') {
+		(&key[..pos], &key[pos + 1..])
+	} else {
+		(key, "")
+	}
+}
+
+/// Percent-encode a path for use in a DLsite Play URL.
+/// Encodes all bytes except unreserved chars (A-Z, a-z, 0-9, `-`, `_`, `.`, `~`).
+fn percent_encode_path(s: &str) -> String {
+	let mut out = String::new();
+	for &b in s.as_bytes() {
+		match b {
+			b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+				out.push(b as char);
+			}
+			_ => {
+				out.push('%');
+				const HEX: &[u8; 16] = b"0123456789ABCDEF";
+				out.push(HEX[(b >> 4) as usize] as char);
+				out.push(HEX[(b & 0x0f) as usize] as char);
+			}
+		}
+	}
+	out
+}
+
+/// Build a DLsite Play viewer URL for a specific file within a work.
+fn play_viewer_url(workno: &str, file_path: &str) -> String {
+	format!(
+		"https://play.dlsite.com/work/{}/view/{}",
+		workno,
+		percent_encode_path(file_path)
+	)
+}
+
 /// Resolve genre IDs to localized names, using the persistent cache.
 /// Fetches only IDs not already in the cache.
 fn resolve_genre_names(works: &[&models::PurchaseWork]) -> BTreeMap<u32, String> {
@@ -338,21 +513,95 @@ fn build_series_lookup(series: &[models::SeriesInfo]) -> BTreeMap<String, String
 	map
 }
 
-/// Convert a batch of works into Manga entries with resolved genres and series.
-fn works_to_manga(
-	works: Vec<models::PurchaseWork>,
-	series: &[models::SeriesInfo],
-) -> Vec<Manga> {
-	let work_refs: Vec<&models::PurchaseWork> = works.iter().collect();
-	let genre_names = resolve_genre_names(&work_refs);
-	let series_names = build_series_lookup(series);
-	works
-		.into_iter()
-		.map(|w| w.into_manga(&genre_names, &series_names))
-		.collect()
+/// Sort works for volume ordering: by `volume_number` if present, then by
+/// `regist_date` as fallback. Works with a volume_number sort before those
+/// without.
+fn sort_works_by_volume(works: &mut [models::PurchaseWork]) {
+	works.sort_by(|a, b| {
+		let a_vol = a.series.as_ref().and_then(|s| s.volume_number);
+		let b_vol = b.series.as_ref().and_then(|s| s.volume_number);
+		match (a_vol, b_vol) {
+			(Some(av), Some(bv)) => av.cmp(&bv),
+			(Some(_), None) => core::cmp::Ordering::Less,
+			(None, Some(_)) => core::cmp::Ordering::Greater,
+			(None, None) => {
+				let a_date = a.regist_date.as_deref().unwrap_or("");
+				let b_date = b.regist_date.as_deref().unwrap_or("");
+				a_date.cmp(b_date)
+			}
+		}
+	});
+}
+
+/// Check whether a work passes the given filters.
+fn work_passes_filter(
+	w: &models::PurchaseWork,
+	q_lower: Option<&str>,
+	q_raw: Option<&str>,
+	work_types: &[String],
+	translation_filter: Option<&str>,
+	genre_filter_lower: Option<&str>,
+	genre_names: &BTreeMap<u32, String>,
+	series_name: Option<&str>,
+) -> bool {
+	if let Some(q) = q_lower {
+		let name = w
+			.name
+			.as_ref()
+			.map(|n| n.best())
+			.unwrap_or_default()
+			.to_lowercase();
+		let maker = w
+			.maker
+			.as_ref()
+			.and_then(|m| m.name.as_ref())
+			.map(|n| n.best())
+			.unwrap_or_default()
+			.to_lowercase();
+		let raw = q_raw.unwrap_or_default();
+		let sname = series_name
+			.map(|s| s.to_lowercase())
+			.unwrap_or_default();
+		if !(name.contains(q)
+			|| maker.contains(q)
+			|| w.workno.contains(raw)
+			|| sname.contains(q))
+		{
+			return false;
+		}
+	}
+	if !work_types.is_empty() {
+		let wt = w.work_type.as_deref().unwrap_or("");
+		if !work_types.iter().any(|t| t == wt) {
+			return false;
+		}
+	}
+	if let Some(tf) = translation_filter {
+		let is_translated = w.has_translator();
+		match tf {
+			"translated" if !is_translated => return false,
+			"original" if is_translated => return false,
+			_ => {}
+		}
+	}
+	if let Some(gf) = genre_filter_lower {
+		let has_genre = w.genre_ids.iter().any(|gid| {
+			genre_names
+				.get(gid)
+				.map(|name| name.to_lowercase().contains(gf))
+				.unwrap_or(false)
+		});
+		if !has_genre {
+			return false;
+		}
+	}
+	true
 }
 
 /// Core listing/search implementation shared by search and listing providers.
+///
+/// Fetches all works, groups them by series `title_id`, and returns paginated
+/// results where each series is a single Manga entry.
 fn get_manga_list_inner(
 	query: Option<String>,
 	page: i32,
@@ -369,113 +618,128 @@ fn get_manga_list_inner(
 		});
 	}
 
-	let page_idx = (page - 1).max(0) as usize;
-	let start = page_idx * PAGE_SIZE;
+	// Always fetch all works to enable cross-page series grouping.
+	let resp = api::get_works(&worknos)?;
 
-	let has_query = query.is_some();
-	let has_filter = !work_types.is_empty()
+	let work_refs: Vec<&models::PurchaseWork> = resp.works.iter().collect();
+	let genre_names = resolve_genre_names(&work_refs);
+	let series_names = build_series_lookup(&resp.series);
+
+	// --- Group works by series title_id ---
+	// Insertion order: first occurrence of each title_id / standalone work
+	// determines the group's position in the final list.
+	let mut group_order: Vec<String> = Vec::new(); // keys in display order
+	let mut series_groups: BTreeMap<String, Vec<models::PurchaseWork>> = BTreeMap::new();
+	let mut standalone: Vec<(String, models::PurchaseWork)> = Vec::new();
+
+	for w in resp.works {
+		if let Some(ref ws) = w.series {
+			let tid = ws.title_id.clone();
+			if !group_order.contains(&tid) {
+				group_order.push(tid.clone());
+			}
+			series_groups.entry(tid).or_default().push(w);
+		} else {
+			let key = w.workno.clone();
+			if !group_order.contains(&key) {
+				group_order.push(key.clone());
+			}
+			standalone.push((key, w));
+		}
+	}
+
+	// Sort each series group by volume order
+	for works in series_groups.values_mut() {
+		sort_works_by_volume(works);
+	}
+
+	// Cache series mappings for get_manga_update
+	let mut cached_title_ids: Vec<String> = Vec::new();
+	for (tid, works) in &series_groups {
+		let wids: Vec<String> = works.iter().map(|w| w.workno.clone()).collect();
+		settings::set_cached_series_map(tid, &wids);
+		cached_title_ids.push(tid.clone());
+	}
+	settings::set_cached_series_title_ids(&cached_title_ids);
+
+	// --- Build Manga entries in display order, applying filters ---
+	let q_lower = query.as_ref().map(|q| q.to_lowercase());
+	let genre_filter_lower = genre_filter.as_ref().map(|g| g.to_lowercase());
+	let has_filter = query.is_some()
+		|| !work_types.is_empty()
 		|| translation_filter.is_some()
 		|| genre_filter.is_some();
 
-	if has_query || has_filter {
-		let resp = api::get_works(&worknos)?;
-		let q_lower = query.as_ref().map(|q| q.to_lowercase());
+	let mut all_entries: Vec<Manga> = Vec::new();
 
-		// Resolve genres for filtering
-		let work_refs: Vec<&models::PurchaseWork> = resp.works.iter().collect();
-		let genre_names = resolve_genre_names(&work_refs);
-		let series_names = build_series_lookup(&resp.series);
-		let genre_filter_lower = genre_filter.as_ref().map(|g| g.to_lowercase());
-
-		let filtered: Vec<Manga> = resp
-			.works
-			.into_iter()
-			.filter(|w| {
-				if let Some(ref q_lower) = q_lower {
-					let name = w
-						.name
-						.as_ref()
-						.map(|n| n.best())
-						.unwrap_or_default()
-						.to_lowercase();
-					let maker = w
-						.maker
-						.as_ref()
-						.and_then(|m| m.name.as_ref())
-						.map(|n| n.best())
-						.unwrap_or_default()
-						.to_lowercase();
-					let q_raw = query.as_deref().unwrap_or_default();
-					if !(name.contains(q_lower.as_str())
-						|| maker.contains(q_lower.as_str())
-						|| w.workno.contains(q_raw))
-					{
-						return false;
-					}
+	for key in &group_order {
+		if let Some(works) = series_groups.get(key.as_str()) {
+			// Series group — match if ANY work passes filters
+			let sname = series_names.get(key.as_str()).map(|s| s.as_str());
+			if has_filter {
+				let any_match = works.iter().any(|w| {
+					work_passes_filter(
+						w,
+						q_lower.as_deref(),
+						query.as_deref(),
+						&work_types,
+						translation_filter.as_deref(),
+						genre_filter_lower.as_deref(),
+						&genre_names,
+						sname,
+					)
+				});
+				if !any_match {
+					continue;
 				}
-				if !work_types.is_empty() {
-					let wt = w.work_type.as_deref().unwrap_or("");
-					if !work_types.iter().any(|t| t == wt) {
-						return false;
-					}
+			}
+			let name = sname.unwrap_or(key.as_str());
+			all_entries.push(models::series_manga(key, name, works, &genre_names));
+		} else if let Some(pos) = standalone.iter().position(|(k, _)| k == key) {
+			let (_, w) = &standalone[pos];
+			if has_filter {
+				if !work_passes_filter(
+					w,
+					q_lower.as_deref(),
+					query.as_deref(),
+					&work_types,
+					translation_filter.as_deref(),
+					genre_filter_lower.as_deref(),
+					&genre_names,
+					None,
+				) {
+					continue;
 				}
-				if let Some(ref tf) = translation_filter {
-					let is_translated = w.has_translator();
-					match tf.as_str() {
-						"translated" if !is_translated => return false,
-						"original" if is_translated => return false,
-						_ => {}
-					}
-				}
-				if let Some(ref gf) = genre_filter_lower {
-					let has_genre = w.genre_ids.iter().any(|gid| {
-						genre_names
-							.get(gid)
-							.map(|name| name.to_lowercase().contains(gf.as_str()))
-							.unwrap_or(false)
-					});
-					if !has_genre {
-						return false;
-					}
-				}
-				true
-			})
-			.map(|w| w.into_manga(&genre_names, &series_names))
-			.collect();
-
-		let total = filtered.len();
-		if start >= total {
-			return Ok(MangaPageResult {
-				entries: Vec::new(),
-				has_next_page: false,
-			});
+			}
+			// Move out of standalone to convert
+			let (_, w) = standalone.remove(pos);
+			all_entries.push(w.into_manga(&genre_names, &series_names));
 		}
-
-		let end = (start + PAGE_SIZE).min(total);
-		let entries: Vec<Manga> = filtered.into_iter().skip(start).take(end - start).collect();
-
-		Ok(MangaPageResult {
-			entries,
-			has_next_page: end < total,
-		})
-	} else {
-		if start >= worknos.len() {
-			return Ok(MangaPageResult {
-				entries: Vec::new(),
-				has_next_page: false,
-			});
-		}
-
-		let end = (start + PAGE_SIZE).min(worknos.len());
-		let page_worknos: Vec<String> = worknos[start..end].to_vec();
-		let resp = api::get_works(&page_worknos)?;
-		let entries = works_to_manga(resp.works, &resp.series);
-
-		Ok(MangaPageResult {
-			entries,
-			has_next_page: end < worknos.len(),
-		})
 	}
+
+	// --- Paginate ---
+	let page_idx = (page - 1).max(0) as usize;
+	let start = page_idx * PAGE_SIZE;
+	let total = all_entries.len();
+
+	if start >= total {
+		return Ok(MangaPageResult {
+			entries: Vec::new(),
+			has_next_page: false,
+		});
+	}
+
+	let end = (start + PAGE_SIZE).min(total);
+	let entries: Vec<Manga> = all_entries
+		.into_iter()
+		.skip(start)
+		.take(end - start)
+		.collect();
+
+	Ok(MangaPageResult {
+		entries,
+		has_next_page: end < total,
+	})
 }
 
 /// Fetch (or use cached) full purchase work ID list, refreshing on page 1.
