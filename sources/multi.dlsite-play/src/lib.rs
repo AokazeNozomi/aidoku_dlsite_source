@@ -686,6 +686,11 @@ fn get_manga_list_inner(
 	let genre_names = resolve_genre_names(&work_refs);
 	let series_names = build_series_lookup(&resp.series);
 
+	print(format!(
+		"[dlsite-play] get_manga_list_inner sort_index={} ascending={}",
+		sort_index, sort_ascending
+	));
+
 	// Fetch view histories for "recently opened" sort.
 	let view_history_map: BTreeMap<String, String> = if sort_index == SORT_RECENTLY_OPENED {
 		api::get_view_histories()
