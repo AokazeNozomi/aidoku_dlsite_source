@@ -26,8 +26,6 @@ struct SortKey {
 	original_position: usize,
 	/// `accessed_at` from view_histories (empty if not in history).
 	recently_opened: String,
-	/// `sales_date` from the work.
-	purchase_date: String,
 	/// `regist_date` from the work.
 	release_date: String,
 	/// Maker/circle name (lowercased for case-insensitive sort).
@@ -1058,7 +1056,6 @@ fn build_work_sort_key(
 	SortKey {
 		original_position: worknos.iter().position(|id| id == &w.workno).unwrap_or(usize::MAX),
 		recently_opened: view_history.get(&w.workno).cloned().unwrap_or_default(),
-		purchase_date: w.sales_date.clone().unwrap_or_default(),
 		release_date: w.regist_date.clone().unwrap_or_default(),
 		writer_name: w
 			.maker
@@ -1093,12 +1090,6 @@ fn build_series_sort_key(
 			.max()
 			.cloned()
 			.unwrap_or_default(),
-		purchase_date: works
-			.iter()
-			.filter_map(|w| w.sales_date.as_deref())
-			.max()
-			.unwrap_or("")
-			.into(),
 		release_date: works
 			.iter()
 			.filter_map(|w| w.regist_date.as_deref())
@@ -1117,11 +1108,6 @@ fn build_series_sort_key(
 
 /// Sort entries by the selected sort option and direction.
 fn apply_sort(entries: &mut Vec<(SortKey, Manga)>, sort_option: SortOption, ascending: bool) {
-	// Purchase date descending is the natural API order — skip sort.
-	if sort_option == SortOption::PurchaseDate && !ascending {
-		return;
-	}
-
 	entries.sort_by(|(a, _), (b, _)| {
 		let ord = match sort_option {
 			SortOption::RecentlyOpened => {
@@ -1134,7 +1120,9 @@ fn apply_sort(entries: &mut Vec<(SortKey, Manga)>, sort_option: SortOption, asce
 					(true, true) => b.original_position.cmp(&a.original_position),
 				}
 			}
-			SortOption::PurchaseDate => a.purchase_date.cmp(&b.purchase_date),
+			// worknos is sorted by purchase date descending (newest = 0),
+			// so lower position = newer. Reverse comparison for ascending order.
+			SortOption::PurchaseDate => b.original_position.cmp(&a.original_position),
 			SortOption::ReleaseDate => a.release_date.cmp(&b.release_date),
 			SortOption::WriterCircle => a.writer_name.cmp(&b.writer_name),
 			SortOption::Title => a.title.cmp(&b.title),
