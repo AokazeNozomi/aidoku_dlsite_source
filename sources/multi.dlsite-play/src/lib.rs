@@ -4,10 +4,10 @@ use aidoku::{
 	alloc::{collections::BTreeMap, format, string::ToString, vec, String, Vec},
 	imports::{canvas::ImageRef, net::{Request, set_rate_limit, TimeUnit}, std::{current_date, print}},
 	prelude::*,
-	register_source, Chapter, FilterValue, HashMap, Home, HomeComponent, HomeComponentValue,
-	HomeLayout, ImageRequestProvider, ImageResponse, Link, Listing, ListingKind, ListingProvider,
-	Manga, MangaPageResult, NotificationHandler, Page, PageContent, PageContext, PageImageProcessor,
-	Result, Source, WebLoginHandler,
+	register_source, Chapter, DynamicSettings, FilterValue, HashMap, Home, HomeComponent,
+	HomeComponentValue, HomeLayout, ImageRequestProvider, ImageResponse, Link, Listing, ListingKind,
+	ListingProvider, Manga, MangaPageResult, NotificationHandler, Page, PageContent, PageContext,
+	PageImageProcessor, Result, Setting, SettingValue, Source, WebLoginHandler,
 };
 
 mod api;
@@ -567,6 +567,36 @@ impl NotificationHandler for DlsitePlay {
 			}
 			_ => {}
 		}
+	}
+}
+
+impl DynamicSettings for DlsitePlay {
+	fn get_dynamic_settings(&self) -> Result<Vec<Setting>> {
+		let title = match settings::get_lang_fetch_progress() {
+			Some((done, total)) if done < total => format!("Fetching Languages ({}/{})", done, total),
+			Some((done, total)) => format!("Fetch All Languages ({}/{})", done, total),
+			None => String::from("Fetch All Languages"),
+		};
+		Ok(vec![Setting {
+			key: "languages_group".into(),
+			title: "Languages".into(),
+			notification: None,
+			requires: None,
+			requires_false: None,
+			refreshes: None,
+			value: SettingValue::Group {
+				footer: Some("Language info comes from DLsite's public API, which is region-locked. Use a VPN to Japan to fetch languages for region-locked works.".into()),
+				items: vec![Setting {
+					key: "fetch_languages".into(),
+					title: title.into(),
+					notification: Some("fetch_languages".into()),
+					requires: None,
+					requires_false: None,
+					refreshes: Some(vec!["settings".into()]),
+					value: SettingValue::Button,
+				}],
+			},
+		}])
 	}
 }
 
@@ -1255,6 +1285,8 @@ fn fetch_all_languages() {
 	set_rate_limit(3, 1, TimeUnit::Seconds);
 
 	let total = worknos.len();
+	settings::set_lang_fetch_progress(0, total);
+
 	for (i, workno) in worknos.iter().enumerate() {
 		print(format!(
 			"[dlsite-play] Fetching languages ({}/{}): {}",
@@ -1263,6 +1295,7 @@ fn fetch_all_languages() {
 			workno
 		));
 		let _ = get_or_fetch_languages(workno);
+		settings::set_lang_fetch_progress(i + 1, total);
 	}
 
 	print(format!(
@@ -1346,6 +1379,7 @@ register_source!(
 	Home,
 	WebLoginHandler,
 	NotificationHandler,
+	DynamicSettings,
 	ImageRequestProvider,
 	PageImageProcessor
 );

@@ -250,6 +250,35 @@ pub fn set_cached_languages(workno: &str, value: &str) {
 }
 
 // ---------------------------------------------------------------------------
+// Language fetch progress
+// ---------------------------------------------------------------------------
+
+const LANG_FETCH_PROGRESS_KEY: &str = "lang_fetch_progress";
+
+/// Store language fetch progress as "done/total" (e.g. "42/150").
+pub fn set_lang_fetch_progress(done: usize, total: usize) {
+	defaults_set(
+		LANG_FETCH_PROGRESS_KEY,
+		DefaultValue::String(format!("{}/{}", done, total)),
+	);
+}
+
+/// Clear language fetch progress.
+#[allow(dead_code)]
+pub fn clear_lang_fetch_progress() {
+	defaults_set(LANG_FETCH_PROGRESS_KEY, DefaultValue::Null);
+}
+
+/// Get language fetch progress as (done, total), or None if not set.
+pub fn get_lang_fetch_progress() -> Option<(usize, usize)> {
+	defaults_get::<String>(LANG_FETCH_PROGRESS_KEY)
+		.and_then(|s| {
+			let (d, t) = s.split_once('/')?;
+			Some((d.parse().ok()?, t.parse().ok()?))
+		})
+}
+
+// ---------------------------------------------------------------------------
 // Work type setting
 // ---------------------------------------------------------------------------
 
