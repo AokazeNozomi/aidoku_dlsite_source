@@ -32,14 +32,20 @@
 					"Chinese (Traditional)",
 					"Korean"
 				],
-				"default": "English"
+				"default": "English",
+				"refreshes": [
+					"listings"
+				]
 			},
 			{
 				"type": "switch",
 				"key": "series_prefix",
 				"title": "Show [SERIES] prefix",
 				"subtitle": "Prepend [SERIES] to series manga titles for easy identification.",
-				"default": "false"
+				"default": "false",
+				"refreshes": [
+					"listings"
+				]
 			}
 		]
 	},
@@ -59,14 +65,20 @@
 					"Writer/Circle Name",
 					"Title"
 				],
-				"default": "Recently Opened"
+				"default": "Recently Opened",
+				"refreshes": [
+					"listings"
+				]
 			},
 			{
 				"type": "switch",
 				"key": "default_sort_ascending",
 				"title": "Ascending",
 				"subtitle": "Sort in ascending order instead of descending.",
-				"default": "false"
+				"default": "false",
+				"refreshes": [
+					"listings"
+				]
 			}
 		]
 	}
