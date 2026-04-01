@@ -53,217 +53,60 @@
 	},
 	{
 		"type": "group",
-		"title": "Work Type — Images",
+		"title": "Work Types",
 		"items": [
 			{
-				"type": "switch",
-				"key": "wt_MNG",
-				"title": "Manga",
-				"default": "true",
+				"type": "multi-select",
+				"key": "wt_images",
+				"title": "Images",
+				"values": ["MNG", "SCM", "WBT", "ICG"],
+				"titles": ["Manga", "Gekiga", "Webtoon", "CG / Illustrations"],
+				"default": ["MNG", "SCM", "WBT", "ICG"],
 				"refreshes": ["listings", "content"]
 			},
 			{
-				"type": "switch",
-				"key": "wt_SCM",
-				"title": "Gekiga",
-				"default": "true",
-				"refreshes": ["listings", "content"]
-			},
-			{
-				"type": "switch",
-				"key": "wt_WBT",
-				"title": "Webtoon",
-				"default": "true",
-				"refreshes": ["listings", "content"]
-			},
-			{
-				"type": "switch",
-				"key": "wt_ICG",
-				"title": "CG / Illustrations",
-				"default": "true",
-				"refreshes": ["listings", "content"]
-			},
-			{
-				"type": "switch",
-				"key": "wt_NRE",
+				"type": "multi-select",
+				"key": "wt_novel",
 				"title": "Novel",
-				"default": "true",
+				"values": ["NRE", "DNV"],
+				"titles": ["Novel", "Digital Novel"],
+				"default": ["NRE", "DNV"],
 				"refreshes": ["listings", "content"]
 			},
 			{
-				"type": "switch",
-				"key": "wt_DNV",
-				"title": "Digital Novel",
-				"default": "true",
-				"refreshes": ["listings", "content"]
-			}
-		]
-	},
-	{
-		"type": "group",
-		"title": "Work Type — Video / Anime",
-		"items": [
-			{
-				"type": "switch",
-				"key": "wt_MOV",
-				"title": "Video",
-				"default": "false",
-				"refreshes": ["listings", "content"]
-			}
-		]
-	},
-	{
-		"type": "group",
-		"title": "Work Type — Voice / ASMR",
-		"items": [
-			{
-				"type": "switch",
-				"key": "wt_SOU",
-				"title": "Voice / ASMR",
-				"default": "false",
-				"refreshes": ["listings", "content"]
-			}
-		]
-	},
-	{
-		"type": "group",
-		"title": "Work Type — Music",
-		"items": [
-			{
-				"type": "switch",
-				"key": "wt_MUS",
-				"title": "Music",
-				"default": "false",
-				"refreshes": ["listings", "content"]
-			}
-		]
-	},
-	{
-		"type": "group",
-		"title": "Work Type — Game",
-		"items": [
-			{
-				"type": "switch",
-				"key": "wt_ACN",
-				"title": "Action",
-				"default": "false",
+				"type": "multi-select",
+				"key": "wt_av",
+				"title": "Audio / Video",
+				"values": ["MOV", "SOU", "MUS"],
+				"titles": ["Video", "Voice / ASMR", "Music"],
+				"default": [],
 				"refreshes": ["listings", "content"]
 			},
 			{
-				"type": "switch",
-				"key": "wt_QIZ",
-				"title": "Quiz",
-				"default": "false",
+				"type": "multi-select",
+				"key": "wt_game",
+				"title": "Game",
+				"values": ["ACN", "QIZ", "ADV", "RPG", "TBL", "SLN", "TYP", "STG", "PZL", "ETC"],
+				"titles": ["Action", "Quiz", "Adventure", "Role-playing", "Table", "Simulation", "Typing", "Shooting", "Puzzle", "Miscellaneous"],
+				"default": [],
 				"refreshes": ["listings", "content"]
 			},
 			{
-				"type": "switch",
-				"key": "wt_ADV",
-				"title": "Adventure",
-				"default": "false",
-				"refreshes": ["listings", "content"]
-			},
-			{
-				"type": "switch",
-				"key": "wt_RPG",
-				"title": "Role-playing",
-				"default": "false",
-				"refreshes": ["listings", "content"]
-			},
-			{
-				"type": "switch",
-				"key": "wt_TBL",
-				"title": "Table",
-				"default": "false",
-				"refreshes": ["listings", "content"]
-			},
-			{
-				"type": "switch",
-				"key": "wt_SLN",
-				"title": "Simulation",
-				"default": "false",
-				"refreshes": ["listings", "content"]
-			},
-			{
-				"type": "switch",
-				"key": "wt_TYP",
-				"title": "Typing",
-				"default": "false",
-				"refreshes": ["listings", "content"]
-			},
-			{
-				"type": "switch",
-				"key": "wt_STG",
-				"title": "Shooting",
-				"default": "false",
-				"refreshes": ["listings", "content"]
-			},
-			{
-				"type": "switch",
-				"key": "wt_PZL",
-				"title": "Puzzle",
-				"default": "false",
-				"refreshes": ["listings", "content"]
-			},
-			{
-				"type": "switch",
-				"key": "wt_ETC",
-				"title": "Miscellaneous Game",
-				"default": "false",
-				"refreshes": ["listings", "content"]
-			}
-		]
-	},
-	{
-		"type": "group",
-		"title": "Work Type — Tools / Accessories",
-		"items": [
-			{
-				"type": "switch",
-				"key": "wt_TOL",
+				"type": "multi-select",
+				"key": "wt_tools",
 				"title": "Tools / Accessories",
-				"default": "false",
+				"values": ["TOL", "IMT", "AMT"],
+				"titles": ["Tools / Accessories", "Illustration Materials", "Music Materials"],
+				"default": ["IMT"],
 				"refreshes": ["listings", "content"]
 			},
 			{
-				"type": "switch",
-				"key": "wt_IMT",
-				"title": "Illustration Materials",
-				"default": "true",
-				"refreshes": ["listings", "content"]
-			},
-			{
-				"type": "switch",
-				"key": "wt_AMT",
-				"title": "Music Materials",
-				"default": "false",
-				"refreshes": ["listings", "content"]
-			}
-		]
-	},
-	{
-		"type": "group",
-		"title": "Work Type — Miscellaneous",
-		"items": [
-			{
-				"type": "switch",
-				"key": "wt_ET3",
+				"type": "multi-select",
+				"key": "wt_misc",
 				"title": "Miscellaneous",
-				"default": "false",
-				"refreshes": ["listings", "content"]
-			},
-			{
-				"type": "switch",
-				"key": "wt_VCM",
-				"title": "Voiced Comic",
-				"default": "false",
-				"refreshes": ["listings", "content"]
-			},
-			{
-				"type": "switch",
-				"key": "wt_PBC",
-				"title": "Publication",
-				"default": "false",
+				"values": ["ET3", "VCM", "PBC"],
+				"titles": ["Miscellaneous", "Voiced Comic", "Publication"],
+				"default": [],
 				"refreshes": ["listings", "content"]
 			}
 		]

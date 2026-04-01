@@ -234,19 +234,16 @@ pub fn set_cached_languages(workno: &str, value: &str) {
 // Work type setting
 // ---------------------------------------------------------------------------
 
-/// Read work type filter from settings switches.
+/// Read work type filter from settings multi-selects.
 /// Returns the list of enabled work type codes.
 pub fn get_work_type_setting() -> Vec<String> {
-	let codes = [
-		"ACN", "ADV", "ICG", "DNV", "SCM", "IMT", "MNG", "ET3", "ETC",
-		"MUS", "AMT", "NRE", "PBC", "PZL", "QIZ", "RPG", "STG", "SLN",
-		"TBL", "TOL", "TYP", "MOV", "SOU", "VCM", "WBT",
+	let keys = [
+		"wt_images", "wt_novel", "wt_av", "wt_game", "wt_tools", "wt_misc",
 	];
 	let mut selected = Vec::new();
-	for code in &codes {
-		let key = format!("wt_{}", code);
-		if defaults_get::<bool>(&key).unwrap_or(false) {
-			selected.push(String::from(*code));
+	for key in &keys {
+		if let Some(values) = defaults_get::<Vec<String>>(key) {
+			selected.extend(values);
 		}
 	}
 	selected
