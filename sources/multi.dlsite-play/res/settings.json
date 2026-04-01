@@ -107,46 +107,128 @@
 				"type": "multi-select",
 				"key": "wt_images",
 				"title": "Images",
-				"values": ["MNG", "SCM", "WBT", "ICG", "NRE", "DNV"],
-				"titles": ["Manga", "Gekiga", "Webtoon", "CG / Illustrations", "Novel", "Digital Novel"],
-				"default": ["MNG", "SCM", "WBT", "ICG", "NRE", "DNV"],
-				"refreshes": ["listings", "content"]
+				"values": [
+					"MNG",
+					"SCM",
+					"WBT",
+					"ICG",
+					"NRE",
+					"DNV"
+				],
+				"titles": [
+					"Manga",
+					"Gekiga",
+					"Webtoon",
+					"CG / Illustrations",
+					"Novel",
+					"Digital Novel"
+				],
+				"default": [
+					"MNG",
+					"SCM",
+					"WBT",
+					"ICG"
+				],
+				"refreshes": [
+					"listings",
+					"content"
+				]
 			},
 			{
 				"type": "multi-select",
 				"key": "wt_av",
 				"title": "Audio / Video",
-				"values": ["MOV", "SOU", "MUS"],
-				"titles": ["Video", "Voice / ASMR", "Music"],
+				"values": [
+					"MOV",
+					"SOU",
+					"MUS"
+				],
+				"titles": [
+					"Video",
+					"Voice / ASMR",
+					"Music"
+				],
 				"default": [],
-				"refreshes": ["listings", "content"]
+				"refreshes": [
+					"listings",
+					"content"
+				]
 			},
 			{
 				"type": "multi-select",
 				"key": "wt_game",
 				"title": "Game",
-				"values": ["ACN", "QIZ", "ADV", "RPG", "TBL", "SLN", "TYP", "STG", "PZL", "ETC"],
-				"titles": ["Action", "Quiz", "Adventure", "Role-playing", "Table", "Simulation", "Typing", "Shooting", "Puzzle", "Miscellaneous"],
+				"values": [
+					"ACN",
+					"QIZ",
+					"ADV",
+					"RPG",
+					"TBL",
+					"SLN",
+					"TYP",
+					"STG",
+					"PZL",
+					"ETC"
+				],
+				"titles": [
+					"Action",
+					"Quiz",
+					"Adventure",
+					"Role-playing",
+					"Table",
+					"Simulation",
+					"Typing",
+					"Shooting",
+					"Puzzle",
+					"Miscellaneous"
+				],
 				"default": [],
-				"refreshes": ["listings", "content"]
+				"refreshes": [
+					"listings",
+					"content"
+				]
 			},
 			{
 				"type": "multi-select",
 				"key": "wt_tools",
 				"title": "Tools / Accessories",
-				"values": ["TOL", "IMT", "AMT"],
-				"titles": ["Tools / Accessories", "Illustration Materials", "Music Materials"],
-				"default": ["IMT"],
-				"refreshes": ["listings", "content"]
+				"values": [
+					"TOL",
+					"IMT",
+					"AMT"
+				],
+				"titles": [
+					"Tools / Accessories",
+					"Illustration Materials",
+					"Music Materials"
+				],
+				"default": [
+					"IMT"
+				],
+				"refreshes": [
+					"listings",
+					"content"
+				]
 			},
 			{
 				"type": "multi-select",
 				"key": "wt_misc",
 				"title": "Miscellaneous",
-				"values": ["ET3", "VCM", "PBC"],
-				"titles": ["Miscellaneous", "Voiced Comic", "Publication"],
+				"values": [
+					"ET3",
+					"VCM",
+					"PBC"
+				],
+				"titles": [
+					"Miscellaneous",
+					"Voiced Comic",
+					"Publication"
+				],
 				"default": [],
-				"refreshes": ["listings", "content"]
+				"refreshes": [
+					"listings",
+					"content"
+				]
 			}
 		]
 	}
