@@ -11,6 +11,7 @@ use aidoku::{
 };
 
 mod api;
+mod explore;
 mod helpers;
 mod models;
 mod settings;
@@ -148,11 +149,18 @@ impl DlsitePlay {
 		needs_chapters: bool,
 	) -> Result<()> {
 		let mut release_date: Option<i64> = None;
+		let mut is_purchased = false;
 
 		if needs_details || needs_chapters {
-			let resp = api::get_works(&[manga.key.clone()])?;
-			let series = resp.series;
-			if let Some(work) = resp.works.into_iter().next() {
+			// Try the authenticated Play API first.
+			let resp = api::get_works(&[manga.key.clone()]).ok();
+			let play_work = resp.and_then(|mut r| {
+				let series = core::mem::take(&mut r.series);
+				r.works.into_iter().next().map(|w| (w, series))
+			});
+
+			if let Some((work, series)) = play_work {
+				is_purchased = true;
 				release_date = work.release_date_timestamp();
 				if needs_details {
 					let genre_names = resolve_genre_names(&[&work]);
@@ -184,10 +192,19 @@ impl DlsitePlay {
 						}
 					}
 				}
+			} else if needs_details {
+				// Fallback to public product API for non-purchased works.
+				if let Ok(Some(public_work)) =
+					explore::api::get_public_work_details(&manga.key)
+				{
+					let updated = public_work.into_manga();
+					manga.copy_from(updated);
+				}
 			}
 		}
 
-		if needs_chapters {
+		// Chapters are only available for purchased works.
+		if needs_chapters && is_purchased {
 			let token = api::download_token(&manga.key)?;
 			let ziptree = api::fetch_ziptree(&token)?;
 			let chapter_groups = helpers::extract_chapter_groups(&ziptree);
@@ -327,7 +344,22 @@ impl ListingProvider for DlsitePlay {
 				let sort_ascending = settings::get_default_sort_ascending();
 				get_manga_list_inner(None, page, work_types, Vec::new(), None, Vec::new(), Vec::new(), content_rating_filter, sort_option, sort_ascending)
 			}
-			// Explore stub — will be implemented later.
+			"explore" => {
+				let work_types = settings::get_work_type_setting();
+				let content_rating_filter = settings_content_rating_to_filter();
+				let sort = settings::get_explore_sort();
+				let result = explore::api::search_explore(
+					None,
+					page,
+					sort,
+					&work_types,
+					content_rating_filter.as_deref(),
+				)?;
+				Ok(MangaPageResult {
+					entries: result.works.into_iter().map(|w| w.into_manga()).collect(),
+					has_next_page: result.has_next_page,
+				})
+			}
 			_ => Ok(MangaPageResult {
 				entries: Vec::new(),
 				has_next_page: false,
@@ -1204,7 +1236,11 @@ fn get_or_fetch_languages(workno: &str) -> Option<String> {
 	}
 	let pairs: Vec<String> = editions
 		.iter()
-		.map(|e| format!("{}:{}", e.lang, lang_english_name(&e.lang)))
+		.map(|e| {
+			let name = lang_english_name(&e.lang);
+			let name = if name == "Other" { &e.label } else { name };
+			format!("{}:{}", e.lang, name)
+		})
 		.collect();
 	let value = pairs.join(",");
 	settings::set_cached_languages(workno, &value);
@@ -1213,21 +1249,21 @@ fn get_or_fetch_languages(workno: &str) -> Option<String> {
 
 fn lang_english_name(code: &str) -> &'static str {
 	match code {
-		"ja" => "Japanese",
-		"en" => "English",
-		"ko" => "Korean",
-		"zh-cn" | "zh-Hans" => "Chinese (Simplified)",
-		"zh-tw" | "zh-Hant" => "Chinese (Traditional)",
-		"es" => "Spanish",
-		"ar" => "Arabic",
-		"de" => "German",
-		"fr" => "French",
-		"id" => "Indonesian",
-		"it" => "Italian",
-		"pt" => "Portuguese",
-		"sv" => "Swedish",
-		"th" => "Thai",
-		"vi" => "Vietnamese",
+		"JPN" => "Japanese",
+		"ENG" => "English",
+		"KO_KR" => "Korean",
+		"CHI_HANS" => "Chinese (Simplified)",
+		"CHI_HANT" => "Chinese (Traditional)",
+		"SPA" => "Spanish",
+		"ARA" => "Arabic",
+		"GER" => "German",
+		"FRE" => "French",
+		"IND" => "Indonesian",
+		"ITA" => "Italian",
+		"POR" => "Portuguese",
+		"SWE" => "Swedish",
+		"THA" => "Thai",
+		"VIE" => "Vietnamese",
 		_ => "Other",
 	}
 }

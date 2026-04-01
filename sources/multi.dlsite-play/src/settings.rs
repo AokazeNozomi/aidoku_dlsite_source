@@ -304,3 +304,9 @@ pub fn get_default_sort_ascending() -> bool {
 pub fn get_default_content_rating() -> ContentRatingFilter {
 	ContentRatingFilter::from_setting(defaults_get::<String>("default_content_rating").as_deref())
 }
+
+pub fn get_explore_sort() -> crate::explore::models::ExploreSort {
+	crate::explore::models::ExploreSort::from_setting(
+		defaults_get::<String>("explore_sort").as_deref(),
+	)
+}

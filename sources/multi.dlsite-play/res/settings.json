@@ -81,7 +81,7 @@
 	{
 		"type": "group",
 		"title": "Sort",
-		"footer": "Sort order for library listings.",
+		"footer": "Sort order for library and explore listings.",
 		"items": [
 			{
 				"type": "select",
@@ -109,6 +109,21 @@
 				"refreshes": [
 					"listings",
 					"content"
+				]
+			},
+			{
+				"type": "select",
+				"key": "explore_sort",
+				"title": "Explore Sort",
+				"values": [
+					"Newest",
+					"Trending",
+					"Downloads",
+					"Rating"
+				],
+				"default": "Newest",
+				"refreshes": [
+					"listings"
 				]
 			}
 		]
