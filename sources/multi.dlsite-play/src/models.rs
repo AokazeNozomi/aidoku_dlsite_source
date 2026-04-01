@@ -731,6 +731,7 @@ pub struct LanguageEdition {
 	#[allow(dead_code)]
 	pub workno: String,
 	pub lang: String,
+	#[allow(dead_code)]
 	pub label: String,
 }
 

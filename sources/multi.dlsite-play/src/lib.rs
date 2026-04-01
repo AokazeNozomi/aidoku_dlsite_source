@@ -1188,11 +1188,32 @@ fn get_or_fetch_languages(workno: &str) -> Option<String> {
 	}
 	let pairs: Vec<String> = editions
 		.iter()
-		.map(|e| format!("{}:{}", e.lang, e.label))
+		.map(|e| format!("{}:{}", e.lang, lang_english_name(&e.lang)))
 		.collect();
 	let value = pairs.join(",");
 	settings::set_cached_languages(workno, &value);
 	Some(value)
+}
+
+fn lang_english_name(code: &str) -> &'static str {
+	match code {
+		"ja" => "Japanese",
+		"en" => "English",
+		"ko" => "Korean",
+		"zh-cn" | "zh-Hans" => "Chinese (Simplified)",
+		"zh-tw" | "zh-Hant" => "Chinese (Traditional)",
+		"es" => "Spanish",
+		"ar" => "Arabic",
+		"de" => "German",
+		"fr" => "French",
+		"id" => "Indonesian",
+		"it" => "Italian",
+		"pt" => "Portuguese",
+		"sv" => "Swedish",
+		"th" => "Thai",
+		"vi" => "Vietnamese",
+		_ => "Other",
+	}
 }
 
 /// Batch-fetch language editions for all works in the library.
