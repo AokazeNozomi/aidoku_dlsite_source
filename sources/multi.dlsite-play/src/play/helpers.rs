@@ -6,7 +6,7 @@ use aidoku::{
 	prelude::*,
 };
 
-use crate::models::{PlayFile, ZipTree};
+use super::models::{PlayFile, PlayFileFiles, OptimizedInfo, ZipTree};
 
 // ---------------------------------------------------------------------------
 // MT19937 PRNG (DLsite Play's init_genrand variant)
@@ -240,8 +240,8 @@ fn expand_pdf_pages(path: &str, playfile: &PlayFile) -> Vec<(String, PlayFile)> 
 		let synthetic = PlayFile {
 			length: opt.length.unwrap_or(0),
 			file_type: "image".into(),
-			files: crate::models::PlayFileFiles {
-				optimized: Some(crate::models::OptimizedInfo {
+			files: PlayFileFiles {
+				optimized: Some(OptimizedInfo {
 					name: opt.name.clone(),
 					length: opt.length,
 					width: opt.width,
@@ -322,6 +322,7 @@ pub(crate) fn natural_cmp(a: &str, b: &str) -> core::cmp::Ordering {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use super::super::models::RawTreeEntry;
 	use aidoku::alloc::string::ToString;
 	use aidoku_test::aidoku_test;
 	use core::cmp::Ordering;
@@ -424,7 +425,6 @@ mod tests {
 
 	#[aidoku_test]
 	fn extract_chapter_groups_images_grouped_by_folder() {
-		use crate::models::*;
 		use aidoku::alloc::collections::BTreeMap;
 
 		let mut playfiles = BTreeMap::new();
@@ -502,7 +502,6 @@ mod tests {
 
 	#[aidoku_test]
 	fn extract_chapter_groups_root_level_images() {
-		use crate::models::*;
 		use aidoku::alloc::collections::BTreeMap;
 
 		let mut playfiles = BTreeMap::new();

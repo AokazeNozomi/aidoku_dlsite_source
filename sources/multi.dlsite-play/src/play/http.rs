@@ -1,29 +1,24 @@
-mod play;
-mod public;
-
-pub use play::*;
-pub use public::*;
-
 use crate::settings;
 use aidoku::{
 	alloc::{format, String, Vec},
-	imports::{net::Request, std::print},
+	imports::net::Request,
+	imports::std::print,
 	prelude::*,
 	Result,
 };
 use core::str;
 
-pub(crate) const PLAY_REFERER: &str = "https://play.dlsite.com/";
+pub(super) const PLAY_REFERER: &str = "https://play.dlsite.com/";
 /// dlsite-async `PlayAPI` uses plain `aiohttp.ClientSession` — no browser `Origin` / `Sec-Fetch-*` / `X-Requested-With`.
 const PLAY_AIOHTTP_USER_AGENT: &str = "Python/3.12 aiohttp/3.11.16";
 /// CDN / optimized assets: keep a real browser UA so hotlink rules stay happy.
 const PLAY_IMAGE_USER_AGENT: &str = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1";
 
-const PLAY_API: &str = "https://play.dlsite.com/api/v3";
-const PLAY_DL_API: &str = "https://play.dl.dlsite.com/api/v3";
-const PLAY_BASE: &str = "https://play.dlsite.com";
+pub(super) const PLAY_API: &str = "https://play.dlsite.com/api/v3";
+pub(super) const PLAY_DL_API: &str = "https://play.dl.dlsite.com/api/v3";
+pub(super) const PLAY_BASE: &str = "https://play.dlsite.com";
 
-pub(crate) fn hex_digit(b: u8) -> Option<u8> {
+pub(super) fn hex_digit(b: u8) -> Option<u8> {
 	match b {
 		b'0'..=b'9' => Some(b - b'0'),
 		b'a'..=b'f' => Some(10 + b - b'a'),
@@ -33,7 +28,7 @@ pub(crate) fn hex_digit(b: u8) -> Option<u8> {
 }
 
 /// Browser stacks send `X-XSRF-TOKEN` as URL-decoded cookie value (see Laravel / axios).
-pub(crate) fn percent_decode_cookie_value(input: &str) -> String {
+pub(super) fn percent_decode_cookie_value(input: &str) -> String {
 	let bytes = input.as_bytes();
 	let mut out: Vec<u8> = Vec::new();
 	let mut i = 0usize;
@@ -51,7 +46,7 @@ pub(crate) fn percent_decode_cookie_value(input: &str) -> String {
 	String::from_utf8_lossy(&out).into_owned()
 }
 
-pub(crate) fn xsrf_token_for_header(cookie_header: &str) -> Option<String> {
+pub(super) fn xsrf_token_for_header(cookie_header: &str) -> Option<String> {
 	for part in cookie_header.split(';') {
 		let p = part.trim();
 		let Some((name, value)) = p.split_once('=') else {
@@ -64,7 +59,7 @@ pub(crate) fn xsrf_token_for_header(cookie_header: &str) -> Option<String> {
 	None
 }
 
-pub(crate) fn accept_for_url(url: &str) -> &'static str {
+fn accept_for_url(url: &str) -> &'static str {
 	if url.contains("/api/v3/") {
 		return "application/json";
 	}
@@ -92,7 +87,7 @@ fn play_api_get(url: &str) -> Result<Request> {
 }
 
 /// JSON / API GET.
-pub(crate) fn play_authenticated_get(url: &str) -> Result<Request> {
+pub(super) fn play_authenticated_get(url: &str) -> Result<Request> {
 	play_api_get(url)
 }
 

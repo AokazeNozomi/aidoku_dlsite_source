@@ -1,7 +1,7 @@
 #![no_std]
 
 use aidoku::{
-	alloc::{collections::BTreeMap, format, string::ToString, vec, String, Vec},
+	alloc::{collections::BTreeMap, format, string::ToString, String, Vec},
 	imports::{canvas::ImageRef, net::{Request, set_rate_limit, TimeUnit}, std::{current_date, print}},
 	prelude::*,
 	register_source, Chapter, FilterValue, HashMap, Home, HomeComponent, HomeComponentValue,
@@ -10,10 +10,10 @@ use aidoku::{
 	Result, Source, WebLoginHandler,
 };
 
-mod api;
 mod explore;
-mod helpers;
 mod models;
+mod play;
+mod public;
 mod settings;
 
 const PAGE_SIZE: usize = 20;
@@ -83,9 +83,9 @@ impl Source for DlsitePlay {
 			(manga.key.as_str(), chapter.key.as_str())
 		};
 
-		let token = api::download_token(workno)?;
-		let ziptree = api::fetch_ziptree(&token)?;
-		let chapter_groups = helpers::extract_chapter_groups(&ziptree);
+		let token = play::download_token(workno)?;
+		let ziptree = play::fetch_ziptree(&token)?;
+		let chapter_groups = play::extract_chapter_groups(&ziptree);
 		let pages = chapter_groups
 			.into_iter()
 			.find(|group| group.key == chapter_key)
@@ -112,7 +112,7 @@ impl Source for DlsitePlay {
 
 		result.extend(pages.into_iter().map(|(_path, pf)| {
 			let opt_name = pf.optimized_name().unwrap_or_default().to_string();
-			let url = api::optimized_url(&token, &opt_name);
+			let url = play::optimized_url(&token, &opt_name);
 
 			let mut context = PageContext::new();
 			context.insert("optimized_name".into(), opt_name);
@@ -153,7 +153,7 @@ impl DlsitePlay {
 
 		if needs_details || needs_chapters {
 			// Try the authenticated Play API first.
-			let resp = api::get_works(&[manga.key.clone()]).ok();
+			let resp = play::get_works(&[manga.key.clone()]).ok();
 			let play_work = resp.and_then(|mut r| {
 				let series = core::mem::take(&mut r.series);
 				r.works.into_iter().next().map(|w| (w, series))
@@ -205,9 +205,9 @@ impl DlsitePlay {
 
 		// Chapters are only available for purchased works.
 		if needs_chapters && is_purchased {
-			let token = api::download_token(&manga.key)?;
-			let ziptree = api::fetch_ziptree(&token)?;
-			let chapter_groups = helpers::extract_chapter_groups(&ziptree);
+			let token = play::download_token(&manga.key)?;
+			let ziptree = play::fetch_ziptree(&token)?;
+			let chapter_groups = play::extract_chapter_groups(&ziptree);
 
 			let chapters: Vec<Chapter> = chapter_groups
 				.into_iter()
@@ -256,7 +256,7 @@ impl DlsitePlay {
 			return Ok(());
 		}
 
-		let resp = api::get_works(&member_worknos)?;
+		let resp = play::get_works(&member_worknos)?;
 		let mut works = resp.works;
 		sort_works_by_volume(&mut works);
 
@@ -290,9 +290,9 @@ impl DlsitePlay {
 					.map(|n| n.best())
 					.unwrap_or_else(|| work.workno.clone());
 
-				let token = api::download_token(&work.workno)?;
-				let ziptree = api::fetch_ziptree(&token)?;
-				let chapter_groups = helpers::extract_chapter_groups(&ziptree);
+				let token = play::download_token(&work.workno)?;
+				let ziptree = play::fetch_ziptree(&token)?;
+				let chapter_groups = play::extract_chapter_groups(&ziptree);
 				let num_groups = chapter_groups.len();
 
 				for (ch_idx, group) in chapter_groups.into_iter().enumerate() {
@@ -378,7 +378,7 @@ impl Home for DlsitePlay {
 			return Ok(HomeLayout { components: Vec::new() });
 		}
 
-		let resp = api::get_works(&worknos)?;
+		let resp = play::get_works(&worknos)?;
 
 		// --- Recently Released carousel ---
 		// Individual works sorted by regist_date descending, deduplicated by
@@ -431,7 +431,7 @@ impl Home for DlsitePlay {
 		// Works sorted by view history accessed_at descending, top 20,
 		// respecting work type filter.
 		let mut read_entries: Vec<Link> = Vec::new();
-		if let Ok(view_hist) = api::get_view_histories() {
+		if let Ok(view_hist) = play::get_view_histories() {
 			let mut hist_sorted = view_hist;
 			hist_sorted.sort_by(|a, b| {
 				let aa = a.accessed_at.as_deref().unwrap_or("");
@@ -602,7 +602,7 @@ impl NotificationHandler for DlsitePlay {
 
 impl ImageRequestProvider for DlsitePlay {
 	fn get_image_request(&self, url: String, _context: Option<PageContext>) -> Result<Request> {
-		api::play_image_get(&url)
+		play::play_image_get(&url)
 	}
 }
 
@@ -638,7 +638,7 @@ impl PageImageProcessor for DlsitePlay {
 			return Ok(response.image);
 		}
 
-		match helpers::descramble_image(&response.image, &opt_name, width, height) {
+		match play::descramble_image(&response.image, &opt_name, width, height) {
 			Ok(img) => Ok(img),
 			Err(_) => Ok(response.image),
 		}
@@ -658,7 +658,7 @@ fn touch_view_history(workno: &str) {
 		return;
 	}
 	settings::set_last_viewed_workno(workno);
-	let _ = api::post_view_history(workno);
+	let _ = play::post_view_history(workno);
 }
 
 /// Split a series chapter key `"{workno}:{internal_key}"` into its components.
@@ -676,7 +676,7 @@ fn split_series_chapter_key(key: &str) -> (&str, &str) {
 
 /// Get the cover image URL for a work from the Play API.
 fn work_cover_url(workno: &str) -> Option<String> {
-	let resp = api::get_works(&[workno.into()]).ok()?;
+	let resp = play::get_works(&[workno.into()]).ok()?;
 	resp.works.into_iter().next()?.cover_url()
 }
 
@@ -740,7 +740,7 @@ fn resolve_genre_names(works: &[&models::PurchaseWork]) -> BTreeMap<u32, String>
 	}
 
 	// Fetch missing genres
-	if let Ok(genres) = api::get_genres(&missing) {
+	if let Ok(genres) = play::get_genres(&missing) {
 		for g in &genres {
 			if let Some(ref name) = g.name {
 				lookup.insert(g.id, name.best());
@@ -897,7 +897,7 @@ fn build_sorted_entries(
 
 	// Fetch view histories for "recently opened" sort.
 	let view_history_map: BTreeMap<String, String> = if sort_option == SortOption::RecentlyOpened {
-		api::get_view_histories()
+		play::get_view_histories()
 			.unwrap_or_default()
 			.into_iter()
 			.filter_map(|e| {
@@ -1047,7 +1047,7 @@ fn get_manga_list_inner(
 		});
 	}
 
-	let resp = api::get_works(&worknos)?;
+	let resp = play::get_works(&worknos)?;
 	let all_entries = build_sorted_entries(
 		&worknos, resp, query, work_types, work_type_exclude, translation_filter,
 		genre_filter, genre_exclude, content_rating_filter, sort_option, sort_ascending,
@@ -1192,7 +1192,7 @@ fn get_or_fetch_worknos(page: i32) -> Result<Vec<String>> {
 			return Ok(cached);
 		}
 
-		let sales = api::get_sales()?;
+		let sales = play::get_sales()?;
 		let worknos: Vec<String> = sales.into_iter().map(|s| s.workno).collect();
 		print(format!(
 			"[dlsite-play] refreshed sales list count={}",
@@ -1205,7 +1205,7 @@ fn get_or_fetch_worknos(page: i32) -> Result<Vec<String>> {
 		let cached = settings::get_cached_worknos();
 		if cached.is_empty() {
 			print("[dlsite-play] cache empty, fetching sales");
-			let sales = api::get_sales()?;
+			let sales = play::get_sales()?;
 			let worknos: Vec<String> = sales.into_iter().map(|s| s.workno).collect();
 			print(format!(
 				"[dlsite-play] sales list count={} (was empty cache)",
@@ -1230,7 +1230,7 @@ fn get_or_fetch_languages(workno: &str) -> Option<String> {
 	if let Some(cached) = settings::get_cached_languages(workno) {
 		return Some(cached);
 	}
-	let editions = api::get_language_editions(workno).ok()?;
+	let editions = public::get_language_editions(workno).ok()?;
 	if editions.is_empty() {
 		return None;
 	}
