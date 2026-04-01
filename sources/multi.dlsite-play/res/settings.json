@@ -34,7 +34,8 @@
 				],
 				"default": "English",
 				"refreshes": [
-					"listings"
+					"listings",
+					"content"
 				]
 			},
 			{
@@ -44,7 +45,8 @@
 				"subtitle": "Prepend [SERIES] to series manga titles for easy identification.",
 				"default": "false",
 				"refreshes": [
-					"listings"
+					"listings",
+					"content"
 				]
 			}
 		]
@@ -67,7 +69,8 @@
 				],
 				"default": "Recently Opened",
 				"refreshes": [
-					"listings"
+					"listings",
+					"content"
 				]
 			},
 			{
@@ -77,7 +80,8 @@
 				"subtitle": "Sort in ascending order instead of descending.",
 				"default": "false",
 				"refreshes": [
-					"listings"
+					"listings",
+					"content"
 				]
 			}
 		]
