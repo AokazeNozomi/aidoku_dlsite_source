@@ -53,7 +53,7 @@
 	},
 	{
 		"type": "group",
-		"title": "Work Type — Manga",
+		"title": "Work Type — Images",
 		"items": [
 			{
 				"type": "switch",
@@ -75,26 +75,14 @@
 				"title": "Webtoon",
 				"default": "true",
 				"refreshes": ["listings", "content"]
-			}
-		]
-	},
-	{
-		"type": "group",
-		"title": "Work Type — CG + Illustrations",
-		"items": [
+			},
 			{
 				"type": "switch",
 				"key": "wt_ICG",
 				"title": "CG / Illustrations",
 				"default": "true",
 				"refreshes": ["listings", "content"]
-			}
-		]
-	},
-	{
-		"type": "group",
-		"title": "Work Type — Novel",
-		"items": [
+			},
 			{
 				"type": "switch",
 				"key": "wt_NRE",
@@ -107,6 +95,45 @@
 				"key": "wt_DNV",
 				"title": "Digital Novel",
 				"default": "true",
+				"refreshes": ["listings", "content"]
+			}
+		]
+	},
+	{
+		"type": "group",
+		"title": "Work Type — Video / Anime",
+		"items": [
+			{
+				"type": "switch",
+				"key": "wt_MOV",
+				"title": "Video",
+				"default": "false",
+				"refreshes": ["listings", "content"]
+			}
+		]
+	},
+	{
+		"type": "group",
+		"title": "Work Type — Voice / ASMR",
+		"items": [
+			{
+				"type": "switch",
+				"key": "wt_SOU",
+				"title": "Voice / ASMR",
+				"default": "false",
+				"refreshes": ["listings", "content"]
+			}
+		]
+	},
+	{
+		"type": "group",
+		"title": "Work Type — Music",
+		"items": [
+			{
+				"type": "switch",
+				"key": "wt_MUS",
+				"title": "Music",
+				"default": "false",
 				"refreshes": ["listings", "content"]
 			}
 		]
@@ -182,45 +209,6 @@
 				"type": "switch",
 				"key": "wt_ETC",
 				"title": "Miscellaneous Game",
-				"default": "false",
-				"refreshes": ["listings", "content"]
-			}
-		]
-	},
-	{
-		"type": "group",
-		"title": "Work Type — Video / Anime",
-		"items": [
-			{
-				"type": "switch",
-				"key": "wt_MOV",
-				"title": "Video",
-				"default": "false",
-				"refreshes": ["listings", "content"]
-			}
-		]
-	},
-	{
-		"type": "group",
-		"title": "Work Type — Voice / ASMR",
-		"items": [
-			{
-				"type": "switch",
-				"key": "wt_SOU",
-				"title": "Voice / ASMR",
-				"default": "false",
-				"refreshes": ["listings", "content"]
-			}
-		]
-	},
-	{
-		"type": "group",
-		"title": "Work Type — Music",
-		"items": [
-			{
-				"type": "switch",
-				"key": "wt_MUS",
-				"title": "Music",
 				"default": "false",
 				"refreshes": ["listings", "content"]
 			}
