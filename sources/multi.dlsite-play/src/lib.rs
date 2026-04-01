@@ -179,7 +179,10 @@ impl DlsitePlay {
 			});
 
 			if let Some((work, series)) = play_work {
-				is_purchased = true;
+				// get_works returns metadata for any work when logged in,
+				// so check the sales cache to confirm actual purchase status.
+				let cached_worknos = settings::get_cached_worknos();
+				is_purchased = cached_worknos.iter().any(|w| w == &work.workno);
 				release_date = work.release_date_timestamp();
 				if needs_details {
 					let genre_names = resolve_genre_names(&[&work]);
