@@ -73,29 +73,44 @@ impl Source for DlsitePlay {
 			.map(|group| group.pages)
 			.ok_or_else(|| error!("Unable to find chapter pages for key '{}'", chapter.key))?;
 
-		let result: Vec<Page> = pages
-			.into_iter()
-			.map(|(_path, pf)| {
-				let opt_name = pf.optimized_name().unwrap_or_default().to_string();
-				let url = api::optimized_url(&token, &opt_name);
+		let mut result: Vec<Page> = Vec::new();
 
-				let mut context = PageContext::new();
-				context.insert("optimized_name".into(), opt_name);
-
-				if pf.is_crypt() {
-					context.insert("crypt".into(), "true".into());
-					if let Some((w, h)) = pf.crypt_dimensions() {
-						context.insert("width".into(), w.to_string());
-						context.insert("height".into(), h.to_string());
-					}
-				}
-
-				Page {
-					content: PageContent::url_context(url, context),
+		// Prepend the work's cover image as the first page of the first
+		// chapter (chapter_number == 1). For series entries each volume's
+		// first chapter gets its own cover.
+		let is_first_chapter = chapter
+			.chapter_number
+			.map(|n| (n - 1.0).abs() < 0.01)
+			.unwrap_or(false);
+		if is_first_chapter {
+			if let Some(cover_url) = work_cover_url(workno) {
+				result.push(Page {
+					content: PageContent::url(cover_url),
 					..Default::default()
+				});
+			}
+		}
+
+		result.extend(pages.into_iter().map(|(_path, pf)| {
+			let opt_name = pf.optimized_name().unwrap_or_default().to_string();
+			let url = api::optimized_url(&token, &opt_name);
+
+			let mut context = PageContext::new();
+			context.insert("optimized_name".into(), opt_name);
+
+			if pf.is_crypt() {
+				context.insert("crypt".into(), "true".into());
+				if let Some((w, h)) = pf.crypt_dimensions() {
+					context.insert("width".into(), w.to_string());
+					context.insert("height".into(), h.to_string());
 				}
-			})
-			.collect();
+			}
+
+			Page {
+				content: PageContent::url_context(url, context),
+				..Default::default()
+			}
+		}));
 
 		Ok(result)
 	}
@@ -423,6 +438,12 @@ fn split_series_chapter_key(key: &str) -> (&str, &str) {
 	} else {
 		(key, "")
 	}
+}
+
+/// Get the cover image URL for a work from the Play API.
+fn work_cover_url(workno: &str) -> Option<String> {
+	let resp = api::get_works(&[workno.into()]).ok()?;
+	resp.works.into_iter().next()?.cover_url()
 }
 
 /// Percent-encode a path for use in a DLsite Play URL.
