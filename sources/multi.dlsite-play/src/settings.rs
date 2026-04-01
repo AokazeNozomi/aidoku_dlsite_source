@@ -59,24 +59,7 @@ impl SortOption {
 	}
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum ContentRatingFilter {
-	All = 0,
-	Safe = 1,
-	R15 = 2,
-	R18 = 3,
-}
-
-impl ContentRatingFilter {
-	fn from_setting(s: Option<&str>) -> Self {
-		match s {
-			Some("Safe") => Self::Safe,
-			Some("R-15") => Self::R15,
-			Some("R-18") => Self::R18,
-			_ => Self::All,
-		}
-	}
-}
+pub use dlsite_common::settings::ContentRatingFilter;
 
 // ---------------------------------------------------------------------------
 // Settings getters
@@ -249,24 +232,7 @@ pub fn set_cached_languages(workno: &str, value: &str) {
 	);
 }
 
-// ---------------------------------------------------------------------------
-// Work type setting
-// ---------------------------------------------------------------------------
-
-/// Read work type filter from settings multi-selects.
-/// Returns the list of enabled work type codes.
-pub fn get_work_type_setting() -> Vec<String> {
-	let keys = [
-		"wt_images", "wt_av", "wt_game", "wt_tools", "wt_misc",
-	];
-	let mut selected = Vec::new();
-	for key in &keys {
-		if let Some(values) = defaults_get::<Vec<String>>(key) {
-			selected.extend(values);
-		}
-	}
-	selected
-}
+pub use dlsite_common::settings::get_work_type_setting;
 
 // ---------------------------------------------------------------------------
 // View history throttle cache
@@ -301,12 +267,5 @@ pub fn get_default_sort_ascending() -> bool {
 	defaults_get::<bool>("default_sort_ascending").unwrap_or(false)
 }
 
-pub fn get_default_content_rating() -> ContentRatingFilter {
-	ContentRatingFilter::from_setting(defaults_get::<String>("default_content_rating").as_deref())
-}
+pub use dlsite_common::settings::get_default_content_rating;
 
-pub fn get_explore_sort() -> crate::explore::models::ExploreSort {
-	crate::explore::models::ExploreSort::from_setting(
-		defaults_get::<String>("explore_sort").as_deref(),
-	)
-}

@@ -5,6 +5,8 @@ use aidoku::{
 	Result,
 };
 
+pub use dlsite_common::api::get_public_work_details;
+
 /// Fetch language editions from the public DLsite product API.
 /// Returns an empty Vec on failure (non-fatal enrichment).
 pub fn get_language_editions(workno: &str) -> Result<Vec<LanguageEdition>> {

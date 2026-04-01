@@ -1,9 +1,9 @@
 {
   "info": {
-    "id": "multi.dlsite-play",
-    "name": "DLsite Play",
-    "version": 91,
-    "url": "https://play.dlsite.com/login/",
+    "id": "multi.dlsite-explore",
+    "name": "DLsite Explore",
+    "version": 1,
+    "url": "https://www.dlsite.com/maniax/",
     "contentRating": 2,
     "languages": [
       "ja",
@@ -22,8 +22,5 @@
       "th",
       "vi"
     ]
-  },
-  "listings": [
-    { "id": "library", "name": "Library" }
-  ]
+  }
 }

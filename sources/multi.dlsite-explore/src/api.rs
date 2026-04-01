@@ -1,9 +1,11 @@
-use super::models::{ExploreResult, ExploreSort, ExploreWork, PublicWork};
+use crate::models::{ExploreResult, ExploreSort, ExploreWork};
 use aidoku::{
 	alloc::{format, String, Vec},
 	imports::{html::Html, net::Request, std::print},
 	Result,
 };
+
+pub use dlsite_common::api::get_public_work_details;
 
 const DLSITE_BASE: &str = "https://www.dlsite.com/maniax";
 /// DLsite ignores per_page and always returns 30 items.
@@ -187,7 +189,7 @@ pub fn search_explore(
 	genres: &[u32],
 ) -> Result<ExploreResult> {
 	let url = build_search_url(keyword, page, sort, work_types, content_rating, genres);
-	print(format!("[dlsite-play] explore → GET {}", url));
+	print(format!("[dlsite-explore] → GET {}", url));
 
 	let resp = Request::get(&url)?
 		.header("Accept", "application/json")
@@ -201,7 +203,7 @@ pub fn search_explore(
 	let data = resp.get_data()?;
 	if !(200..300).contains(&status) {
 		print(format!(
-			"[dlsite-play] explore HTTP {} ({} bytes)",
+			"[dlsite-explore] HTTP {} ({} bytes)",
 			status,
 			data.len()
 		));
@@ -229,7 +231,7 @@ pub fn search_explore(
 	let has_next_page = (page as i64) * (EXPLORE_PAGE_SIZE as i64) < ajax.page_info.count;
 
 	print(format!(
-		"[dlsite-play] explore: {} works, total={}, has_next={}",
+		"[dlsite-explore] {} works, total={}, has_next={}",
 		works.len(),
 		ajax.page_info.count,
 		has_next_page
@@ -239,37 +241,6 @@ pub fn search_explore(
 		works,
 		has_next_page,
 	})
-}
-
-// ---------------------------------------------------------------------------
-// Public product detail fallback
-// ---------------------------------------------------------------------------
-
-/// Fetch work details from the public DLsite product JSON API.
-/// Used as a fallback when a user taps an explore result that isn't purchased.
-pub fn get_public_work_details(workno: &str) -> Result<Option<PublicWork>> {
-	let url = format!(
-		"{}/api/=/product.json?workno={}",
-		DLSITE_BASE, workno
-	);
-	print(format!("[dlsite-play] explore detail → GET {}", url));
-
-	let resp = Request::get(&url)?
-		.header("Accept", "application/json")
-		.send()?;
-
-	let status = resp.status_code();
-	let data = resp.get_data()?;
-	if !(200..300).contains(&status) {
-		print(format!(
-			"[dlsite-play] explore detail HTTP {} for {}",
-			status, workno
-		));
-		return Ok(None);
-	}
-
-	let products: Vec<PublicWork> = serde_json::from_slice(&data).unwrap_or_default();
-	Ok(products.into_iter().next())
 }
 
 #[cfg(test)]

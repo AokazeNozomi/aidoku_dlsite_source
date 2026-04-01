@@ -10,7 +10,6 @@ use aidoku::{
 	Result, Source, WebLoginHandler,
 };
 
-mod explore;
 mod models;
 mod play;
 mod public;
@@ -48,25 +47,6 @@ impl Source for DlsitePlay {
 		page: i32,
 		filters: Vec<FilterValue>,
 	) -> Result<MangaPageResult> {
-		if extract_search_mode(&filters) == "explore" {
-			let (work_types, _) = extract_work_type_filter(&filters);
-			let content_rating_filter = extract_content_rating_filter(&filters);
-			let (genre_include, _) = extract_genre_filter(&filters);
-			let sort = settings::get_explore_sort();
-			let result = explore::api::search_explore(
-				query.as_deref(),
-				page,
-				sort,
-				&work_types,
-				content_rating_filter.as_deref(),
-				&genre_include,
-			)?;
-			return Ok(MangaPageResult {
-				entries: result.works.into_iter().map(|w| w.into_manga()).collect(),
-				has_next_page: result.has_next_page,
-			});
-		}
-
 		let (work_types, work_type_exclude) = extract_work_type_filter(&filters);
 		let translation_filter = extract_translation_filter(&filters);
 		let (genre_filter, genre_exclude) = extract_genre_filter(&filters);
@@ -217,7 +197,7 @@ impl DlsitePlay {
 			} else if needs_details {
 				// Fallback to public product API for non-purchased works.
 				if let Ok(Some(public_work)) =
-					explore::api::get_public_work_details(&manga.key)
+					public::get_public_work_details(&manga.key)
 				{
 					let updated = public_work.into_manga();
 					manga.copy_from(updated);
@@ -365,23 +345,6 @@ impl ListingProvider for DlsitePlay {
 				let sort_option = settings::get_default_sort();
 				let sort_ascending = settings::get_default_sort_ascending();
 				get_manga_list_inner(None, page, work_types, Vec::new(), None, Vec::new(), Vec::new(), content_rating_filter, sort_option, sort_ascending)
-			}
-			"explore" => {
-				let work_types = settings::get_work_type_setting();
-				let content_rating_filter = settings_content_rating_to_filter();
-				let sort = settings::get_explore_sort();
-				let result = explore::api::search_explore(
-					None,
-					page,
-					sort,
-					&work_types,
-					content_rating_filter.as_deref(),
-					&[],
-				)?;
-				Ok(MangaPageResult {
-					entries: result.works.into_iter().map(|w| w.into_manga()).collect(),
-					has_next_page: result.has_next_page,
-				})
 			}
 			_ => Ok(MangaPageResult {
 				entries: Vec::new(),
@@ -1318,17 +1281,6 @@ fn fetch_all_languages() {
 	));
 }
 
-fn extract_search_mode(filters: &[FilterValue]) -> &'static str {
-	for f in filters {
-		if let FilterValue::Select { id, value } = f {
-			if id == "search_mode" && value == "explore" {
-				return "explore";
-			}
-		}
-	}
-	"library"
-}
-
 fn extract_translation_filter(filters: &[FilterValue]) -> Option<String> {
 	for f in filters {
 		if let FilterValue::Select { id, value } = f {
@@ -1389,13 +1341,7 @@ fn extract_content_rating_filter(filters: &[FilterValue]) -> Option<String> {
 
 /// Convert the content rating setting to a filter string for `work_passes_filter`.
 fn settings_content_rating_to_filter() -> Option<String> {
-	use settings::ContentRatingFilter;
-	match settings::get_default_content_rating() {
-		ContentRatingFilter::Safe => Some("safe".into()),
-		ContentRatingFilter::R15 => Some("r15".into()),
-		ContentRatingFilter::R18 => Some("r18".into()),
-		ContentRatingFilter::All => None,
-	}
+	settings::get_default_content_rating().to_filter_string()
 }
 
 register_source!(
