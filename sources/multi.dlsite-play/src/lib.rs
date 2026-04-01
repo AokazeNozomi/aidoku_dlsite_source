@@ -910,7 +910,16 @@ fn apply_sort(entries: &mut Vec<(SortKey, Manga)>, sort_index: i32, ascending: b
 
 	entries.sort_by(|(a, _), (b, _)| {
 		let ord = match sort_index {
-			SORT_RECENTLY_OPENED => a.recently_opened.cmp(&b.recently_opened),
+			SORT_RECENTLY_OPENED => {
+				// Works with view history sort by accessed_at.
+				// Works without fall back to purchase order (lower position = newer).
+				match (a.recently_opened.is_empty(), b.recently_opened.is_empty()) {
+					(false, false) => a.recently_opened.cmp(&b.recently_opened),
+					(false, true) => core::cmp::Ordering::Greater,
+					(true, false) => core::cmp::Ordering::Less,
+					(true, true) => b.original_position.cmp(&a.original_position),
+				}
+			}
 			SORT_PURCHASE_DATE => a.purchase_date.cmp(&b.purchase_date),
 			SORT_RELEASE_DATE => a.release_date.cmp(&b.release_date),
 			SORT_WRITER_CIRCLE => a.writer_name.cmp(&b.writer_name),
