@@ -52,8 +52,9 @@ impl Source for DlsitePlay {
 		let (work_types, work_type_exclude) = extract_work_type_filter(&filters);
 		let translation_filter = extract_translation_filter(&filters);
 		let (genre_filter, genre_exclude) = extract_genre_filter(&filters);
+		let content_rating_filter = extract_content_rating_filter(&filters);
 		let (sort_option, sort_ascending) = extract_sort_filter(&filters);
-		get_manga_list_inner(query, page, work_types, work_type_exclude, translation_filter, genre_filter, genre_exclude, sort_option, sort_ascending)
+		get_manga_list_inner(query, page, work_types, work_type_exclude, translation_filter, genre_filter, genre_exclude, content_rating_filter, sort_option, sort_ascending)
 	}
 
 	fn get_manga_update(
@@ -323,9 +324,10 @@ impl ListingProvider for DlsitePlay {
 		match listing.id.as_str() {
 			"library" => {
 				let work_types = settings::get_work_type_setting();
+				let content_rating_filter = settings_content_rating_to_filter();
 				let sort_option = settings::get_default_sort();
 				let sort_ascending = settings::get_default_sort_ascending();
-				get_manga_list_inner(None, page, work_types, Vec::new(), None, Vec::new(), Vec::new(), sort_option, sort_ascending)
+				get_manga_list_inner(None, page, work_types, Vec::new(), None, Vec::new(), Vec::new(), content_rating_filter, sort_option, sort_ascending)
 			}
 			// Explore stub — will be implemented later.
 			_ => Ok(MangaPageResult {
@@ -339,6 +341,7 @@ impl ListingProvider for DlsitePlay {
 impl Home for DlsitePlay {
 	fn get_home(&self) -> Result<HomeLayout> {
 		let work_types = settings::get_work_type_setting();
+		let content_rating_filter = settings_content_rating_to_filter();
 		let worknos = get_or_fetch_worknos(1)?;
 
 		if worknos.is_empty() {
@@ -354,14 +357,23 @@ impl Home for DlsitePlay {
 		let genre_names = resolve_genre_names(&work_refs);
 		let series_names = build_series_lookup(&resp.series);
 
+		let cr_filter = content_rating_filter.as_deref();
 		let mut recent: Vec<&models::PurchaseWork> = resp.works.iter()
 			.filter(|w| {
-				if work_types.is_empty() {
-					return true;
+				if !work_types.is_empty() {
+					if !w.work_type.as_deref()
+						.map(|wt| work_types.iter().any(|t| t == wt))
+						.unwrap_or(false)
+					{
+						return false;
+					}
 				}
-				w.work_type.as_deref()
-					.map(|wt| work_types.iter().any(|t| t == wt))
-					.unwrap_or(false)
+				if let Some(cr) = cr_filter {
+					if !w.matches_content_rating(cr) {
+						return false;
+					}
+				}
+				true
 			})
 			.collect();
 		recent.sort_by(|a, b| {
@@ -409,6 +421,11 @@ impl Home for DlsitePlay {
 							continue;
 						}
 					}
+					if let Some(cr) = cr_filter {
+						if !w.matches_content_rating(cr) {
+							continue;
+						}
+					}
 					read_entries.push(w.clone().into_manga(&genre_names, &series_names).into());
 				}
 			}
@@ -419,7 +436,7 @@ impl Home for DlsitePlay {
 		let sort_ascending = settings::get_default_sort_ascending();
 		let library_entries = build_sorted_entries(
 			&worknos, resp, None, work_types, Vec::new(), None, Vec::new(),
-			Vec::new(), sort_option, sort_ascending,
+			Vec::new(), content_rating_filter, sort_option, sort_ascending,
 		);
 		let library_links: Vec<Link> = library_entries
 			.into_iter()
@@ -751,6 +768,7 @@ fn work_passes_filter(
 	translation_filter: Option<&str>,
 	genre_filter: &[u32],
 	genre_exclude: &[u32],
+	content_rating_filter: Option<&str>,
 	series_name: Option<&str>,
 ) -> bool {
 	if let Some(q) = q_lower {
@@ -812,6 +830,11 @@ fn work_passes_filter(
 			return false;
 		}
 	}
+	if let Some(cr) = content_rating_filter {
+		if !w.matches_content_rating(cr) {
+			return false;
+		}
+	}
 	true
 }
 
@@ -829,6 +852,7 @@ fn build_sorted_entries(
 	translation_filter: Option<String>,
 	genre_filter: Vec<u32>,
 	genre_exclude: Vec<u32>,
+	content_rating_filter: Option<String>,
 	sort_option: SortOption,
 	sort_ascending: bool,
 ) -> Vec<(SortKey, Manga)> {
@@ -899,7 +923,8 @@ fn build_sorted_entries(
 		|| !work_type_exclude.is_empty()
 		|| translation_filter.is_some()
 		|| !genre_filter.is_empty()
-		|| !genre_exclude.is_empty();
+		|| !genre_exclude.is_empty()
+		|| content_rating_filter.is_some();
 
 	let mut all_entries: Vec<(SortKey, Manga)> = Vec::new();
 
@@ -925,6 +950,7 @@ fn build_sorted_entries(
 						translation_filter.as_deref(),
 						&genre_filter,
 						&genre_exclude,
+						content_rating_filter.as_deref(),
 						sname,
 					)
 				});
@@ -947,6 +973,7 @@ fn build_sorted_entries(
 					translation_filter.as_deref(),
 					&genre_filter,
 					&genre_exclude,
+					content_rating_filter.as_deref(),
 					None,
 				) {
 					continue;
@@ -977,6 +1004,7 @@ fn get_manga_list_inner(
 	translation_filter: Option<String>,
 	genre_filter: Vec<u32>,
 	genre_exclude: Vec<u32>,
+	content_rating_filter: Option<String>,
 	sort_option: SortOption,
 	sort_ascending: bool,
 ) -> Result<MangaPageResult> {
@@ -992,7 +1020,7 @@ fn get_manga_list_inner(
 	let resp = api::get_works(&worknos)?;
 	let all_entries = build_sorted_entries(
 		&worknos, resp, query, work_types, work_type_exclude, translation_filter,
-		genre_filter, genre_exclude, sort_option, sort_ascending,
+		genre_filter, genre_exclude, content_rating_filter, sort_option, sort_ascending,
 	);
 
 	// --- Paginate ---
@@ -1290,6 +1318,28 @@ fn extract_sort_filter(filters: &[FilterValue]) -> (SortOption, bool) {
 	(settings::get_default_sort(), settings::get_default_sort_ascending())
 }
 
+fn extract_content_rating_filter(filters: &[FilterValue]) -> Option<String> {
+	for f in filters {
+		if let FilterValue::Select { id, value } = f {
+			if id == "content_rating" && value != "all" {
+				return Some(value.clone());
+			}
+		}
+	}
+	None
+}
+
+/// Convert the content rating setting to a filter string for `work_passes_filter`.
+fn settings_content_rating_to_filter() -> Option<String> {
+	use settings::ContentRatingFilter;
+	match settings::get_default_content_rating() {
+		ContentRatingFilter::Safe => Some("safe".into()),
+		ContentRatingFilter::R15 => Some("r15".into()),
+		ContentRatingFilter::R18 => Some("r18".into()),
+		ContentRatingFilter::All => None,
+	}
+}
+
 register_source!(
 	DlsitePlay,
 	ListingProvider,
@@ -1399,14 +1449,14 @@ mod tests {
 	#[aidoku_test]
 	fn work_passes_filter_no_filters() {
 		let w = make_filter_work("RJ001", "Test Work", "MNG", false);
-		assert!(work_passes_filter(&w, None, None, &[], &[], None, &[], &[], None));
+		assert!(work_passes_filter(&w, None, None, &[], &[], None, &[], &[], None, None));
 	}
 
 	#[aidoku_test]
 	fn work_passes_filter_query_match_name() {
 		let w = make_filter_work("RJ001", "My Great Manga", "MNG", false);
 		assert!(work_passes_filter(
-			&w, Some("great"), Some("great"), &[], &[], None, &[], &[], None
+			&w, Some("great"), Some("great"), &[], &[], None, &[], &[], None, None
 		));
 	}
 
@@ -1414,7 +1464,7 @@ mod tests {
 	fn work_passes_filter_query_no_match() {
 		let w = make_filter_work("RJ001", "My Manga", "MNG", false);
 		assert!(!work_passes_filter(
-			&w, Some("zzzzz"), Some("zzzzz"), &[], &[], None, &[], &[], None
+			&w, Some("zzzzz"), Some("zzzzz"), &[], &[], None, &[], &[], None, None
 		));
 	}
 
@@ -1422,7 +1472,7 @@ mod tests {
 	fn work_passes_filter_query_match_workno() {
 		let w = make_filter_work("RJ123456", "Title", "MNG", false);
 		assert!(work_passes_filter(
-			&w, Some("rj123456"), Some("RJ123456"), &[], &[], None, &[], &[], None
+			&w, Some("rj123456"), Some("RJ123456"), &[], &[], None, &[], &[], None, None
 		));
 	}
 
@@ -1430,10 +1480,10 @@ mod tests {
 	fn work_passes_filter_work_type() {
 		let w = make_filter_work("RJ001", "Test", "MNG", false);
 		assert!(work_passes_filter(
-			&w, None, None, &["MNG".to_string()], &[], None, &[], &[], None
+			&w, None, None, &["MNG".to_string()], &[], None, &[], &[], None, None
 		));
 		assert!(!work_passes_filter(
-			&w, None, None, &["CG".to_string()], &[], None, &[], &[], None
+			&w, None, None, &["CG".to_string()], &[], None, &[], &[], None, None
 		));
 	}
 
@@ -1443,16 +1493,16 @@ mod tests {
 		let w_trans = make_filter_work("RJ002", "Test", "MNG", true);
 
 		assert!(work_passes_filter(
-			&w_trans, None, None, &[], &[], Some("translated"), &[], &[], None
+			&w_trans, None, None, &[], &[], Some("translated"), &[], &[], None, None
 		));
 		assert!(!work_passes_filter(
-			&w_no_trans, None, None, &[], &[], Some("translated"), &[], &[], None
+			&w_no_trans, None, None, &[], &[], Some("translated"), &[], &[], None, None
 		));
 		assert!(work_passes_filter(
-			&w_no_trans, None, None, &[], &[], Some("original"), &[], &[], None
+			&w_no_trans, None, None, &[], &[], Some("original"), &[], &[], None, None
 		));
 		assert!(!work_passes_filter(
-			&w_trans, None, None, &[], &[], Some("original"), &[], &[], None
+			&w_trans, None, None, &[], &[], Some("original"), &[], &[], None, None
 		));
 	}
 
@@ -1463,19 +1513,19 @@ mod tests {
 
 		// Work has genre 100 — filter for 100 should pass
 		assert!(work_passes_filter(
-			&w, None, None, &[], &[], None, &[100], &[], None
+			&w, None, None, &[], &[], None, &[100], &[], None, None
 		));
 		// Work does not have genre 300 — filter for 300 should fail
 		assert!(!work_passes_filter(
-			&w, None, None, &[], &[], None, &[300], &[], None
+			&w, None, None, &[], &[], None, &[300], &[], None, None
 		));
 		// Filter for both 100 and 200 — work has both, should pass
 		assert!(work_passes_filter(
-			&w, None, None, &[], &[], None, &[100, 200], &[], None
+			&w, None, None, &[], &[], None, &[100, 200], &[], None, None
 		));
 		// Filter for 100 and 300 — work missing 300, should fail
 		assert!(!work_passes_filter(
-			&w, None, None, &[], &[], None, &[100, 300], &[], None
+			&w, None, None, &[], &[], None, &[100, 300], &[], None, None
 		));
 	}
 
@@ -1486,19 +1536,19 @@ mod tests {
 
 		// Excluding genre 100 — work has it, should fail
 		assert!(!work_passes_filter(
-			&w, None, None, &[], &[], None, &[], &[100], None
+			&w, None, None, &[], &[], None, &[], &[100], None, None
 		));
 		// Excluding genre 300 — work doesn't have it, should pass
 		assert!(work_passes_filter(
-			&w, None, None, &[], &[], None, &[], &[300], None
+			&w, None, None, &[], &[], None, &[], &[300], None, None
 		));
 		// Excluding 300 and 400 — work has neither, should pass
 		assert!(work_passes_filter(
-			&w, None, None, &[], &[], None, &[], &[300, 400], None
+			&w, None, None, &[], &[], None, &[], &[300, 400], None, None
 		));
 		// Excluding 200 and 300 — work has 200, should fail
 		assert!(!work_passes_filter(
-			&w, None, None, &[], &[], None, &[], &[200, 300], None
+			&w, None, None, &[], &[], None, &[], &[200, 300], None, None
 		));
 	}
 
@@ -1508,11 +1558,11 @@ mod tests {
 
 		// Excluding MNG — work is MNG, should fail
 		assert!(!work_passes_filter(
-			&w, None, None, &[], &["MNG".to_string()], None, &[], &[], None
+			&w, None, None, &[], &["MNG".to_string()], None, &[], &[], None, None
 		));
 		// Excluding CG — work is MNG, should pass
 		assert!(work_passes_filter(
-			&w, None, None, &[], &["CG".to_string()], None, &[], &[], None
+			&w, None, None, &[], &["CG".to_string()], None, &[], &[], None, None
 		));
 	}
 
@@ -1523,11 +1573,11 @@ mod tests {
 
 		// Include 100, exclude 300 — work has both, exclude wins → fail
 		assert!(!work_passes_filter(
-			&w, None, None, &[], &[], None, &[100], &[300], None
+			&w, None, None, &[], &[], None, &[100], &[300], None, None
 		));
 		// Include 100, exclude 400 — work passes include and no excluded match → pass
 		assert!(work_passes_filter(
-			&w, None, None, &[], &[], None, &[100], &[400], None
+			&w, None, None, &[], &[], None, &[100], &[400], None, None
 		));
 	}
 
@@ -1537,12 +1587,57 @@ mod tests {
 
 		// Include MNG, exclude CG — work is MNG, not CG → pass
 		assert!(work_passes_filter(
-			&w, None, None, &["MNG".to_string()], &["CG".to_string()], None, &[], &[], None
+			&w, None, None, &["MNG".to_string()], &["CG".to_string()], None, &[], &[], None, None
 		));
 		// Include MNG, exclude MNG — exclude wins → fail
 		assert!(!work_passes_filter(
-			&w, None, None, &["MNG".to_string()], &["MNG".to_string()], None, &[], &[], None
+			&w, None, None, &["MNG".to_string()], &["MNG".to_string()], None, &[], &[], None, None
 		));
+	}
+
+	// -- content rating filter tests --
+
+	#[aidoku_test]
+	fn work_passes_filter_content_rating_safe() {
+		let mut w = make_filter_work("RJ001", "Test", "MNG", false);
+		w.age_category = None;
+		assert!(work_passes_filter(&w, None, None, &[], &[], None, &[], &[], Some("safe"), None));
+		assert!(!work_passes_filter(&w, None, None, &[], &[], None, &[], &[], Some("r18"), None));
+		assert!(!work_passes_filter(&w, None, None, &[], &[], None, &[], &[], Some("r15"), None));
+	}
+
+	#[aidoku_test]
+	fn work_passes_filter_content_rating_r18() {
+		let mut w = make_filter_work("RJ001", "Test", "MNG", false);
+		w.age_category = Some("R18".into());
+		assert!(work_passes_filter(&w, None, None, &[], &[], None, &[], &[], Some("r18"), None));
+		assert!(!work_passes_filter(&w, None, None, &[], &[], None, &[], &[], Some("safe"), None));
+		assert!(!work_passes_filter(&w, None, None, &[], &[], None, &[], &[], Some("r15"), None));
+	}
+
+	#[aidoku_test]
+	fn work_passes_filter_content_rating_r15() {
+		let mut w = make_filter_work("RJ001", "Test", "MNG", false);
+		w.age_category = Some("R15".into());
+		assert!(work_passes_filter(&w, None, None, &[], &[], None, &[], &[], Some("r15"), None));
+		assert!(!work_passes_filter(&w, None, None, &[], &[], None, &[], &[], Some("safe"), None));
+		assert!(!work_passes_filter(&w, None, None, &[], &[], None, &[], &[], Some("r18"), None));
+	}
+
+	#[aidoku_test]
+	fn work_passes_filter_content_rating_all() {
+		let mut w = make_filter_work("RJ001", "Test", "MNG", false);
+		w.age_category = Some("R18".into());
+		// None means "All" / no filter
+		assert!(work_passes_filter(&w, None, None, &[], &[], None, &[], &[], None, None));
+	}
+
+	#[aidoku_test]
+	fn work_passes_filter_content_rating_case_insensitive() {
+		let mut w = make_filter_work("RJ001", "Test", "MNG", false);
+		w.age_category = Some("r18".into()); // lowercase from API
+		assert!(work_passes_filter(&w, None, None, &[], &[], None, &[], &[], Some("r18"), None));
+		assert!(!work_passes_filter(&w, None, None, &[], &[], None, &[], &[], Some("safe"), None));
 	}
 
 	// -- test helpers --

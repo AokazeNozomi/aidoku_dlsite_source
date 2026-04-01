@@ -115,6 +115,29 @@
 	},
 	{
 		"type": "group",
+		"title": "Content Rating",
+		"footer": "Default content rating filter for library and home. Search filter overrides this when active.",
+		"items": [
+			{
+				"type": "select",
+				"key": "default_content_rating",
+				"title": "Content Rating Filter",
+				"values": [
+					"All",
+					"Safe",
+					"R-15",
+					"R-18"
+				],
+				"default": "All",
+				"refreshes": [
+					"listings",
+					"content"
+				]
+			}
+		]
+	},
+	{
+		"type": "group",
 		"title": "Work Types",
 		"items": [
 			{

@@ -85,6 +85,14 @@
     "ids": ["all", "translated", "original"]
   },
   {
+    "id": "content_rating",
+    "title": "Content Rating",
+    "type": "select",
+    "usesTagStyle": true,
+    "options": ["All", "Safe", "R-15", "R-18"],
+    "ids": ["all", "safe", "r15", "r18"]
+  },
+  {
     "id": "genre_focus",
     "title": "Focus / Appeals",
     "type": "multi-select",

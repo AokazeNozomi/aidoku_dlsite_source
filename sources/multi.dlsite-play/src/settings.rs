@@ -59,6 +59,25 @@ impl SortOption {
 	}
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum ContentRatingFilter {
+	All = 0,
+	Safe = 1,
+	R15 = 2,
+	R18 = 3,
+}
+
+impl ContentRatingFilter {
+	fn from_setting(s: Option<&str>) -> Self {
+		match s {
+			Some("Safe") => Self::Safe,
+			Some("R-15") => Self::R15,
+			Some("R-18") => Self::R18,
+			_ => Self::All,
+		}
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Settings getters
 // ---------------------------------------------------------------------------
@@ -280,4 +299,8 @@ pub fn get_default_sort() -> SortOption {
 
 pub fn get_default_sort_ascending() -> bool {
 	defaults_get::<bool>("default_sort_ascending").unwrap_or(false)
+}
+
+pub fn get_default_content_rating() -> ContentRatingFilter {
+	ContentRatingFilter::from_setting(defaults_get::<String>("default_content_rating").as_deref())
 }

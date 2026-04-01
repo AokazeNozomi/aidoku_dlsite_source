@@ -416,6 +416,17 @@ impl PurchaseWork {
 			}
 		})
 	}
+
+	/// Check if this work's age_category matches the given content rating filter value.
+	pub fn matches_content_rating(&self, filter: &str) -> bool {
+		let age = self.age_category.as_deref().unwrap_or("");
+		match filter {
+			"safe" => !matches!(age, "R18" | "r18" | "R15" | "r15"),
+			"r15" => matches!(age, "R15" | "r15"),
+			"r18" => matches!(age, "R18" | "r18"),
+			_ => true,
+		}
+	}
 }
 
 impl PurchaseWork {
