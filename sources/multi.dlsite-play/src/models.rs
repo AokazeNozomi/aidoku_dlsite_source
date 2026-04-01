@@ -734,6 +734,52 @@ pub struct ProductInfo {
 // Series Manga builder
 // ---------------------------------------------------------------------------
 
+/// Derive a series name from member work titles by finding the longest common
+/// prefix. Strips trailing whitespace, punctuation, and volume-like suffixes.
+pub fn derive_series_name(works: &[PurchaseWork]) -> Option<String> {
+	let titles: Vec<String> = works
+		.iter()
+		.filter_map(|w| w.name.as_ref().map(|n| n.best()))
+		.collect();
+	if titles.is_empty() {
+		return None;
+	}
+	if titles.len() == 1 {
+		return Some(titles.into_iter().next().unwrap());
+	}
+
+	// Find longest common prefix (byte-level, then trim to char boundary)
+	let first = titles[0].as_bytes();
+	let mut prefix_len = first.len();
+	for t in &titles[1..] {
+		let b = t.as_bytes();
+		let mut i = 0;
+		let limit = prefix_len.min(b.len());
+		while i < limit && first[i] == b[i] {
+			i += 1;
+		}
+		prefix_len = i;
+	}
+
+	// Trim to valid UTF-8 char boundary
+	let prefix = &titles[0].as_bytes()[..prefix_len];
+	let prefix = core::str::from_utf8(prefix)
+		.unwrap_or_else(|e| core::str::from_utf8(&prefix[..e.valid_up_to()]).unwrap_or(""));
+
+	// Strip trailing whitespace, punctuation, and common separators
+	let trimmed = prefix
+		.trim_end()
+		.trim_end_matches(|c: char| matches!(c, '-' | '–' | '—' | ':' | '/' | '(' | '[' | '【'))
+		.trim_end();
+
+	if trimmed.is_empty() {
+		// No common prefix — fall back to first work's title
+		return Some(titles.into_iter().next().unwrap());
+	}
+
+	Some(trimmed.into())
+}
+
 /// Build a single [`Manga`] entry representing a series, merging metadata from
 /// all member works. `works` must be pre-sorted by volume order.
 pub fn series_manga(
@@ -745,7 +791,12 @@ pub fn series_manga(
 	let first = works.first();
 
 	// -- Title --
-	let title = series_name.into();
+	let show_prefix = crate::settings::show_series_prefix();
+	let title: String = if show_prefix {
+		format!("[SERIES] {}", series_name)
+	} else {
+		series_name.into()
+	};
 
 	// -- Cover: from the first (earliest) work --
 	let cover = first.and_then(|w| w.cover_url());

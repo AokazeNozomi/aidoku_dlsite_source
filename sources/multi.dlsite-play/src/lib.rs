@@ -227,6 +227,7 @@ impl DlsitePlay {
 			let sname = series_names
 				.get(&title_id)
 				.cloned()
+				.or_else(|| models::derive_series_name(&works))
 				.unwrap_or_else(|| title_id.clone());
 			let updated = models::series_manga(&title_id, &sname, &works, &genre_names);
 			manga.copy_from(updated);
@@ -696,7 +697,14 @@ fn get_manga_list_inner(
 	for key in &group_order {
 		if let Some(works) = series_groups.get(key.as_str()) {
 			// Series group — match if ANY work passes filters
-			let sname = series_names.get(key.as_str()).map(|s| s.as_str());
+			let derived;
+			let sname = match series_names.get(key.as_str()) {
+				Some(s) => Some(s.as_str()),
+				None => {
+					derived = models::derive_series_name(works);
+					derived.as_deref()
+				}
+			};
 			if has_filter {
 				let any_match = works.iter().any(|w| {
 					work_passes_filter(

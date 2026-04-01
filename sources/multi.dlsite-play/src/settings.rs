@@ -4,6 +4,7 @@ use aidoku::{
 };
 
 const PREFERRED_LANGUAGE_KEY: &str = "preferred_language";
+const SERIES_PREFIX_KEY: &str = "series_prefix";
 const CACHED_WORKNOS_KEY: &str = "cached_worknos";
 const LOGGED_IN_KEY: &str = "logged_in";
 const WEB_COOKIES_KEY: &str = "web_cookies";
@@ -12,6 +13,10 @@ const SALES_FETCHED_AT_KEY: &str = "sales_fetched_at_unix";
 /// 0 = English, 1 = Japanese, 2 = Chinese (Simplified), 3 = Chinese (Traditional), 4 = Korean
 pub fn get_preferred_language() -> i32 {
 	defaults_get::<i32>(PREFERRED_LANGUAGE_KEY).unwrap_or(0)
+}
+
+pub fn show_series_prefix() -> bool {
+	defaults_get::<bool>(SERIES_PREFIX_KEY).unwrap_or(false)
 }
 
 pub fn is_logged_in() -> bool {
