@@ -105,12 +105,12 @@
 	{
 		"type": "group",
 		"title": "Sort",
-		"footer": "Default sort order for library listings.",
+		"footer": "Sort order for library listings.",
 		"items": [
 			{
 				"type": "select",
 				"key": "default_sort",
-				"title": "Default Sort",
+				"title": "Library Sort",
 				"values": [
 					"Recently Opened",
 					"Purchase Date",
@@ -118,7 +118,7 @@
 					"Writer/Circle Name",
 					"Title"
 				],
-				"default": "Recently Opened",
+				"default": "Purchase Date",
 				"refreshes": [
 					"listings",
 					"content"
