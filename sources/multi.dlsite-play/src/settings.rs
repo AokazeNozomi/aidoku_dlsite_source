@@ -26,21 +26,21 @@ pub enum Language {
 }
 
 impl Language {
-	fn from_setting(s: Option<&str>) -> Self {
-		match s {
-			Some("Japanese") => Self::Japanese,
-			Some("Chinese (Simplified)") => Self::ChineseSimplified,
-			Some("Chinese (Traditional)") => Self::ChineseTraditional,
-			Some("Korean") => Self::Korean,
-			Some("Spanish") => Self::Spanish,
-			Some("German") => Self::German,
-			Some("French") => Self::French,
-			Some("Italian") => Self::Italian,
-			Some("Portuguese (Brazil)") => Self::Portuguese,
-			Some("Indonesian") => Self::Indonesian,
-			Some("Vietnamese") => Self::Vietnamese,
-			Some("Thai") => Self::Thai,
-			Some("Swedish") => Self::Swedish,
+	fn from_index(index: i32) -> Self {
+		match index {
+			1 => Self::Japanese,
+			2 => Self::ChineseSimplified,
+			3 => Self::ChineseTraditional,
+			4 => Self::Korean,
+			5 => Self::Spanish,
+			6 => Self::German,
+			7 => Self::French,
+			8 => Self::Italian,
+			9 => Self::Portuguese,
+			10 => Self::Indonesian,
+			11 => Self::Vietnamese,
+			12 => Self::Thai,
+			13 => Self::Swedish,
 			_ => Self::English,
 		}
 	}
@@ -85,12 +85,12 @@ impl SortOption {
 		}
 	}
 
-	fn from_setting(s: Option<&str>) -> Self {
-		match s {
-			Some("Purchase Date") => Self::PurchaseDate,
-			Some("Release Date") => Self::ReleaseDate,
-			Some("Writer/Circle Name") => Self::WriterCircle,
-			Some("Title") => Self::Title,
+	fn from_setting(index: i32) -> Self {
+		match index {
+			1 => Self::PurchaseDate,
+			2 => Self::ReleaseDate,
+			3 => Self::WriterCircle,
+			4 => Self::Title,
 			_ => Self::RecentlyOpened,
 		}
 	}
@@ -109,7 +109,7 @@ const WEB_COOKIES_KEY: &str = "web_cookies";
 const SALES_FETCHED_AT_KEY: &str = "sales_fetched_at_unix";
 
 pub fn get_preferred_language() -> Language {
-	Language::from_setting(defaults_get::<String>(PREFERRED_LANGUAGE_KEY).as_deref())
+	Language::from_index(defaults_get::<i32>(PREFERRED_LANGUAGE_KEY).unwrap_or(0))
 }
 
 pub fn show_series_prefix() -> bool {
@@ -296,7 +296,7 @@ pub fn update_view_history_enabled() -> bool {
 // ---------------------------------------------------------------------------
 
 pub fn get_default_sort() -> SortOption {
-	SortOption::from_setting(defaults_get::<String>("default_sort").as_deref())
+	SortOption::from_setting(defaults_get::<i32>("default_sort").unwrap_or(1))
 }
 
 pub fn get_default_sort_ascending() -> bool {
