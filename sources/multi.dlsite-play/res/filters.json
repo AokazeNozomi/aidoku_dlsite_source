@@ -75,7 +75,7 @@
       "VCM",
       "PBC"
     ],
-    "default": ["MNG"]
+    "defaultIncluded": ["MNG"]
   },
   {
     "id": "translation",
@@ -91,7 +91,8 @@
     "type": "multi-select",
     "usesTagStyle": true,
     "options": ["Safe", "R-15", "R-18"],
-    "ids": ["safe", "r15", "r18"]
+    "ids": ["safe", "r15", "r18"],
+    "defaultIncluded": ["safe", "r15"]
   },
   {
     "id": "genre_focus",

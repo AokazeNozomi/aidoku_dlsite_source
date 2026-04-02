@@ -71,7 +71,7 @@
 			"VCM",
 			"PBC"
 		],
-		"default": ["MNG"]
+		"defaultIncluded": ["MNG"]
 	},
 	{
 		"id": "content_rating",
@@ -87,7 +87,8 @@
 			"safe",
 			"r15",
 			"r18"
-		]
+		],
+		"defaultIncluded": ["safe", "r15"]
 	},
 	{
 		"id": "genre_focus",
