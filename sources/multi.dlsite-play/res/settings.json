@@ -57,41 +57,7 @@
 					"listings",
 					"content"
 				]
-			}
-		]
-	},
-	{
-		"type": "group",
-		"title": "Languages",
-		"footer": "Language info comes from DLsite's public API, which is region-locked. Use a VPN to Japan to fetch languages for region-locked works.",
-		"items": [
-			{
-				"type": "button",
-				"title": "Fetch All Languages",
-				"notification": "fetch_languages",
-				"confirmTitle": "Fetch Languages?",
-				"confirmText": "This will fetch language information for all works in your library. Use a Japanese VPN to include region-locked titles. Already-fetched works are skipped. This may take a while for large libraries."
-			}
-		]
-	},
-	{
-		"type": "group",
-		"title": "View History",
-		"items": [
-			{
-				"type": "switch",
-				"key": "update_view_history",
-				"title": "Update View History",
-				"subtitle": "Update DLsite Play's recently opened list when reading.",
-				"default": false
-			}
-		]
-	},
-	{
-		"type": "group",
-		"title": "Sort",
-		"footer": "Sort order for library listing.",
-		"items": [
+			},
 			{
 				"type": "select",
 				"key": "default_sort",
@@ -119,14 +85,7 @@
 					"listings",
 					"content"
 				]
-			}
-		]
-	},
-	{
-		"type": "group",
-		"title": "Content Rating",
-		"footer": "Default content rating filter for library and home. Search filter overrides this when active.",
-		"items": [
+			},
 			{
 				"type": "multi-select",
 				"key": "default_content_rating",
@@ -149,6 +108,33 @@
 					"listings",
 					"content"
 				]
+			}
+		]
+	},
+	{
+		"type": "group",
+		"title": "Languages",
+		"footer": "Language info comes from DLsite's public API, which is region-locked. Use a VPN to Japan to fetch languages for region-locked works.",
+		"items": [
+			{
+				"type": "button",
+				"title": "Fetch All Languages",
+				"notification": "fetch_languages",
+				"confirmTitle": "Fetch Languages?",
+				"confirmText": "This will fetch language information for all works in your library. Use a Japanese VPN to include region-locked titles. Already-fetched works are skipped. This may take a while for large libraries."
+			}
+		]
+	},
+	{
+		"type": "group",
+		"title": "View History",
+		"items": [
+			{
+				"type": "switch",
+				"key": "update_view_history",
+				"title": "Update View History",
+				"subtitle": "Update DLsite Play's recently opened list when reading.",
+				"default": false
 			}
 		]
 	},

@@ -47,14 +47,7 @@
 				"refreshes": [
 					"content"
 				]
-			}
-		]
-	},
-	{
-		"type": "group",
-		"title": "Content Rating",
-		"footer": "Default content rating filter for search results.",
-		"items": [
+			},
 			{
 				"type": "multi-select",
 				"key": "default_content_rating",
