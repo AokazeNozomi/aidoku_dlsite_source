@@ -25,6 +25,8 @@
 				],
 				"default": "English",
 				"refreshes": [
+					"home",
+					"listings",
 					"content"
 				]
 			}
