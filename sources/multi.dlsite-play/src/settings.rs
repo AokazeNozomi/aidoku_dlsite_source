@@ -300,7 +300,8 @@ pub fn get_default_sort() -> SortOption {
 }
 
 pub fn get_default_sort_ascending() -> bool {
-	defaults_get::<bool>("default_sort_ascending").unwrap_or(true)
+	// 0 = Ascending, 1 = Descending
+	defaults_get::<i32>("default_sort_ascending").unwrap_or(0) == 0
 }
 
 pub use dlsite_common::settings::get_default_content_ratings;

@@ -76,11 +76,14 @@
 				]
 			},
 			{
-				"type": "switch",
+				"type": "select",
 				"key": "default_sort_ascending",
-				"title": "Ascending",
-				"subtitle": "Sort in ascending order instead of descending.",
-				"default": true,
+				"title": "Sort Direction",
+				"values": [
+					"Ascending",
+					"Descending"
+				],
+				"default": "Ascending",
 				"refreshes": [
 					"listings",
 					"content"
