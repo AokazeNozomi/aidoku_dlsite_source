@@ -20,11 +20,20 @@ fn build_search_url(
 	keyword: Option<&str>,
 	page: i32,
 	sort: ExploreSort,
+	languages: &[String],
 	work_types: &[String],
 	content_ratings: &[String],
 	genres: &[u32],
 ) -> String {
 	let mut path = String::from("/fsr/ajax/=/language/jp");
+
+	// Language options — uses options[N] indexed array params
+	if !languages.is_empty() {
+		path.push_str("/options_and_or/and");
+		for (i, lang) in languages.iter().enumerate() {
+			path.push_str(&format!("/options%5B{}%5D/{}", i, lang));
+		}
+	}
 
 	// Content ratings — use indexed array params
 	let mut cr_idx = 0usize;
@@ -189,11 +198,12 @@ pub fn search_explore(
 	keyword: Option<&str>,
 	page: i32,
 	sort: ExploreSort,
+	languages: &[String],
 	work_types: &[String],
 	content_ratings: &[String],
 	genres: &[u32],
 ) -> Result<ExploreResult> {
-	let url = build_search_url(keyword, page, sort, work_types, content_ratings, genres);
+	let url = build_search_url(keyword, page, sort, languages, work_types, content_ratings, genres);
 	print(format!("[dlsite-explore] → GET {}", url));
 
 	let resp = Request::get(&url)?
@@ -321,7 +331,7 @@ mod tests {
 
 	#[aidoku_test]
 	fn build_search_url_basic() {
-		let url = build_search_url(None, 1, ExploreSort::Newest, &[], &[], &[]);
+		let url = build_search_url(None, 1, ExploreSort::Newest, &[], &[], &[], &[]);
 		assert_eq!(
 			url,
 			"https://www.dlsite.com/maniax/fsr/ajax/=/language/jp/order%5B0%5D/release_d/page/1"
@@ -329,10 +339,31 @@ mod tests {
 	}
 
 	#[aidoku_test]
+	fn build_search_url_with_single_language() {
+		let langs = vec!["ENG".into()];
+		let url = build_search_url(None, 1, ExploreSort::Newest, &langs, &[], &[], &[]);
+		assert!(url.contains("/language/jp"));
+		assert!(url.contains("/options_and_or/and"));
+		assert!(url.contains("/options%5B0%5D/ENG"));
+	}
+
+	#[aidoku_test]
+	fn build_search_url_with_multiple_languages() {
+		let langs = vec!["JPN".into(), "ENG".into(), "NM".into()];
+		let url = build_search_url(None, 1, ExploreSort::Newest, &langs, &[], &[], &[]);
+		assert!(url.contains("/language/jp"));
+		assert!(url.contains("/options_and_or/and"));
+		assert!(url.contains("/options%5B0%5D/JPN"));
+		assert!(url.contains("/options%5B1%5D/ENG"));
+		assert!(url.contains("/options%5B2%5D/NM"));
+	}
+
+	#[aidoku_test]
 	fn build_search_url_with_filters() {
 		let types = vec!["MNG".into(), "WBT".into()];
 		let ratings = vec!["r18".into()];
-		let url = build_search_url(Some("test"), 2, ExploreSort::Trending, &types, &ratings, &[]);
+		let url =
+			build_search_url(Some("test"), 2, ExploreSort::Trending, &[], &types, &ratings, &[]);
 		assert!(url.contains("/age_category%5B0%5D/adult"));
 		assert!(url.contains("/work_type%5B0%5D/MNG"));
 		assert!(url.contains("/work_type%5B1%5D/WBT"));
@@ -344,14 +375,14 @@ mod tests {
 	#[aidoku_test]
 	fn build_search_url_with_multiple_ratings() {
 		let ratings = vec!["safe".into(), "r15".into()];
-		let url = build_search_url(None, 1, ExploreSort::Newest, &[], &ratings, &[]);
+		let url = build_search_url(None, 1, ExploreSort::Newest, &[], &[], &ratings, &[]);
 		assert!(url.contains("/age_category%5B0%5D/general"));
 		assert!(url.contains("/age_category%5B1%5D/r15"));
 	}
 
 	#[aidoku_test]
 	fn build_search_url_with_genres() {
-		let url = build_search_url(None, 1, ExploreSort::Newest, &[], &[], &[509, 66]);
+		let url = build_search_url(None, 1, ExploreSort::Newest, &[], &[], &[], &[509, 66]);
 		assert!(url.contains("/genre%5B0%5D/509"));
 		assert!(url.contains("/genre%5B1%5D/66"));
 	}

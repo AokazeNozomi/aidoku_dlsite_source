@@ -3,7 +3,6 @@ use aidoku::{
 	ContentRating, Manga,
 };
 
-pub use dlsite_common::models::PublicWork;
 
 // ---------------------------------------------------------------------------
 // Explore sort options (server-side via /fsr/ajax/=/)

@@ -13,6 +13,47 @@
 		}
 	},
 	{
+		"id": "language",
+		"title": "Language",
+		"type": "multi-select",
+		"usesTagStyle": true,
+		"options": [
+			"Japanese",
+			"English",
+			"Korean",
+			"Chinese (Simplified)",
+			"Chinese (Traditional)",
+			"Spanish",
+			"German",
+			"French",
+			"Indonesian",
+			"Italian",
+			"Portuguese (Brazil)",
+			"Swedish",
+			"Thai",
+			"Vietnamese",
+			"Alingual"
+		],
+		"ids": [
+			"JPN",
+			"ENG",
+			"KOR",
+			"CHI",
+			"TWN",
+			"SPA",
+			"GER",
+			"FRE",
+			"IND",
+			"ITA",
+			"POR",
+			"SWE",
+			"THA",
+			"VIE",
+			"NM"
+		],
+		"defaultIncluded": ["ENG", "JPN"]
+	},
+	{
 		"id": "work_type",
 		"title": "Work Type",
 		"type": "multi-select",

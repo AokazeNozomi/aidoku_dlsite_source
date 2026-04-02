@@ -2,7 +2,6 @@
 
 use aidoku::{
 	alloc::{String, Vec},
-	prelude::*,
 	register_source, FilterValue, Manga, MangaPageResult, Page, Result, Source,
 };
 
@@ -26,6 +25,7 @@ impl Source for DlsiteExplore {
 		filters: Vec<FilterValue>,
 	) -> Result<MangaPageResult> {
 		let sort = extract_sort_filter(&filters);
+		let language = extract_language_filter(&filters);
 		let work_types = extract_work_type_filter(&filters);
 		let content_rating_filter = extract_content_rating_filter(&filters);
 		let genre_filter = extract_genre_filter(&filters);
@@ -48,6 +48,7 @@ impl Source for DlsiteExplore {
 			query.as_deref(),
 			page,
 			sort,
+			&language,
 			&effective_work_types,
 			&effective_content_rating,
 			&genre_filter,
@@ -84,6 +85,17 @@ impl Source for DlsiteExplore {
 // ---------------------------------------------------------------------------
 // Filter extraction
 // ---------------------------------------------------------------------------
+
+fn extract_language_filter(filters: &[FilterValue]) -> Vec<String> {
+	for f in filters {
+		if let FilterValue::MultiSelect { id, included, .. } = f {
+			if id == "language" && !included.is_empty() {
+				return included.clone();
+			}
+		}
+	}
+	Vec::new()
+}
 
 fn extract_sort_filter(filters: &[FilterValue]) -> ExploreSort {
 	for f in filters {
