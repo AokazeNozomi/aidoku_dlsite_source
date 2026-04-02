@@ -344,6 +344,9 @@ impl ListingProvider for DlsitePlay {
 	fn get_manga_list(&self, listing: Listing, page: i32) -> Result<MangaPageResult> {
 		match listing.id.as_str() {
 			"library" => {
+				if !settings::is_logged_in() {
+					bail!("Not logged in. Log in from the source settings to view your library.");
+				}
 				let work_types = settings::get_work_type_setting();
 				let content_rating_filter = settings_content_rating_to_filter();
 				let sort_option = settings::get_default_sort();
@@ -360,6 +363,18 @@ impl ListingProvider for DlsitePlay {
 
 impl Home for DlsitePlay {
 	fn get_home(&self) -> Result<HomeLayout> {
+		if !settings::is_logged_in() {
+			return Ok(HomeLayout {
+				components: Vec::from([HomeComponent {
+					title: Some(String::from("Not Logged In")),
+					subtitle: Some(String::from(
+						"Log in from the source settings to view your library.",
+					)),
+					value: HomeComponentValue::empty_scroller(),
+				}]),
+			});
+		}
+
 		let work_types = settings::get_work_type_setting();
 		let content_rating_filter = settings_content_rating_to_filter();
 		let worknos = get_or_fetch_worknos(1)?;
