@@ -73,38 +73,11 @@ pub fn get_preferred_language() -> Language {
 // Content rating
 // ---------------------------------------------------------------------------
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum ContentRatingFilter {
-	All = 0,
-	Safe = 1,
-	R15 = 2,
-	R18 = 3,
-}
-
-impl ContentRatingFilter {
-	pub fn from_setting(s: Option<&str>) -> Self {
-		match s {
-			Some("Safe") => Self::Safe,
-			Some("R-15") => Self::R15,
-			Some("R-18") => Self::R18,
-			_ => Self::All,
-		}
-	}
-
-	/// Convert to a filter string for API calls.
-	/// Returns `None` for `All` (no filtering).
-	pub fn to_filter_string(self) -> Option<String> {
-		match self {
-			Self::Safe => Some("safe".into()),
-			Self::R15 => Some("r15".into()),
-			Self::R18 => Some("r18".into()),
-			Self::All => None,
-		}
-	}
-}
-
-pub fn get_default_content_rating() -> ContentRatingFilter {
-	ContentRatingFilter::from_setting(defaults_get::<String>("default_content_rating").as_deref())
+/// Read default content rating filter from multi-select setting.
+/// Returns the list of selected rating codes (e.g. `["safe", "r15"]`).
+/// Empty vec means "all" (no filtering).
+pub fn get_default_content_ratings() -> Vec<String> {
+	defaults_get::<Vec<String>>("default_content_rating").unwrap_or_default()
 }
 
 // ---------------------------------------------------------------------------

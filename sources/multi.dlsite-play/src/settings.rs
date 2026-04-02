@@ -96,7 +96,6 @@ impl SortOption {
 	}
 }
 
-pub use dlsite_common::settings::ContentRatingFilter;
 
 // ---------------------------------------------------------------------------
 // Settings getters
@@ -304,5 +303,5 @@ pub fn get_default_sort_ascending() -> bool {
 	defaults_get::<bool>("default_sort_ascending").unwrap_or(false)
 }
 
-pub use dlsite_common::settings::get_default_content_rating;
+pub use dlsite_common::settings::get_default_content_ratings;
 

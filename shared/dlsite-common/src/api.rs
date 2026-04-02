@@ -1,6 +1,6 @@
 use crate::models::PublicWork;
 use aidoku::{
-	alloc::{format, String, Vec},
+	alloc::{format, Vec},
 	imports::{net::Request, std::print},
 	Result,
 };

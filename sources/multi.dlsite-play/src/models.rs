@@ -239,15 +239,19 @@ impl PurchaseWork {
 		})
 	}
 
-	/// Check if this work's age_category matches the given content rating filter value.
-	pub fn matches_content_rating(&self, filter: &str) -> bool {
+	/// Check if this work's age_category matches any of the given content rating
+	/// filter values. Empty slice means "all" (always matches).
+	pub fn matches_content_ratings(&self, filters: &[String]) -> bool {
+		if filters.is_empty() {
+			return true;
+		}
 		let age = self.age_category.as_deref().unwrap_or("");
-		match filter {
+		filters.iter().any(|f| match f.as_str() {
 			"safe" => !matches!(age, "R18" | "r18" | "R15" | "r15"),
 			"r15" => matches!(age, "R15" | "r15"),
 			"r18" => matches!(age, "R18" | "r18"),
-			_ => true,
-		}
+			_ => false,
+		})
 	}
 }
 

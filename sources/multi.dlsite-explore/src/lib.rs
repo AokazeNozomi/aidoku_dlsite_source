@@ -38,15 +38,18 @@ impl Source for DlsiteExplore {
 		};
 
 		// Fall back to settings content rating if no filter selected
-		let effective_content_rating = content_rating_filter
-			.or_else(settings_content_rating_to_filter);
+		let effective_content_rating = if content_rating_filter.is_empty() {
+			settings_content_rating_to_filter()
+		} else {
+			content_rating_filter
+		};
 
 		let result = api::search_explore(
 			query.as_deref(),
 			page,
 			sort,
 			&effective_work_types,
-			effective_content_rating.as_deref(),
+			&effective_content_rating,
 			&genre_filter,
 		)?;
 
@@ -88,7 +91,7 @@ fn extract_sort_filter(filters: &[FilterValue]) -> ExploreSort {
 			return ExploreSort::from_index(*index);
 		}
 	}
-	ExploreSort::Newest
+	ExploreSort::Trending
 }
 
 fn extract_work_type_filter(filters: &[FilterValue]) -> Vec<String> {
@@ -102,15 +105,15 @@ fn extract_work_type_filter(filters: &[FilterValue]) -> Vec<String> {
 	Vec::new()
 }
 
-fn extract_content_rating_filter(filters: &[FilterValue]) -> Option<String> {
+fn extract_content_rating_filter(filters: &[FilterValue]) -> Vec<String> {
 	for f in filters {
-		if let FilterValue::Select { id, value } = f {
-			if id == "content_rating" && value != "all" {
-				return Some(value.clone());
+		if let FilterValue::MultiSelect { id, included, .. } = f {
+			if id == "content_rating" && !included.is_empty() {
+				return included.clone();
 			}
 		}
 	}
-	None
+	Vec::new()
 }
 
 fn extract_genre_filter(filters: &[FilterValue]) -> Vec<u32> {
@@ -125,9 +128,9 @@ fn extract_genre_filter(filters: &[FilterValue]) -> Vec<u32> {
 	ids
 }
 
-/// Convert the content rating setting to a filter string.
-fn settings_content_rating_to_filter() -> Option<String> {
-	settings::get_default_content_rating().to_filter_string()
+/// Read content rating filter from settings.
+fn settings_content_rating_to_filter() -> Vec<String> {
+	settings::get_default_content_ratings()
 }
 
 register_source!(DlsiteExplore);

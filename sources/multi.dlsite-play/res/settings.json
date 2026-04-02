@@ -128,16 +128,23 @@
 		"footer": "Default content rating filter for library and home. Search filter overrides this when active.",
 		"items": [
 			{
-				"type": "select",
+				"type": "multi-select",
 				"key": "default_content_rating",
 				"title": "Content Rating Filter",
 				"values": [
-					"All",
+					"safe",
+					"r15",
+					"r18"
+				],
+				"titles": [
 					"Safe",
 					"R-15",
 					"R-18"
 				],
-				"default": "All",
+				"default": [
+					"safe",
+					"r15"
+				],
 				"refreshes": [
 					"listings",
 					"content"

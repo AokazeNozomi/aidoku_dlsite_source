@@ -74,7 +74,8 @@
       "ET3",
       "VCM",
       "PBC"
-    ]
+    ],
+    "default": ["MNG"]
   },
   {
     "id": "translation",
@@ -87,10 +88,10 @@
   {
     "id": "content_rating",
     "title": "Content Rating",
-    "type": "select",
+    "type": "multi-select",
     "usesTagStyle": true,
-    "options": ["All", "Safe", "R-15", "R-18"],
-    "ids": ["all", "safe", "r15", "r18"]
+    "options": ["Safe", "R-15", "R-18"],
+    "ids": ["safe", "r15", "r18"]
   },
   {
     "id": "genre_focus",
