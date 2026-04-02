@@ -173,28 +173,18 @@ impl DlsitePlay {
 					let updated = work.into_manga(&genre_names, &series_names);
 					manga.copy_from(updated);
 
-					if let Some(lang_str) = get_or_fetch_languages(&manga.key) {
+					if let Some(label) = get_work_language(&manga.key) {
 						let mut tags = manga.tags.take().unwrap_or_default();
-						for part in lang_str.split(',') {
-							if let Some((_code, label)) = part.split_once(':') {
-								let tag = format!("Lang: {}", label);
-								if !tags.contains(&tag) {
-									tags.push(tag);
-								}
-							}
+						let tag = format!("Lang: {}", label);
+						if !tags.contains(&tag) {
+							tags.push(tag);
 						}
 						manga.tags = Some(tags);
 
-						let labels: Vec<&str> = lang_str
-							.split(',')
-							.filter_map(|s| s.split_once(':').map(|(_, l)| l))
-							.collect();
-						if !labels.is_empty() {
-							let mut desc = manga.description.take().unwrap_or_default();
-							desc.push('\n');
-							desc.push_str(&format!("Languages: {}", labels.join(", ")));
-							manga.description = Some(desc);
-						}
+						let mut desc = manga.description.take().unwrap_or_default();
+						desc.push('\n');
+						desc.push_str(&format!("Language: {}", label));
+						manga.description = Some(desc);
 					}
 				}
 			} else if needs_details {
@@ -278,22 +268,18 @@ impl DlsitePlay {
 			let updated = models::series_manga(&title_id, &sname, &works, &genre_names);
 			manga.copy_from(updated);
 
-			// Collect languages from all member works as a union.
+			// Collect languages from all member works (purchased editions only).
 			let mut seen = BTreeSet::new();
 			let mut tags = manga.tags.take().unwrap_or_default();
 			let mut lang_labels: Vec<String> = Vec::new();
 			for w in &works {
-				if let Some(lang_str) = get_or_fetch_languages(&w.workno) {
-					for part in lang_str.split(',') {
-						if let Some((_code, label)) = part.split_once(':') {
-							if seen.insert(label.to_string()) {
-								let tag = format!("Lang: {}", label);
-								if !tags.contains(&tag) {
-									tags.push(tag);
-								}
-								lang_labels.push(label.to_string());
-							}
+				if let Some(label) = get_work_language(&w.workno) {
+					if seen.insert(label.clone()) {
+						let tag = format!("Lang: {}", label);
+						if !tags.contains(&tag) {
+							tags.push(tag);
 						}
+						lang_labels.push(label);
 					}
 				}
 			}
@@ -322,6 +308,8 @@ impl DlsitePlay {
 					.as_ref()
 					.map(|n| n.best())
 					.unwrap_or_else(|| work.workno.clone());
+
+				let language = get_work_language(&work.workno);
 
 				let token = play::download_token(&work.workno)?;
 				let ziptree = play::fetch_ziptree(&token)?;
@@ -355,6 +343,7 @@ impl DlsitePlay {
 						chapter_number: Some((ch_idx + 1) as f32),
 						date_uploaded: release_date,
 						url,
+						language: language.clone(),
 						..Default::default()
 					});
 				}
@@ -1270,6 +1259,45 @@ fn get_or_fetch_languages(workno: &str) -> Option<String> {
 	let value = pairs.join(",");
 	settings::set_cached_languages(workno, &value);
 	Some(value)
+}
+
+/// Resolve the specific language of a purchased work by matching its workno
+/// against the language editions list. Falls back to all edition labels when
+/// the workno doesn't appear in the editions (e.g. mono-language works).
+fn get_work_language(workno: &str) -> Option<String> {
+	let editions = public::get_language_editions(workno).ok()?;
+	if editions.is_empty() {
+		return None;
+	}
+	// If the queried workno matches one of the editions, that's the language
+	// of the copy the user owns.
+	if let Some(ed) = editions.iter().find(|e| e.workno == workno) {
+		let name = lang_english_name(&ed.lang);
+		return Some(if name == "Other" {
+			ed.label.clone()
+		} else {
+			name.to_string()
+		});
+	}
+	// Mono-language works only have one edition — use it directly.
+	if editions.len() == 1 {
+		let ed = &editions[0];
+		let name = lang_english_name(&ed.lang);
+		return Some(if name == "Other" {
+			ed.label.clone()
+		} else {
+			name.to_string()
+		});
+	}
+	// Multiple editions but no workno match — list them all.
+	let labels: Vec<&str> = editions
+		.iter()
+		.map(|e| {
+			let name = lang_english_name(&e.lang);
+			if name == "Other" { e.label.as_str() } else { name }
+		})
+		.collect();
+	Some(labels.join(", "))
 }
 
 fn lang_english_name(code: &str) -> &'static str {
