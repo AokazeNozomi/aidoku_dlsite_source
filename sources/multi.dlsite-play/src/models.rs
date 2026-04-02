@@ -21,6 +21,24 @@ pub struct LocalizedName {
 	pub zh_TW: Option<String>,
 	#[serde(default)]
 	pub ko_KR: Option<String>,
+	#[serde(default)]
+	pub es_ES: Option<String>,
+	#[serde(default)]
+	pub de_DE: Option<String>,
+	#[serde(default)]
+	pub fr_FR: Option<String>,
+	#[serde(default)]
+	pub it_IT: Option<String>,
+	#[serde(default)]
+	pub pt_BR: Option<String>,
+	#[serde(default)]
+	pub id_ID: Option<String>,
+	#[serde(default)]
+	pub vi_VN: Option<String>,
+	#[serde(default)]
+	pub th_TH: Option<String>,
+	#[serde(default)]
+	pub sv_SE: Option<String>,
 }
 
 impl LocalizedName {
@@ -32,6 +50,15 @@ impl LocalizedName {
 			Language::ChineseSimplified => self.zh_CN.as_deref(),
 			Language::ChineseTraditional => self.zh_TW.as_deref(),
 			Language::Korean => self.ko_KR.as_deref(),
+			Language::Spanish => self.es_ES.as_deref(),
+			Language::German => self.de_DE.as_deref(),
+			Language::French => self.fr_FR.as_deref(),
+			Language::Italian => self.it_IT.as_deref(),
+			Language::Portuguese => self.pt_BR.as_deref(),
+			Language::Indonesian => self.id_ID.as_deref(),
+			Language::Vietnamese => self.vi_VN.as_deref(),
+			Language::Thai => self.th_TH.as_deref(),
+			Language::Swedish => self.sv_SE.as_deref(),
 		};
 		primary
 			.or(self.en_US.as_deref())
@@ -39,6 +66,15 @@ impl LocalizedName {
 			.or(self.zh_CN.as_deref())
 			.or(self.zh_TW.as_deref())
 			.or(self.ko_KR.as_deref())
+			.or(self.es_ES.as_deref())
+			.or(self.de_DE.as_deref())
+			.or(self.fr_FR.as_deref())
+			.or(self.it_IT.as_deref())
+			.or(self.pt_BR.as_deref())
+			.or(self.id_ID.as_deref())
+			.or(self.vi_VN.as_deref())
+			.or(self.th_TH.as_deref())
+			.or(self.sv_SE.as_deref())
 			.unwrap_or("Unknown")
 			.into()
 	}
@@ -926,6 +962,15 @@ mod tests {
 				zh_CN: None,
 				zh_TW: None,
 				ko_KR: None,
+				es_ES: None,
+				de_DE: None,
+				fr_FR: None,
+				it_IT: None,
+				pt_BR: None,
+				id_ID: None,
+				vi_VN: None,
+				th_TH: None,
+				sv_SE: None,
 			}),
 			name_phonetic: None,
 			maker: None,

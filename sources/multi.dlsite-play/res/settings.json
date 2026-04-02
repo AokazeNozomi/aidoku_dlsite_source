@@ -30,7 +30,16 @@
 					"Japanese",
 					"Chinese (Simplified)",
 					"Chinese (Traditional)",
-					"Korean"
+					"Korean",
+					"Spanish",
+					"German",
+					"French",
+					"Italian",
+					"Portuguese (Brazil)",
+					"Indonesian",
+					"Vietnamese",
+					"Thai",
+					"Swedish"
 				],
 				"default": "English",
 				"refreshes": [

@@ -2,7 +2,7 @@
   "info": {
     "id": "multi.dlsite-play",
     "name": "DLsite Play",
-    "version": 92,
+    "version": 93,
     "url": "https://play.dlsite.com/login/",
     "contentRating": 2,
     "languages": [
@@ -12,7 +12,7 @@
       "zh-Hant",
       "ko",
       "es",
-      "ar",
+
       "de",
       "fr",
       "id",

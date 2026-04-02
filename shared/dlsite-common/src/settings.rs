@@ -14,6 +14,15 @@ pub enum Language {
 	ChineseSimplified = 2,
 	ChineseTraditional = 3,
 	Korean = 4,
+	Spanish = 5,
+	German = 6,
+	French = 7,
+	Italian = 8,
+	Portuguese = 9,
+	Indonesian = 10,
+	Vietnamese = 11,
+	Thai = 12,
+	Swedish = 13,
 }
 
 impl Language {
@@ -23,6 +32,15 @@ impl Language {
 			Some("Chinese (Simplified)") => Self::ChineseSimplified,
 			Some("Chinese (Traditional)") => Self::ChineseTraditional,
 			Some("Korean") => Self::Korean,
+			Some("Spanish") => Self::Spanish,
+			Some("German") => Self::German,
+			Some("French") => Self::French,
+			Some("Italian") => Self::Italian,
+			Some("Portuguese (Brazil)") => Self::Portuguese,
+			Some("Indonesian") => Self::Indonesian,
+			Some("Vietnamese") => Self::Vietnamese,
+			Some("Thai") => Self::Thai,
+			Some("Swedish") => Self::Swedish,
 			_ => Self::English,
 		}
 	}
@@ -34,6 +52,15 @@ impl Language {
 			Self::ChineseSimplified => "zh_CN",
 			Self::ChineseTraditional => "zh_TW",
 			Self::Korean => "ko_KR",
+			Self::Spanish => "es_ES",
+			Self::German => "de_DE",
+			Self::French => "fr_FR",
+			Self::Italian => "it_IT",
+			Self::Portuguese => "pt_BR",
+			Self::Indonesian => "id_ID",
+			Self::Vietnamese => "vi_VN",
+			Self::Thai => "th_TH",
+			Self::Swedish => "sv_SE",
 		}
 	}
 }
