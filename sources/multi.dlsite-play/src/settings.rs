@@ -26,6 +26,16 @@ impl Language {
 			_ => Self::English,
 		}
 	}
+
+	pub fn locale_code(self) -> &'static str {
+		match self {
+			Self::English => "en_US",
+			Self::Japanese => "ja_JP",
+			Self::ChineseSimplified => "zh_CN",
+			Self::ChineseTraditional => "zh_TW",
+			Self::Korean => "ko_KR",
+		}
+	}
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]

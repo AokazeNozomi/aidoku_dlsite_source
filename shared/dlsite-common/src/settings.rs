@@ -4,6 +4,45 @@ use aidoku::{
 };
 
 // ---------------------------------------------------------------------------
+// Language
+// ---------------------------------------------------------------------------
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum Language {
+	English = 0,
+	Japanese = 1,
+	ChineseSimplified = 2,
+	ChineseTraditional = 3,
+	Korean = 4,
+}
+
+impl Language {
+	pub fn from_setting(s: Option<&str>) -> Self {
+		match s {
+			Some("Japanese") => Self::Japanese,
+			Some("Chinese (Simplified)") => Self::ChineseSimplified,
+			Some("Chinese (Traditional)") => Self::ChineseTraditional,
+			Some("Korean") => Self::Korean,
+			_ => Self::English,
+		}
+	}
+
+	pub fn locale_code(self) -> &'static str {
+		match self {
+			Self::English => "en_US",
+			Self::Japanese => "ja_JP",
+			Self::ChineseSimplified => "zh_CN",
+			Self::ChineseTraditional => "zh_TW",
+			Self::Korean => "ko_KR",
+		}
+	}
+}
+
+pub fn get_preferred_language() -> Language {
+	Language::from_setting(defaults_get::<String>("preferred_language").as_deref())
+}
+
+// ---------------------------------------------------------------------------
 // Content rating
 // ---------------------------------------------------------------------------
 

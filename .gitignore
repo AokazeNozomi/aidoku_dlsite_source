@@ -19,3 +19,4 @@ templates/*/target
 /.cursor
 /scripts
 tests/full_cookies.txt
+/shared/dlsite-common/target

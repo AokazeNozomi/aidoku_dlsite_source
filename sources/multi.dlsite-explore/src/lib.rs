@@ -63,7 +63,8 @@ impl Source for DlsiteExplore {
 		_needs_chapters: bool,
 	) -> Result<Manga> {
 		if needs_details {
-			if let Ok(Some(public_work)) = api::get_public_work_details(&manga.key) {
+			let locale = settings::get_preferred_language().locale_code();
+			if let Ok(Some(public_work)) = api::get_public_work_details(&manga.key, Some(locale)) {
 				let updated = public_work.into_manga();
 				manga.copy_from(updated);
 			}

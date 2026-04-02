@@ -196,8 +196,9 @@ impl DlsitePlay {
 				}
 			} else if needs_details {
 				// Fallback to public product API for non-purchased works.
+				let locale = settings::get_preferred_language().locale_code();
 				if let Ok(Some(public_work)) =
-					public::get_public_work_details(&manga.key)
+					public::get_public_work_details(&manga.key, Some(locale))
 				{
 					let updated = public_work.into_manga();
 					manga.copy_from(updated);

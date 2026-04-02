@@ -1,6 +1,28 @@
 [
 	{
 		"type": "group",
+		"title": "Display",
+		"items": [
+			{
+				"type": "select",
+				"key": "preferred_language",
+				"title": "Preferred Language",
+				"values": [
+					"English",
+					"Japanese",
+					"Chinese (Simplified)",
+					"Chinese (Traditional)",
+					"Korean"
+				],
+				"default": "English",
+				"refreshes": [
+					"content"
+				]
+			}
+		]
+	},
+	{
+		"type": "group",
 		"title": "Content Rating",
 		"footer": "Default content rating filter for search results.",
 		"items": [
