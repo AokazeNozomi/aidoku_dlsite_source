@@ -8,10 +8,13 @@
 				"key": "site",
 				"title": "DLsite Site",
 				"values": [
-					"Doujin",
-					"PC Games"
+					"Adult Doujin",
+					"H Games",
+					"Adult Comics",
+					"Otome",
+					"BL"
 				],
-				"default": "Doujin",
+				"default": "Adult Doujin",
 				"refreshes": [
 					"listings",
 					"content"
@@ -61,14 +64,17 @@
 				"title": "Content Rating Filter",
 				"values": [
 					"safe",
-					"r15"
+					"r15",
+					"r18"
 				],
 				"titles": [
 					"Safe",
-					"R-15"
+					"R-15",
+					"R-18"
 				],
 				"default": [
-					"safe"
+					"safe",
+					"r15"
 				],
 				"refreshes": [
 					"listings",

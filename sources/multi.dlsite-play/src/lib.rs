@@ -15,6 +15,9 @@ mod play;
 mod public;
 mod settings;
 
+/// DLsite sub-site slug used for public API calls.
+const DLSITE_SITE_SLUG: &str = "maniax";
+
 const PAGE_SIZE: usize = 20;
 /// Skip duplicate `/content/sales` calls when Aidoku requests page 1 several times in a row.
 const SALES_CACHE_MAX_AGE_SEC: i64 = 120;
@@ -198,9 +201,9 @@ impl DlsitePlay {
 				// Fallback to public product API for non-purchased works.
 				let locale = settings::get_preferred_language().locale_code();
 				if let Ok(Some(public_work)) =
-					public::get_public_work_details(&manga.key, Some(locale))
+					public::get_public_work_details(DLSITE_SITE_SLUG, &manga.key, Some(locale))
 				{
-					let updated = public_work.into_manga();
+					let updated = public_work.into_manga(DLSITE_SITE_SLUG);
 					manga.copy_from(updated);
 				}
 			}

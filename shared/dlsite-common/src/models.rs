@@ -78,7 +78,7 @@ impl PublicWork {
 		}
 	}
 
-	pub fn into_manga(self) -> Manga {
+	pub fn into_manga(self, site_slug: &str) -> Manga {
 		let workno = self.workno.clone().unwrap_or_default();
 		let title = self.work_name.clone().unwrap_or_else(|| workno.clone());
 
@@ -181,8 +181,8 @@ impl PublicWork {
 		let tags = if tags.is_empty() { None } else { Some(tags) };
 
 		let url = Some(format!(
-			"https://www.dlsite.com/maniax/work/=/product_id/{}.html",
-			workno
+			"https://www.dlsite.com/{}/work/=/product_id/{}.html",
+			site_slug, workno
 		));
 
 		Manga {

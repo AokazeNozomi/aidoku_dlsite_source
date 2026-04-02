@@ -11,8 +11,8 @@ pub use dlsite_common::api::get_public_work_details;
 /// Returns an empty Vec on failure (non-fatal enrichment).
 pub fn get_language_editions(workno: &str) -> Result<Vec<LanguageEdition>> {
 	let url = format!(
-		"https://www.dlsite.com/maniax/api/=/product.json?workno={}",
-		workno
+		"https://www.dlsite.com/{}/api/=/product.json?workno={}",
+		crate::DLSITE_SITE_SLUG, workno
 	);
 	print(format!("[dlsite-play] → GET {} (public API)", url));
 	let resp = Request::get(&url)?

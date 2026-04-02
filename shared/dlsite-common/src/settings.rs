@@ -70,6 +70,28 @@ pub fn get_preferred_language() -> Language {
 }
 
 // ---------------------------------------------------------------------------
+// Site slug
+// ---------------------------------------------------------------------------
+
+/// Read the selected site from settings and return the URL slug.
+/// Falls back to `default_slug` if no setting is found.
+pub fn get_site_slug(default_slug: &str) -> &str {
+	let setting = defaults_get::<String>("site");
+	match setting.as_deref() {
+		// All-ages sites
+		Some("Doujin") => "home",
+		Some("PC Games") => "soft",
+		// Adult sites
+		Some("Adult Doujin") => "maniax",
+		Some("H Games") => "pro",
+		Some("Adult Comics") => "books",
+		Some("Otome") => "girls",
+		Some("BL") => "bl",
+		_ => default_slug,
+	}
+}
+
+// ---------------------------------------------------------------------------
 // Content rating
 // ---------------------------------------------------------------------------
 

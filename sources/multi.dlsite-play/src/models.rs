@@ -776,8 +776,8 @@ pub fn series_manga(
 		.unwrap_or(Viewer::RightToLeft);
 
 	let url = Some(format!(
-		"https://www.dlsite.com/maniax/fsr/=/title_id/{}/order/release_d",
-		title_id
+		"https://www.dlsite.com/{}/fsr/=/title_id/{}/order/release_d",
+		crate::DLSITE_SITE_SLUG, title_id
 	));
 
 	Manga {

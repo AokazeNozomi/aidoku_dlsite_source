@@ -5,19 +5,22 @@ use aidoku::{
 	Result,
 };
 
-const DLSITE_BASE: &str = "https://www.dlsite.com/maniax";
-
 /// Fetch work details from the public DLsite product JSON API.
 /// Used as a fallback when viewing a work that isn't purchased.
-pub fn get_public_work_details(workno: &str, locale: Option<&str>) -> Result<Option<PublicWork>> {
+pub fn get_public_work_details(
+	site_slug: &str,
+	workno: &str,
+	locale: Option<&str>,
+) -> Result<Option<PublicWork>> {
+	let base = format!("https://www.dlsite.com/{}", site_slug);
 	let url = match locale {
 		Some(loc) => format!(
 			"{}/api/=/product.json?workno={}&locale={}",
-			DLSITE_BASE, workno, loc
+			base, workno, loc
 		),
 		None => format!(
 			"{}/api/=/product.json?workno={}",
-			DLSITE_BASE, workno
+			base, workno
 		),
 	};
 	print(format!("[dlsite] public detail → GET {}", url));

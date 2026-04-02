@@ -1,10 +1,10 @@
 {
   "info": {
-    "id": "multi.dlsite-explore",
-    "name": "DLsite Explore",
-    "version": 8,
-    "url": "https://www.dlsite.com/home/",
-    "contentRating": 0,
+    "id": "multi.dlsite-explore-r18",
+    "name": "DLsite Explore R18",
+    "version": 2,
+    "url": "https://www.dlsite.com/maniax/",
+    "contentRating": 2,
     "languages": [
       "ja",
       "en",

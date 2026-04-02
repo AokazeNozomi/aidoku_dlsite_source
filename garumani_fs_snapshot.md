@@ -1,0 +1,518 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - generic [ref=e7]:
+            - paragraph
+          - generic [ref=e8]:
+            - list [ref=e9]:
+              - listitem [ref=e10]:
+                - link "Points10,830pt" [ref=e11] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/garumani/mypage/point
+              - listitem [ref=e12]:
+                - link "Coupon17" [ref=e13] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/garumani/mypage/coupon/list
+            - generic [ref=e14]:
+              - generic [ref=e15] [cursor=pointer]:
+                - text: 
+                - generic [ref=e16]: English-USD
+              - option "日本語"
+              - option "English" [selected]
+              - option "简体中文"
+              - option "繁體中文"
+              - option "한국어"
+              - option "Español"
+              - option "Deutsch"
+              - option "Français"
+              - option "Bahasa Indonesia"
+              - option "Italiano"
+              - option "Português"
+              - option "Svenska"
+              - option "ภาษาไทย"
+              - option "Tiếng Việt"
+              - option "JPY - Japanese Yen"
+              - option "USD - US Dollar" [selected]
+              - option "RMB - Chinese Yuan"
+              - option "TWD - New Taiwan Dollar"
+              - option "KRW - Korean Won"
+              - option "AUD - Australian Dollar"
+              - option "BRL - Brazilian Real"
+              - option "CAD - Canadian Dollar"
+              - option "EUR - Euro"
+              - option "GBP - British Pound"
+              - option "HKD - Hong Kong Dollar"
+              - option "IDR - Indonesian Rupiah"
+              - option "INR - Indian Rupee"
+              - option "MXN - Mexican Peso"
+              - option "MYR - Malaysian Ringgit"
+              - option "NZD - New Zealand Dollar"
+              - option "PHP - Philippine Peso"
+              - option "SEK - Swedish Krona"
+              - option "SGD - Singapore Dollar"
+              - option "THB - Thai Baht"
+              - option "VND - Vietnamese Dong"
+        - generic [ref=e17]:
+          - link "garumani" [ref=e19] [cursor=pointer]:
+            - /url: https://www.dlsite.com/garumani/
+            - img "garumani" [ref=e20]
+          - generic [ref=e22]:
+            - generic [ref=e23]:
+              - generic [ref=e25] [cursor=pointer]: Voice / ASMR
+              - combobox [ref=e26] [cursor=pointer]:
+                - option "Voice / ASMR" [selected]
+            - searchbox "Search by keywords (product name, circle name, etc)" [ref=e28]
+            - button " Search" [ref=e29] [cursor=pointer]:
+              - text: 
+              - generic [ref=e30]: Search
+          - link "Advanced Search" [ref=e32] [cursor=pointer]:
+            - /url: https://www.dlsite.com/garumani/fs
+          - list [ref=e33]:
+            - listitem [ref=e34]:
+              - link "Favorites" [ref=e35] [cursor=pointer]:
+                - /url: https://www.dlsite.com/garumani/mypage/wishlist/=/discount/1/order/cstart_d
+                - generic [ref=e36]: Favorites
+              - link "Discounts Detected!" [ref=e37] [cursor=pointer]:
+                - /url: https://www.dlsite.com/garumani/mypage/wishlist/=/discount/1/order/cstart_d
+            - listitem [ref=e38]:
+              - link "Cart" [ref=e39] [cursor=pointer]:
+                - /url: https://www.dlsite.com/garumani/cart
+                - generic [ref=e40]: Cart
+            - listitem [ref=e41]:
+              - link "My Items" [ref=e42] [cursor=pointer]:
+                - /url: https://play.dlsite.com/
+                - generic [ref=e43]: My Items
+            - listitem [ref=e44]:
+              - generic [ref=e46]: Account
+              - generic [ref=e47]: "1"
+            - listitem [ref=e48]:
+              - link "Guide" [ref=e49] [cursor=pointer]:
+                - /url: "#"
+                - generic [ref=e50]: Guide
+        - generic [ref=e52]:
+          - generic [ref=e53]:
+            - navigation [ref=e54]:
+              - listitem [ref=e55]:
+                - heading "All Ages" [level=1] [ref=e56]:
+                  - link "All Ages" [ref=e57] [cursor=pointer]:
+                    - /url: https://www.dlsite.com/garumani/voice
+            - generic [ref=e58]:
+              - link "To Comics (comipo)" [ref=e60] [cursor=pointer]:
+                - /url: https://www.comipo.app/
+              - link "R18 (HENTAI)" [ref=e62] [cursor=pointer]:
+                - /url: https://www.dlsite.com/maniax/
+              - link "TL/BL" [ref=e64] [cursor=pointer]:
+                - /url: https://www.dlsite.com/girls/
+          - list [ref=e67]:
+            - listitem [ref=e68]:
+              - link " Voice / ASMR" [ref=e69] [cursor=pointer]:
+                - /url: https://www.dlsite.com/garumani/voice
+    - generic [ref=e72]:
+      - heading "Advanced Search" [level=1] [ref=e74]
+      - generic [ref=e76]:
+        - generic [ref=e77]:
+          - generic [ref=e78]:
+            - generic [ref=e79]:
+              - generic [ref=e80]: Keywords
+              - searchbox "Title, Publisher, Creator" [ref=e82]
+              - paragraph [ref=e84]:  About Keyword Searches
+            - generic [ref=e85]:
+              - generic [ref=e86]: Product format
+              - link "Select product format" [ref=e88] [cursor=pointer]:
+                - /url: "#"
+            - generic [ref=e89]:
+              - generic [ref=e90]: Genre
+              - link "Genre Selection" [ref=e92] [cursor=pointer]:
+                - /url: "#"
+            - generic [ref=e93]:
+              - generic [ref=e94]: Terms of Discount
+              - generic [ref=e95]:
+                - list [ref=e96]:
+                  - listitem [ref=e97]:
+                    - generic [ref=e98] [cursor=pointer]: Discount Rate - Not specified
+                  - listitem [ref=e99]:
+                    - generic [ref=e100] [cursor=pointer]: Discounted Works
+                  - listitem [ref=e101]:
+                    - generic [ref=e102] [cursor=pointer]: 1% - 29% OFF
+                  - listitem [ref=e103]:
+                    - generic [ref=e104] [cursor=pointer]: 30% off and up
+                  - listitem [ref=e105]:
+                    - generic [ref=e106] [cursor=pointer]: 50% off and up
+                  - listitem [ref=e107]:
+                    - generic [ref=e108] [cursor=pointer]: 80% off and up
+                - list [ref=e109]:
+                  - listitem [ref=e110]:  Discount ends in 24 hours
+            - generic [ref=e111]:
+              - generic [ref=e112]: Price range
+              - generic [ref=e113]:
+                - combobox [ref=e114]:
+                  - option "Unspecified" [selected]
+                  - option "0-300 JPY"
+                  - option "301-500 JPY"
+                  - option "501-800 JPY"
+                  - option "801-1000 JPY"
+                  - option "1001-1200 JPY"
+                  - option "1201-1500 JPY"
+                  - option "1501-2000 JPY"
+                  - option "2001-3000 JPY"
+                  - option "3001-5000 JPY"
+                  - option "Over 5000 JPY"
+                - text: 
+            - generic [ref=e115]:
+              - generic [ref=e116]: Product Category
+              - list [ref=e118]:
+                - listitem [ref=e119]:  Otome / TL
+                - listitem [ref=e120]:  BL
+            - generic [ref=e121]:
+              - generic [ref=e122]: Release date
+              - generic [ref=e123]:
+                - combobox [ref=e124]:
+                  - option "Unspecified" [selected]
+                  - option "Last 7 days"
+                  - option "Last 30 days"
+                  - option "Last 12 months"
+                  - option "Older"
+                - text: 
+            - generic [ref=e125]:
+              - generic [ref=e126]: Sale status
+              - generic [ref=e127]:
+                - combobox [ref=e128]:
+                  - option "Works available for sale"
+                  - option "Upcoming works"
+                  - option "Works available for preorder"
+                  - option "Unspecified" [selected]
+                - text: 
+            - generic [ref=e129]:
+              - generic [ref=e130]: Options
+              - link "Select options" [ref=e132] [cursor=pointer]:
+                - /url: "#"
+            - generic [ref=e133]:
+              - generic [ref=e134]: Additional Terms
+              - list [ref=e136]:
+                - listitem [ref=e137]:  Exclusives
+                - listitem [ref=e138]:  Advance Products
+                - listitem [ref=e139]:  Bonus Point Products
+                - listitem [ref=e140]:  Free
+            - generic [ref=e141]:
+              - generic [ref=e142]: Supported languages
+              - generic [ref=e143]:
+                - list [ref=e144]:
+                  - listitem [ref=e145]:  Japanese
+                  - listitem [ref=e146]:  English
+                  - listitem [ref=e147]:  Simplified Chinese
+                  - listitem [ref=e148]:  Traditional Chinese
+                  - listitem [ref=e149]:  Korean
+                  - listitem [ref=e150]:  Spanish
+                  - listitem [ref=e151]:  Arabic
+                  - listitem [ref=e152]:  German
+                  - listitem [ref=e153]:  French
+                  - listitem [ref=e154]:  Indonesian
+                  - listitem [ref=e155]:  Italian
+                  - listitem [ref=e156]:  Portuguese
+                  - listitem [ref=e157]:  Swedish
+                  - listitem [ref=e158]:  Thai
+                  - listitem [ref=e159]:  Vietnamese
+                  - listitem [ref=e160]:  Other Languages
+                  - listitem [ref=e161]:  Alingual
+                  - listitem [ref=e162]:  DLsite Official Translation
+                - paragraph [ref=e163]: "*\"Alingual\" works do not require knowledge of any particular language to understand."
+            - generic [ref=e164]:
+              - generic [ref=e165]: Sort by
+              - generic [ref=e166]:
+                - combobox [ref=e167]:
+                  - option "Sort by popularity" [selected]
+                  - option "Release date - New to Old"
+                  - option "Release date - Old to New"
+                  - option "Best Selling"
+                  - option "Price - Low to High"
+                  - option "Price - High to Low"
+                  - option "Rating - High to Low"
+                  - option "Reviews - High to Low"
+                - text: 
+            - generic [ref=e168]:
+              - generic [ref=e169]: Display
+              - list [ref=e171]:
+                - listitem [ref=e172]:
+                  - generic [ref=e174] [cursor=pointer]: 
+                - listitem [ref=e175]:
+                  - generic [ref=e176] [cursor=pointer]:
+                    - generic [ref=e177]: 
+                    - text: Tile Display
+            - generic [ref=e178]:
+              - generic [ref=e179]: Items per page
+              - generic [ref=e180]:
+                - combobox [ref=e181]:
+                  - option "30" [selected]
+                  - option "50"
+                  - option "100"
+                - text: 
+          - generic [ref=e182]:
+            - button "Reset" [ref=e183] [cursor=pointer]
+            - button "Search" [ref=e184] [cursor=pointer]
+        - text:                                                                                                                                                                                                                                   
+    - generic [ref=e186]:
+      - heading "Search products" [level=3] [ref=e187]
+      - generic [ref=e188]:
+        - generic [ref=e189]:
+          - heading "Work Category" [level=4] [ref=e191]
+          - list [ref=e193]:
+            - listitem [ref=e194]:
+              - link "Otome / TL" [ref=e195] [cursor=pointer]:
+                - /url: https://www.dlsite.com/garumani/fsr/=/is_tl/1
+            - listitem [ref=e196]:
+              - link "BL" [ref=e197] [cursor=pointer]:
+                - /url: https://www.dlsite.com/garumani/fsr/=/is_bl/1
+        - generic [ref=e198]:
+          - heading "Popular Voice Actors" [level=4] [ref=e200]
+          - list [ref=e202]:
+            - listitem [ref=e203]:
+              - link "阿座上洋平" [ref=e204] [cursor=pointer]:
+                - /url: https://www.dlsite.com/garumani/fsr/=/keyword_creater/%22%E9%98%BF%E5%BA%A7%E4%B8%8A%E6%B4%8B%E5%B9%B3%22
+            - listitem [ref=e205]:
+              - link "伊東健人" [ref=e206] [cursor=pointer]:
+                - /url: https://www.dlsite.com/garumani/fsr/=/keyword_creater/%22%E4%BC%8A%E6%9D%B1%E5%81%A5%E4%BA%BA%22
+            - listitem [ref=e207]:
+              - link "梅原裕一郎" [ref=e208] [cursor=pointer]:
+                - /url: https://www.dlsite.com/garumani/fsr/=/keyword_creater/%22%E6%A2%85%E5%8E%9F%E8%A3%95%E4%B8%80%E9%83%8E%22
+            - listitem [ref=e209]:
+              - link "江口拓也" [ref=e210] [cursor=pointer]:
+                - /url: https://www.dlsite.com/garumani/fsr/=/keyword_creater/%22%E6%B1%9F%E5%8F%A3%E6%8B%93%E4%B9%9F%22
+            - listitem [ref=e211]:
+              - link "岡本信彦" [ref=e212] [cursor=pointer]:
+                - /url: https://www.dlsite.com/garumani/fsr/=/keyword_creater/%22%E5%B2%A1%E6%9C%AC%E4%BF%A1%E5%BD%A6%22
+            - listitem [ref=e213]:
+              - link "木村良平" [ref=e214] [cursor=pointer]:
+                - /url: https://www.dlsite.com/garumani/fsr/=/keyword_creater/%22%E6%9C%A8%E6%9D%91%E8%89%AF%E5%B9%B3%22
+            - listitem [ref=e215]:
+              - link "熊谷健太郎" [ref=e216] [cursor=pointer]:
+                - /url: https://www.dlsite.com/garumani/fsr/=/keyword_creater/%22%E7%86%8A%E8%B0%B7%E5%81%A5%E5%A4%AA%E9%83%8E%22
+            - listitem [ref=e217]:
+              - link "小林千晃" [ref=e218] [cursor=pointer]:
+                - /url: https://www.dlsite.com/garumani/fsr/=/keyword_creater/%22%E5%B0%8F%E6%9E%97%E5%8D%83%E6%99%83%22
+            - listitem [ref=e219]:
+              - link "斉藤壮馬" [ref=e220] [cursor=pointer]:
+                - /url: https://www.dlsite.com/garumani/fsr/=/keyword_creater/%22%E6%96%89%E8%97%A4%E5%A3%AE%E9%A6%AC%22
+            - listitem [ref=e221]:
+              - link "佐藤拓也" [ref=e222] [cursor=pointer]:
+                - /url: https://www.dlsite.com/garumani/fsr/=/keyword_creater/%22%E4%BD%90%E8%97%A4%E6%8B%93%E4%B9%9F%22
+            - listitem [ref=e223]:
+              - link "白井悠介" [ref=e224] [cursor=pointer]:
+                - /url: https://www.dlsite.com/garumani/fsr/=/keyword_creater/%22%E7%99%BD%E4%BA%95%E6%82%A0%E4%BB%8B%22
+            - listitem [ref=e225]:
+              - link "鈴木達央" [ref=e226] [cursor=pointer]:
+                - /url: https://www.dlsite.com/garumani/fsr/=/keyword_creater/%22%E9%88%B4%E6%9C%A8%E9%81%94%E5%A4%AE%22
+            - listitem [ref=e227]:
+              - link "立花慎之介" [ref=e228] [cursor=pointer]:
+                - /url: https://www.dlsite.com/garumani/fsr/=/keyword_creater/%22%E7%AB%8B%E8%8A%B1%E6%85%8E%E4%B9%8B%E4%BB%8B%22
+            - listitem [ref=e229]:
+              - link "千葉翔也" [ref=e230] [cursor=pointer]:
+                - /url: https://www.dlsite.com/garumani/fsr/=/keyword_creater/%22%E5%8D%83%E8%91%89%E7%BF%94%E4%B9%9F%22
+            - listitem [ref=e231]:
+              - link "中島ヨシキ" [ref=e232] [cursor=pointer]:
+                - /url: https://www.dlsite.com/garumani/fsr/=/keyword_creater/%22%E4%B8%AD%E5%B3%B6%E3%83%A8%E3%82%B7%E3%82%AD%22
+            - listitem [ref=e233]:
+              - link "羽多野渉" [ref=e234] [cursor=pointer]:
+                - /url: https://www.dlsite.com/garumani/fsr/=/keyword_creater/%22%E7%BE%BD%E5%A4%9A%E9%87%8E%E6%B8%89%22
+            - listitem [ref=e235]:
+              - link "古川慎" [ref=e236] [cursor=pointer]:
+                - /url: https://www.dlsite.com/garumani/fsr/=/keyword_creater/%22%E5%8F%A4%E5%B7%9D%E6%85%8E%22
+            - listitem [ref=e237]:
+              - link "前野智昭" [ref=e238] [cursor=pointer]:
+                - /url: https://www.dlsite.com/garumani/fsr/=/keyword_creater/%22%E5%89%8D%E9%87%8E%E6%99%BA%E6%98%AD%22
+            - listitem [ref=e239]:
+              - link "増田俊樹" [ref=e240] [cursor=pointer]:
+                - /url: https://www.dlsite.com/garumani/fsr/=/keyword_creater/%22%E5%A2%97%E7%94%B0%E4%BF%8A%E6%A8%B9%22
+            - listitem [ref=e241]:
+              - link "森川智之" [ref=e242] [cursor=pointer]:
+                - /url: https://www.dlsite.com/garumani/fsr/=/keyword_creater/%22%E6%A3%AE%E5%B7%9D%E6%99%BA%E4%B9%8B%22
+        - generic [ref=e243]:
+          - heading "Series" [level=4] [ref=e245]
+          - list [ref=e247]:
+            - listitem [ref=e248]:
+              - link "DIABOLIK LOVERS" [ref=e249] [cursor=pointer]:
+                - /url: https://www.dlsite.com/garumani/fsr/=/title_id%5B0%5D/TITLE00529543/title_id%5B1%5D/TITLE00529545/title_id%5B2%5D/TITLE00529546/title_id%5B3%5D/TITLE00570825/title_id%5B4%5D/TITLE00575188/title_id%5B5%5D/TITLE00588822/title_id%5B6%5D/TITLE00593598/title_id%5B7%5D/TITLE00593599/title_id%5B8%5D/TITLE00593600/title_id%5B9%5D/TITLE00602502/title_id%5B10%5D/TITLE00611192/title_id%5B11%5D/TITLE00611193/title_id%5B12%5D/TITLE00617078/title_id%5B13%5D/TITLE00617079/order/title_d/from/work.titles
+            - listitem [ref=e250]:
+              - link "Obey Me!" [ref=e251] [cursor=pointer]:
+                - /url: https://www.dlsite.com/garumani/fsr/=/title_id%5B0%5D/TITLE00436336/title_id%5B1%5D/TITLE00436337/title_id%5B2%5D/TITLE00470113/title_id%5B3%5D/TITLE00470114/order/title_d/from/work.titles
+            - listitem [ref=e252]:
+              - link "朗読喫茶 噺の籠" [ref=e253] [cursor=pointer]:
+                - /url: https://www.dlsite.com/garumani/fsr/=/title_id%5B0%5D/TITLE00381079/title_id%5B1%5D/TITLE00381080/order/title_d/from/work.titles
+        - generic [ref=e254]:
+          - heading "Genre" [level=4] [ref=e256]
+          - generic [ref=e257]:
+            - list [ref=e258]:
+              - listitem [ref=e259]:
+                - link "幼なじみ" [ref=e260] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/garumani/works/genre/=/genre/222
+              - listitem [ref=e261]:
+                - link "俺様" [ref=e262] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/garumani/works/genre/=/genre/422
+              - listitem [ref=e263]:
+                - link "ツンデレ" [ref=e264] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/garumani/works/genre/=/genre/059
+              - listitem [ref=e265]:
+                - link "ヤンデレ" [ref=e266] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/garumani/works/genre/=/genre/316
+              - listitem [ref=e267]:
+                - link "日常/生活" [ref=e268] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/garumani/works/genre/=/genre/008
+              - listitem [ref=e269]:
+                - link "学校/学園" [ref=e270] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/garumani/works/genre/=/genre/001
+              - listitem [ref=e271]:
+                - link "ファンタジー" [ref=e272] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/garumani/works/genre/=/genre/016
+            - link "See more..." [ref=e274] [cursor=pointer]:
+              - /url: https://www.dlsite.com/garumani/genre/list
+    - generic [ref=e275]:
+      - paragraph [ref=e277]:
+        - link "PAGE TOP" [ref=e278] [cursor=pointer]:
+          - /url: "#header"
+      - list [ref=e280]:
+        - listitem [ref=e281]:
+          - link "Voice / ASMR" [ref=e282] [cursor=pointer]:
+            - /url: https://www.dlsite.com/garumani/voice
+        - listitem [ref=e283]:
+          - link "To Garumani smartphone site" [ref=e284] [cursor=pointer]:
+            - /url: https://www.dlsite.com/garumani-touch/fs
+      - generic [ref=e285]:
+        - generic [ref=e287]:
+          - generic [ref=e288]:
+            - generic [ref=e289]: About Garumani
+            - list [ref=e290]:
+              - listitem [ref=e291]:
+                - link "Company Overview" [ref=e292] [cursor=pointer]:
+                  - /url: https://www.eisys.co.jp/company/information_en
+              - listitem [ref=e293]:
+                - link "Recruitment Guide" [ref=e294] [cursor=pointer]:
+                  - /url: https://www.eisys.co.jp/recruit
+              - listitem [ref=e295]:
+                - link "User Agreement" [ref=e296] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/garumani/user/regulations
+              - listitem [ref=e297]:
+                - link "Legal Statement based on Act on Specified Commercial Transactions" [ref=e298] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/garumani/guide/law
+              - listitem [ref=e299]:
+                - link "Privacy Policy" [ref=e300] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/garumani/guide/privacy
+              - listitem [ref=e301]:
+                - link "外部送信規律に関する公表" [ref=e302] [cursor=pointer]:
+                  - /url: https://www.eisys.co.jp/cookie/policy
+              - listitem [ref=e303]:
+                - link "Compliance Policy" [ref=e304] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/garumani/mosaic
+              - listitem [ref=e305]:
+                - link "Copyright" [ref=e306] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/garumani/guide/copy
+              - listitem [ref=e307]:
+                - link "Customer Harassment Response Policy" [ref=e308] [cursor=pointer]:
+                  - /url: https://www.geonet.co.jp/english/csr/social/customer-harassment/
+              - listitem [ref=e309]:
+                - link "About Links" [ref=e310] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/garumani/banners
+              - listitem [ref=e311]:
+                - link "Site Map" [ref=e312] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/garumani/sitemap
+              - listitem [ref=e313]:
+                - link "Other Information" [ref=e314] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/garumani/otherinformation
+          - generic [ref=e315]:
+            - generic [ref=e316]: Help&guide
+            - list [ref=e317]:
+              - listitem [ref=e318]:
+                - link "For First-time Visitors" [ref=e319] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/garumani/welcome
+              - listitem [ref=e320]:
+                - link "FAQ" [ref=e321] [cursor=pointer]:
+                  - /url: https://cs.dlsite.com/hc/en-us
+              - listitem [ref=e322]:
+                - link "Product Request" [ref=e323] [cursor=pointer]:
+                  - /url: https://cs.dlsite.com/hc/en-us/requests/new?ticket_form_id=1500000429921
+          - generic [ref=e324]:
+            - generic [ref=e325]: Garumani Services
+            - list [ref=e326]:
+              - listitem [ref=e327]:
+                - link "To sell your works" [ref=e328] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/garumani/circle/invite
+              - listitem [ref=e329]:
+                - link "Translators Unite" [ref=e330] [cursor=pointer]:
+                  - /url: https://min-hon.net/en/
+              - listitem [ref=e331]:
+                - link "Affiliate" [ref=e332] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/garumani/guide/affiliate
+              - listitem [ref=e333]:
+                - link "Newsletters" [ref=e334] [cursor=pointer]:
+                  - /url: /garumani/mypage/setting/mail
+              - listitem [ref=e335]:
+                - link "Web Viewer - DLsite Play" [ref=e336] [cursor=pointer]:
+                  - /url: https://play.dlsite.com/ja
+              - listitem [ref=e337]:
+                - link "PC Client DLsite Nest" [ref=e338] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/garumani/guide/dlnest
+        - generic [ref=e339]:
+          - generic [ref=e340]: Payments/Points
+          - generic [ref=e341]:
+            - list [ref=e342]:
+              - listitem [ref=e343]:
+                - link "Payment Method" [ref=e344] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/garumani/guide/payment
+              - listitem [ref=e345]:
+                - link "About Points" [ref=e346] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/garumani/mypage/aboutpoint
+              - listitem [ref=e347]:
+                - link "How to buy points" [ref=e348] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/garumani/guide/payment#link_point
+            - link "Credit Cards JCB Convenience Store / Online Banking Lawson Familymart Pay-easy Electronic money Rakuten Edy BitCash FamiPay WebMoney PayPay Delayed Payment paidy atone" [ref=e349] [cursor=pointer]:
+              - /url: https://www.dlsite.com/garumani/guide/payment
+              - generic [ref=e350]:
+                - generic [ref=e351]:
+                  - paragraph [ref=e352]: Credit Cards
+                  - img "JCB" [ref=e354]
+                - generic [ref=e355]:
+                  - paragraph [ref=e356]: Convenience Store / Online Banking
+                  - generic [ref=e357]:
+                    - img "Lawson" [ref=e358]
+                    - img "Familymart" [ref=e359]
+                    - img "Pay-easy" [ref=e360]
+                - generic [ref=e361]:
+                  - paragraph [ref=e362]: Electronic money
+                  - generic [ref=e363]:
+                    - img "Rakuten Edy" [ref=e364]
+                    - img "BitCash" [ref=e365]
+                    - img "FamiPay" [ref=e366]
+                  - generic [ref=e367]:
+                    - img "WebMoney" [ref=e368]
+                    - img "PayPay" [ref=e369]
+                - generic [ref=e370]:
+                  - paragraph [ref=e371]: Delayed Payment
+                  - generic [ref=e372]:
+                    - img "paidy" [ref=e373]
+                    - img "atone" [ref=e374]
+        - generic [ref=e376]:
+          - generic [ref=e377]:
+            - generic [ref=e378]: X
+            - list [ref=e379]:
+              - listitem [ref=e380]:
+                - link "All Ages" [ref=e381] [cursor=pointer]:
+                  - /url: https://x.com/DLsite
+              - listitem [ref=e382]:
+                - link "Garumani All Ages" [ref=e383] [cursor=pointer]:
+                  - /url: https://x.com/garumani_all
+              - listitem [ref=e384]:
+                - link "Publicity" [ref=e385] [cursor=pointer]:
+                  - /url: https://x.com/DLsite_info
+          - generic [ref=e386]:
+            - generic [ref=e387]: Other social media
+            - list [ref=e388]:
+              - listitem [ref=e389]:
+                - link "Publicity (YouTube)" [ref=e390] [cursor=pointer]:
+                  - /url: https://www.youtube.com/channel/UCQEN3LsNnqottC2mXx3tAjA
+        - generic [ref=e391]:
+          - generic [ref=e392]: Career Information（Recruitment for Group Companies）
+          - list
+          - link "To Recruitment Page" [ref=e393] [cursor=pointer]:
+            - /url: https://www.eisys.co.jp/recruit
+      - generic [ref=e395]:
+        - generic [ref=e396]: "Recommended Browsers: Latest version of Microsoft Edge, Safari, Chrome, Firefox (JavaScript/Cookies enabled)"
+        - paragraph [ref=e397]: © 1996 DLsite
+  - iframe

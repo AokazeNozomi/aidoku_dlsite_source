@@ -1,22 +1,143 @@
-use crate::models::{ExploreResult, ExploreSort, ExploreWork};
 use aidoku::{
 	alloc::{format, String, Vec},
 	imports::{html::Html, net::Request, std::print},
-	Result,
+	ContentRating, Manga, Result,
 };
 
-pub use dlsite_common::api::get_public_work_details;
+// ---------------------------------------------------------------------------
+// Explore sort options (server-side via /fsr/ajax/=/)
+// ---------------------------------------------------------------------------
 
-const DLSITE_BASE: &str = "https://www.dlsite.com/maniax";
-/// DLsite ignores per_page and always returns 30 items.
-const EXPLORE_PAGE_SIZE: i32 = 30;
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum ExploreSort {
+	Newest = 0,
+	Trending = 1,
+	Downloads = 2,
+	Rating = 3,
+}
+
+impl ExploreSort {
+	pub fn from_index(index: i32) -> Self {
+		match index {
+			1 => Self::Trending,
+			2 => Self::Downloads,
+			3 => Self::Rating,
+			_ => Self::Newest,
+		}
+	}
+
+	/// DLsite `order` path segment value.
+	pub fn order_param(self) -> &'static str {
+		match self {
+			Self::Newest => "release_d",
+			Self::Trending => "trend",
+			Self::Downloads => "dl_d",
+			Self::Rating => "rate_d",
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Search result models (parsed from /fsr/ajax/=/ HTML)
+// ---------------------------------------------------------------------------
+
+pub struct ExploreWork {
+	pub workno: String,
+	pub title: String,
+	pub cover_url: Option<String>,
+	pub maker_name: Option<String>,
+	pub work_type: Option<String>,
+	/// Raw age string from `__product_attributes`: `"adl"`, `"r15"`, or absent.
+	pub age_category: Option<String>,
+}
+
+pub struct ExploreResult {
+	pub works: Vec<ExploreWork>,
+	pub has_next_page: bool,
+}
+
+impl ExploreWork {
+	fn work_type_label(&self) -> Option<&'static str> {
+		match self.work_type.as_deref()? {
+			"MNG" => Some("Manga"),
+			"SCM" => Some("Gekiga"),
+			"WBT" => Some("Webtoon"),
+			"ICG" => Some("CG / Illustration"),
+			"NRE" => Some("Novel"),
+			"DNV" => Some("Digital Novel"),
+			"MOV" => Some("Video"),
+			"SOU" => Some("Sound / Voice"),
+			"MUS" => Some("Music"),
+			"ACN" | "QIZ" | "ADV" | "RPG" | "TBL" | "SLN" | "TYP" | "STG" | "PZL" => {
+				Some("Game")
+			}
+			"ETC" | "ET3" => Some("Other"),
+			"TOL" => Some("Tools / Accessories"),
+			"IMT" => Some("Illustration Materials"),
+			"AMT" => Some("Music Materials"),
+			"VCM" => Some("Voiced Comic"),
+			"PBC" => Some("Publication"),
+			_ => None,
+		}
+	}
+
+	pub fn into_manga(self, site_slug: &str) -> Manga {
+		let content_rating = match self.age_category.as_deref() {
+			Some("adl") => ContentRating::NSFW,
+			Some("r15") => ContentRating::Suggestive,
+			_ => ContentRating::Safe,
+		};
+
+		let mut tags: Vec<String> = Vec::new();
+		if let Some(label) = self.work_type_label() {
+			tags.push(label.into());
+		}
+
+		let description = self.maker_name.as_ref().map(|m| format!("Circle: {}", m));
+
+		let url = Some(format!(
+			"https://www.dlsite.com/{}/work/=/product_id/{}.html",
+			site_slug, self.workno
+		));
+
+		Manga {
+			key: self.workno,
+			title: self.title,
+			cover: self.cover_url,
+			description,
+			tags: if tags.is_empty() { None } else { Some(tags) },
+			content_rating,
+			url,
+			..Default::default()
+		}
+	}
+}
 
 // ---------------------------------------------------------------------------
 // Search URL builder
 // ---------------------------------------------------------------------------
 
+/// DLsite ignores per_page and always returns 30 items.
+const EXPLORE_PAGE_SIZE: i32 = 30;
+
+/// JSON wrapper returned by `/fsr/ajax/=/`.
+#[derive(aidoku::serde::Deserialize)]
+struct SearchAjaxResponse {
+	#[serde(default)]
+	search_result: String,
+	#[serde(default)]
+	page_info: SearchPageInfo,
+}
+
+#[derive(aidoku::serde::Deserialize, Default)]
+struct SearchPageInfo {
+	#[serde(default)]
+	count: i64,
+}
+
 /// Build a `/fsr/ajax/=/` search URL from the given parameters.
-fn build_search_url(
+pub fn build_search_url(
+	site_slug: &str,
 	keyword: Option<&str>,
 	page: i32,
 	sort: ExploreSort,
@@ -25,6 +146,7 @@ fn build_search_url(
 	content_ratings: &[String],
 	genres: &[u32],
 ) -> String {
+	let base = format!("https://www.dlsite.com/{}", site_slug);
 	let mut path = String::from("/fsr/ajax/=/language/jp");
 
 	// Language options — uses options[N] indexed array params
@@ -71,34 +193,19 @@ fn build_search_url(
 	// Page
 	path.push_str(&format!("/page/{}", page));
 
-	format!("{}{}", DLSITE_BASE, path)
+	format!("{}{}", base, path)
 }
 
 // ---------------------------------------------------------------------------
 // HTML parsing
 // ---------------------------------------------------------------------------
 
-/// JSON wrapper returned by `/fsr/ajax/=/`.
-#[derive(aidoku::serde::Deserialize)]
-struct SearchAjaxResponse {
-	#[serde(default)]
-	search_result: String,
-	#[serde(default)]
-	page_info: SearchPageInfo,
-}
-
-#[derive(aidoku::serde::Deserialize, Default)]
-struct SearchPageInfo {
-	#[serde(default)]
-	count: i64,
-}
-
 /// Construct the cover thumbnail URL from a product ID.
 ///
 /// Pattern: `//img.dlsite.jp/resize/images2/work/{category}/{bucket}/{id}_img_main_240x240.jpg`
 /// - category: doujin (RJ), professional (VJ), books (BJ)
 /// - bucket: product ID rounded up to nearest 1000
-fn cover_url_from_id(workno: &str) -> Option<String> {
+pub fn cover_url_from_id(workno: &str) -> Option<String> {
 	let category = if workno.starts_with("RJ") {
 		"doujin"
 	} else if workno.starts_with("VJ") {
@@ -127,7 +234,7 @@ fn cover_url_from_id(workno: &str) -> Option<String> {
 ///
 /// Example value: `RG45215,adl,male,ICG,JPN,DLP,504,536,...`
 /// The age field is typically the 2nd element: `adl`, `r15`, or `general`.
-fn parse_age_from_attributes(attrs: &str) -> Option<String> {
+pub fn parse_age_from_attributes(attrs: &str) -> Option<String> {
 	let parts: Vec<&str> = attrs.split(',').collect();
 	if parts.len() >= 2 {
 		let age = parts[1];
@@ -195,6 +302,7 @@ fn parse_product_element(li: &aidoku::imports::html::Element) -> Option<ExploreW
 
 /// Search DLsite's public catalog via the `/fsr/ajax/=/` endpoint.
 pub fn search_explore(
+	site_slug: &str,
 	keyword: Option<&str>,
 	page: i32,
 	sort: ExploreSort,
@@ -203,7 +311,16 @@ pub fn search_explore(
 	content_ratings: &[String],
 	genres: &[u32],
 ) -> Result<ExploreResult> {
-	let url = build_search_url(keyword, page, sort, languages, work_types, content_ratings, genres);
+	let url = build_search_url(
+		site_slug,
+		keyword,
+		page,
+		sort,
+		languages,
+		work_types,
+		content_ratings,
+		genres,
+	);
 	print(format!("[dlsite-explore] → GET {}", url));
 
 	let resp = Request::get(&url)?
@@ -262,9 +379,8 @@ pub fn search_explore(
 mod tests {
 	use super::*;
 	use aidoku::alloc::vec;
-	use aidoku_test::aidoku_test;
 
-	#[aidoku_test]
+	#[test]
 	fn cover_url_rj_product() {
 		let url = cover_url_from_id("RJ01599911").unwrap();
 		assert_eq!(
@@ -273,7 +389,7 @@ mod tests {
 		);
 	}
 
-	#[aidoku_test]
+	#[test]
 	fn cover_url_vj_product() {
 		let url = cover_url_from_id("VJ01006082").unwrap();
 		assert_eq!(
@@ -282,7 +398,7 @@ mod tests {
 		);
 	}
 
-	#[aidoku_test]
+	#[test]
 	fn cover_url_bj_product() {
 		let url = cover_url_from_id("BJ02452708").unwrap();
 		assert_eq!(
@@ -291,7 +407,7 @@ mod tests {
 		);
 	}
 
-	#[aidoku_test]
+	#[test]
 	fn cover_url_exact_thousand() {
 		let url = cover_url_from_id("RJ01000000").unwrap();
 		assert_eq!(
@@ -300,7 +416,7 @@ mod tests {
 		);
 	}
 
-	#[aidoku_test]
+	#[test]
 	fn parse_age_adl() {
 		assert_eq!(
 			parse_age_from_attributes("RG45215,adl,male,ICG,JPN"),
@@ -308,7 +424,7 @@ mod tests {
 		);
 	}
 
-	#[aidoku_test]
+	#[test]
 	fn parse_age_r15() {
 		assert_eq!(
 			parse_age_from_attributes("RG12345,r15,male,MNG,JPN"),
@@ -316,7 +432,7 @@ mod tests {
 		);
 	}
 
-	#[aidoku_test]
+	#[test]
 	fn parse_age_general() {
 		assert_eq!(
 			parse_age_from_attributes("RG12345,general,male,SOU,JPN"),
@@ -324,33 +440,42 @@ mod tests {
 		);
 	}
 
-	#[aidoku_test]
+	#[test]
 	fn parse_age_empty() {
 		assert_eq!(parse_age_from_attributes(""), None);
 	}
 
-	#[aidoku_test]
+	#[test]
 	fn build_search_url_basic() {
-		let url = build_search_url(None, 1, ExploreSort::Newest, &[], &[], &[], &[]);
+		let url = build_search_url("maniax", None, 1, ExploreSort::Newest, &[], &[], &[], &[]);
 		assert_eq!(
 			url,
 			"https://www.dlsite.com/maniax/fsr/ajax/=/language/jp/order%5B0%5D/release_d/page/1"
 		);
 	}
 
-	#[aidoku_test]
+	#[test]
+	fn build_search_url_different_site() {
+		let url = build_search_url("home", None, 1, ExploreSort::Trending, &[], &[], &[], &[]);
+		assert_eq!(
+			url,
+			"https://www.dlsite.com/home/fsr/ajax/=/language/jp/order%5B0%5D/trend/page/1"
+		);
+	}
+
+	#[test]
 	fn build_search_url_with_single_language() {
 		let langs = vec!["ENG".into()];
-		let url = build_search_url(None, 1, ExploreSort::Newest, &langs, &[], &[], &[]);
+		let url = build_search_url("maniax", None, 1, ExploreSort::Newest, &langs, &[], &[], &[]);
 		assert!(url.contains("/language/jp"));
 		assert!(url.contains("/options_and_or/and"));
 		assert!(url.contains("/options%5B0%5D/ENG"));
 	}
 
-	#[aidoku_test]
+	#[test]
 	fn build_search_url_with_multiple_languages() {
 		let langs = vec!["JPN".into(), "ENG".into(), "NM".into()];
-		let url = build_search_url(None, 1, ExploreSort::Newest, &langs, &[], &[], &[]);
+		let url = build_search_url("maniax", None, 1, ExploreSort::Newest, &langs, &[], &[], &[]);
 		assert!(url.contains("/language/jp"));
 		assert!(url.contains("/options_and_or/and"));
 		assert!(url.contains("/options%5B0%5D/JPN"));
@@ -358,12 +483,20 @@ mod tests {
 		assert!(url.contains("/options%5B2%5D/NM"));
 	}
 
-	#[aidoku_test]
+	#[test]
 	fn build_search_url_with_filters() {
 		let types = vec!["MNG".into(), "WBT".into()];
 		let ratings = vec!["r18".into()];
-		let url =
-			build_search_url(Some("test"), 2, ExploreSort::Trending, &[], &types, &ratings, &[]);
+		let url = build_search_url(
+			"maniax",
+			Some("test"),
+			2,
+			ExploreSort::Trending,
+			&[],
+			&types,
+			&ratings,
+			&[],
+		);
 		assert!(url.contains("/age_category%5B0%5D/adult"));
 		assert!(url.contains("/work_type%5B0%5D/MNG"));
 		assert!(url.contains("/work_type%5B1%5D/WBT"));
@@ -372,17 +505,19 @@ mod tests {
 		assert!(url.contains("/page/2"));
 	}
 
-	#[aidoku_test]
+	#[test]
 	fn build_search_url_with_multiple_ratings() {
 		let ratings = vec!["safe".into(), "r15".into()];
-		let url = build_search_url(None, 1, ExploreSort::Newest, &[], &[], &ratings, &[]);
+		let url =
+			build_search_url("maniax", None, 1, ExploreSort::Newest, &[], &[], &ratings, &[]);
 		assert!(url.contains("/age_category%5B0%5D/general"));
 		assert!(url.contains("/age_category%5B1%5D/r15"));
 	}
 
-	#[aidoku_test]
+	#[test]
 	fn build_search_url_with_genres() {
-		let url = build_search_url(None, 1, ExploreSort::Newest, &[], &[], &[], &[509, 66]);
+		let url =
+			build_search_url("maniax", None, 1, ExploreSort::Newest, &[], &[], &[], &[509, 66]);
 		assert!(url.contains("/genre%5B0%5D/509"));
 		assert!(url.contains("/genre%5B1%5D/66"));
 	}
