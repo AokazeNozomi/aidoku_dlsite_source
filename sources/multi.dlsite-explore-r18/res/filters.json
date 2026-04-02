@@ -1,5 +1,18 @@
 [
 	{
+		"id": "site",
+		"title": "Site",
+		"type": "select",
+		"options": [
+			"Adult Doujin",
+			"H Games",
+			"Adult Comics",
+			"Otome",
+			"BL"
+		],
+		"ids": ["maniax", "pro", "books", "girls", "bl"]
+	},
+	{
 		"title": "Sort",
 		"type": "sort",
 		"options": [

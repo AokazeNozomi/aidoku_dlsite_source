@@ -101,7 +101,7 @@ impl ExploreWork {
 		));
 
 		Manga {
-			key: self.workno,
+			key: format!("{}/{}", site_slug, self.workno),
 			title: self.title,
 			cover: self.cover_url,
 			description,
@@ -194,6 +194,16 @@ pub fn build_search_url(
 	path.push_str(&format!("/page/{}", page));
 
 	format!("{}{}", base, path)
+}
+
+// ---------------------------------------------------------------------------
+// Key helpers
+// ---------------------------------------------------------------------------
+
+/// Split an explore manga key (`"site_slug/product_id"`) into its components.
+/// Falls back to `default_slug` if the key has no slash.
+pub fn split_key<'a>(key: &'a str, default_slug: &'a str) -> (&'a str, &'a str) {
+	key.split_once('/').unwrap_or((default_slug, key))
 }
 
 // ---------------------------------------------------------------------------

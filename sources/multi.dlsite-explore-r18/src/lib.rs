@@ -7,7 +7,7 @@ use aidoku::{
 
 use dlsite_common::{explore, filters, settings};
 
-const DEFAULT_SITE_SLUG: &str = "maniax";
+const SITE_SLUGS: &[&str] = &["maniax", "pro", "books", "girls", "bl"];
 
 struct DlsiteExploreR18;
 
@@ -22,26 +22,12 @@ impl Source for DlsiteExploreR18 {
 		page: i32,
 		filter_list: Vec<FilterValue>,
 	) -> Result<MangaPageResult> {
-		let site_slug = settings::get_site_slug(DEFAULT_SITE_SLUG);
+		let site_slug = filters::extract_site_filter(&filter_list, SITE_SLUGS);
 		let sort = filters::extract_sort_filter(&filter_list);
 		let language = filters::extract_language_filter(&filter_list);
 		let work_types = filters::extract_work_type_filter(&filter_list);
 		let content_rating_filter = filters::extract_content_rating_filter(&filter_list);
 		let genre_filter = filters::extract_genre_filter(&filter_list);
-
-		// Fall back to settings work types if no filter selected
-		let effective_work_types = if work_types.is_empty() {
-			settings::get_work_type_setting()
-		} else {
-			work_types
-		};
-
-		// Fall back to settings content rating if no filter selected
-		let effective_content_rating = if content_rating_filter.is_empty() {
-			settings::get_default_content_ratings()
-		} else {
-			content_rating_filter
-		};
 
 		let result = explore::search_explore(
 			site_slug,
@@ -49,8 +35,8 @@ impl Source for DlsiteExploreR18 {
 			page,
 			sort,
 			&language,
-			&effective_work_types,
-			&effective_content_rating,
+			&work_types,
+			&content_rating_filter,
 			&genre_filter,
 		)?;
 
@@ -71,10 +57,10 @@ impl Source for DlsiteExploreR18 {
 		_needs_chapters: bool,
 	) -> Result<Manga> {
 		if needs_details {
-			let site_slug = settings::get_site_slug(DEFAULT_SITE_SLUG);
+			let (site_slug, product_id) = explore::split_key(&manga.key, SITE_SLUGS[0]);
 			let locale = settings::get_preferred_language().locale_code();
 			if let Ok(Some(public_work)) =
-				dlsite_common::api::get_public_work_details(site_slug, &manga.key, Some(locale))
+				dlsite_common::api::get_public_work_details(site_slug, product_id, Some(locale))
 			{
 				let updated = public_work.into_manga(site_slug);
 				manga.copy_from(updated);

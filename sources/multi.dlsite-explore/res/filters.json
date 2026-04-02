@@ -1,5 +1,15 @@
 [
 	{
+		"id": "site",
+		"title": "Site",
+		"type": "select",
+		"options": [
+			"Doujin",
+			"PC Games"
+		],
+		"ids": ["home", "soft"]
+	},
+	{
 		"title": "Sort",
 		"type": "sort",
 		"options": [

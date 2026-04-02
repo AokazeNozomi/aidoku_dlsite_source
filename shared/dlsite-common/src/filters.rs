@@ -46,6 +46,19 @@ pub fn extract_content_rating_filter(filters: &[FilterValue]) -> Vec<String> {
 	Vec::new()
 }
 
+pub fn extract_site_filter<'a>(filters: &[FilterValue], slugs: &[&'a str]) -> &'a str {
+	for f in filters {
+		if let FilterValue::Select { id, value, .. } = f {
+			if id == "site" {
+				if let Some(slug) = slugs.iter().find(|&&s| s == value.as_str()) {
+					return slug;
+				}
+			}
+		}
+	}
+	slugs[0]
+}
+
 pub fn extract_genre_filter(filters: &[FilterValue]) -> Vec<u32> {
 	let mut ids = Vec::new();
 	for f in filters {
