@@ -1,14 +1,18 @@
 use crate::explore::ExploreSort;
+use crate::settings::DlsiteLang;
 use aidoku::{
 	alloc::{String, Vec},
 	FilterValue,
 };
 
-pub fn extract_language_filter(filters: &[FilterValue]) -> Vec<String> {
+pub fn extract_language_filter(filters: &[FilterValue]) -> Vec<DlsiteLang> {
 	for f in filters {
 		if let FilterValue::MultiSelect { id, included, .. } = f {
 			if id == "language" && !included.is_empty() {
-				return included.clone();
+				return included
+					.iter()
+					.filter_map(|s| DlsiteLang::from_api_code(s))
+					.collect();
 			}
 		}
 	}

@@ -4,6 +4,8 @@ use aidoku::{
 	ContentRating, Manga, Result,
 };
 
+use crate::settings::DlsiteLang;
+
 // ---------------------------------------------------------------------------
 // Explore sort options (server-side via /fsr/ajax/=/)
 // ---------------------------------------------------------------------------
@@ -141,7 +143,7 @@ pub fn build_search_url(
 	keyword: Option<&str>,
 	page: i32,
 	sort: ExploreSort,
-	languages: &[String],
+	languages: &[DlsiteLang],
 	work_types: &[String],
 	content_ratings: &[String],
 	genres: &[u32],
@@ -153,7 +155,7 @@ pub fn build_search_url(
 	if !languages.is_empty() {
 		path.push_str("/options_and_or/and");
 		for (i, lang) in languages.iter().enumerate() {
-			path.push_str(&format!("/options%5B{}%5D/{}", i, lang));
+			path.push_str(&format!("/options%5B{}%5D/{}", i, lang.api_code()));
 		}
 	}
 
@@ -341,7 +343,7 @@ pub fn search_explore(
 	keyword: Option<&str>,
 	page: i32,
 	sort: ExploreSort,
-	languages: &[String],
+	languages: &[DlsiteLang],
 	work_types: &[String],
 	content_ratings: &[String],
 	genres: &[u32],
@@ -481,7 +483,7 @@ mod tests {
 
 	#[test]
 	fn build_search_url_with_single_language() {
-		let langs = vec!["ENG".into()];
+		let langs = vec![DlsiteLang::ENG];
 		let url = build_search_url("maniax", None, 1, ExploreSort::Newest, &langs, &[], &[], &[]);
 		assert!(url.contains("/language/jp"));
 		assert!(url.contains("/options_and_or/and"));
@@ -490,13 +492,12 @@ mod tests {
 
 	#[test]
 	fn build_search_url_with_multiple_languages() {
-		let langs = vec!["JPN".into(), "ENG".into(), "NM".into()];
+		let langs = vec![DlsiteLang::JPN, DlsiteLang::ENG];
 		let url = build_search_url("maniax", None, 1, ExploreSort::Newest, &langs, &[], &[], &[]);
 		assert!(url.contains("/language/jp"));
 		assert!(url.contains("/options_and_or/and"));
 		assert!(url.contains("/options%5B0%5D/JPN"));
 		assert!(url.contains("/options%5B1%5D/ENG"));
-		assert!(url.contains("/options%5B2%5D/NM"));
 	}
 
 	#[test]

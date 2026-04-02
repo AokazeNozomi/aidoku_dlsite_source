@@ -1320,24 +1320,12 @@ fn get_work_language(workno: &str) -> Option<String> {
 }
 
 fn lang_english_name(code: &str) -> &'static str {
-	match code {
-		"JPN" => "Japanese",
-		"ENG" => "English",
-		"KO_KR" => "Korean",
-		"CHI_HANS" => "Chinese (Simplified)",
-		"CHI_HANT" => "Chinese (Traditional)",
-		"SPA" => "Spanish",
-		"ARA" => "Arabic",
-		"GER" => "German",
-		"FRE" => "French",
-		"IND" => "Indonesian",
-		"ITA" => "Italian",
-		"POR" => "Portuguese",
-		"SWE" => "Swedish",
-		"THA" => "Thai",
-		"VIE" => "Vietnamese",
-		_ => "Other",
-	}
+	dlsite_common::settings::DlsiteLang::from_api_code(code)
+		.map(|l| l.english_name())
+		.unwrap_or(match code {
+			"ARA" => "Arabic",
+			_ => "Other",
+		})
 }
 
 /// Batch-fetch language editions for all works in the library.

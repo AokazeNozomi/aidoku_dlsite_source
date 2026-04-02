@@ -139,6 +139,136 @@ pub fn clear_web_cookies() {
 }
 
 // ---------------------------------------------------------------------------
+// DLsite language codes
+// ---------------------------------------------------------------------------
+
+/// DLsite API language codes used in FSR search URLs and filter options.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum DlsiteLang {
+	JPN,
+	ENG,
+	ChiHans,
+	ChiHant,
+	KoKr,
+	SPA,
+	GER,
+	FRE,
+	IND,
+	ITA,
+	POR,
+	SWE,
+	THA,
+	VIE,
+}
+
+impl DlsiteLang {
+	/// The API code string used in FSR URL paths and filter values.
+	pub fn api_code(self) -> &'static str {
+		match self {
+			Self::JPN => "JPN",
+			Self::ENG => "ENG",
+			Self::ChiHans => "CHI_HANS",
+			Self::ChiHant => "CHI_HANT",
+			Self::KoKr => "KO_KR",
+			Self::SPA => "SPA",
+			Self::GER => "GER",
+			Self::FRE => "FRE",
+			Self::IND => "IND",
+			Self::ITA => "ITA",
+			Self::POR => "POR",
+			Self::SWE => "SWE",
+			Self::THA => "THA",
+			Self::VIE => "VIE",
+		}
+	}
+
+	/// Parse from the API code string (e.g. `"JPN"`, `"ENG"`).
+	pub fn from_api_code(code: &str) -> Option<Self> {
+		match code {
+			"JPN" => Some(Self::JPN),
+			"ENG" => Some(Self::ENG),
+			"CHI_HANS" => Some(Self::ChiHans),
+			"CHI_HANT" => Some(Self::ChiHant),
+			"KO_KR" => Some(Self::KoKr),
+			"SPA" => Some(Self::SPA),
+			"GER" => Some(Self::GER),
+			"FRE" => Some(Self::FRE),
+			"IND" => Some(Self::IND),
+			"ITA" => Some(Self::ITA),
+			"POR" => Some(Self::POR),
+			"SWE" => Some(Self::SWE),
+			"THA" => Some(Self::THA),
+			"VIE" => Some(Self::VIE),
+			_ => None,
+		}
+	}
+
+	/// Parse from Aidoku source.json language code (e.g. `"ja"`, `"en"`).
+	pub fn from_source_code(code: &str) -> Option<Self> {
+		match code {
+			"ja" => Some(Self::JPN),
+			"en" => Some(Self::ENG),
+			"zh-Hans" => Some(Self::ChiHans),
+			"zh-Hant" => Some(Self::ChiHant),
+			"ko" => Some(Self::KoKr),
+			"es" => Some(Self::SPA),
+			"de" => Some(Self::GER),
+			"fr" => Some(Self::FRE),
+			"id" => Some(Self::IND),
+			"it" => Some(Self::ITA),
+			"pt" => Some(Self::POR),
+			"sv" => Some(Self::SWE),
+			"th" => Some(Self::THA),
+			"vi" => Some(Self::VIE),
+			_ => None,
+		}
+	}
+
+	/// English display name for this language.
+	pub fn english_name(self) -> &'static str {
+		match self {
+			Self::JPN => "Japanese",
+			Self::ENG => "English",
+			Self::ChiHans => "Chinese (Simplified)",
+			Self::ChiHant => "Chinese (Traditional)",
+			Self::KoKr => "Korean",
+			Self::SPA => "Spanish",
+			Self::GER => "German",
+			Self::FRE => "French",
+			Self::IND => "Indonesian",
+			Self::ITA => "Italian",
+			Self::POR => "Portuguese",
+			Self::SWE => "Swedish",
+			Self::THA => "Thai",
+			Self::VIE => "Vietnamese",
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Source language filter
+// ---------------------------------------------------------------------------
+
+/// Read the user's selected languages from Aidoku's Source Settings and
+/// return them as `DlsiteLang` values.
+/// Returns an empty Vec when all languages are selected (no filtering).
+pub fn get_selected_languages() -> Vec<DlsiteLang> {
+	let codes: Vec<String> = defaults_get::<Vec<String>>("languages").unwrap_or_default();
+	if codes.is_empty() {
+		return Vec::new();
+	}
+	// If every defined language is selected, treat it as "no filter".
+	// source.json defines 14 languages.
+	if codes.len() >= 14 {
+		return Vec::new();
+	}
+	codes
+		.iter()
+		.filter_map(|c| DlsiteLang::from_source_code(c))
+		.collect()
+}
+
+// ---------------------------------------------------------------------------
 // Work type setting
 // ---------------------------------------------------------------------------
 

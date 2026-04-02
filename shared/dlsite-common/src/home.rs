@@ -5,7 +5,7 @@ use aidoku::{
 };
 
 use crate::explore::{self, ExploreResult, ExploreSort, ExploreWork};
-use crate::settings;
+use crate::settings::{self, DlsiteLang};
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -67,7 +67,7 @@ fn build_home_fsr_url(
 	sex_category: Option<&str>,
 	work_categories: &[&str],
 	age_category: &str,
-	languages: &[String],
+	languages: &[DlsiteLang],
 ) -> String {
 	let base = format!("https://www.dlsite.com/{}", site_slug);
 	let mut path = String::from("/fsr/ajax/=/language/jp/ana_flg/all");
@@ -89,7 +89,7 @@ fn build_home_fsr_url(
 	if !languages.is_empty() {
 		path.push_str("/options_and_or/and");
 		for (i, lang) in languages.iter().enumerate() {
-			path.push_str(&format!("/options%5B{}%5D/{}", i, lang));
+			path.push_str(&format!("/options%5B{}%5D/{}", i, lang.api_code()));
 		}
 	}
 
@@ -156,7 +156,7 @@ pub fn fetch_english_picks(site_slug: &str, is_r18: bool, page: i32) -> Result<E
 		Some(sex),
 		&["doujin"],
 		age,
-		&[String::from("ENG")],
+		&[DlsiteLang::ENG],
 	);
 	print(format!("[dlsite-home] english_picks → GET {}", url));
 
@@ -475,7 +475,7 @@ pub fn fetch_recommended(
 pub fn fetch_new_works(
 	site_slug: &str,
 	is_r18: bool,
-	languages: &[String],
+	languages: &[DlsiteLang],
 	page: i32,
 ) -> Result<ExploreResult> {
 	let age = default_age_category(is_r18);
@@ -516,7 +516,7 @@ pub fn fetch_new_works(
 pub fn fetch_popular_works(
 	site_slug: &str,
 	is_r18: bool,
-	languages: &[String],
+	languages: &[DlsiteLang],
 	page: i32,
 ) -> Result<ExploreResult> {
 	let age = default_age_category(is_r18);

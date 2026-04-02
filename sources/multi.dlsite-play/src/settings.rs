@@ -250,44 +250,13 @@ pub fn set_cached_languages(workno: &str, value: &str) {
 // Language filter (Source Settings > Languages)
 // ---------------------------------------------------------------------------
 
-/// Map a source.json language code to the DLsite API language code.
-fn source_lang_to_dlsite(code: &str) -> Option<&'static str> {
-	match code {
-		"ja" => Some("JPN"),
-		"en" => Some("ENG"),
-		"zh-Hans" => Some("CHI_HANS"),
-		"zh-Hant" => Some("CHI_HANT"),
-		"ko" => Some("KO_KR"),
-		"es" => Some("SPA"),
-		"de" => Some("GER"),
-		"fr" => Some("FRE"),
-		"id" => Some("IND"),
-		"it" => Some("ITA"),
-		"pt" => Some("POR"),
-		"sv" => Some("SWE"),
-		"th" => Some("THA"),
-		"vi" => Some("VIE"),
-		_ => None,
-	}
-}
-
 /// Read the user's selected languages from Aidoku's Source Settings and
-/// return them as DLsite API codes (e.g. `["JPN", "ENG"]`).
+/// return them as DLsite API code strings (e.g. `["JPN", "ENG"]`).
 /// Returns an empty Vec when all languages are selected (no filtering).
 pub fn get_selected_languages() -> Vec<String> {
-	let codes: Vec<String> = defaults_get::<Vec<String>>("languages").unwrap_or_default();
-	if codes.is_empty() {
-		return Vec::new();
-	}
-	// If every defined language is selected, treat it as "no filter".
-	// source.json defines 14 languages.
-	if codes.len() >= 14 {
-		return Vec::new();
-	}
-	codes
+	dlsite_common::settings::get_selected_languages()
 		.iter()
-		.filter_map(|c| source_lang_to_dlsite(c))
-		.map(|s| String::from(s))
+		.map(|l| String::from(l.api_code()))
 		.collect()
 }
 

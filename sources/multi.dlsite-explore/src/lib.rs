@@ -84,7 +84,7 @@ impl ListingProvider for DlsiteExplore {
 	fn get_manga_list(&self, listing: Listing, page: i32) -> Result<MangaPageResult> {
 		let site_slug = settings::get_site_slug(SITE_SLUGS[0]);
 		let work_types = settings::get_work_type_setting();
-		let languages = get_home_languages();
+		let languages = settings::get_selected_languages();
 
 		let result = match listing.id.as_str() {
 			"english_picks" => home::fetch_english_picks(site_slug, IS_R18, page),
@@ -116,7 +116,7 @@ impl Home for DlsiteExplore {
 	fn get_home(&self) -> Result<HomeLayout> {
 		let site_slug = settings::get_site_slug(SITE_SLUGS[0]);
 		let work_types = settings::get_work_type_setting();
-		let languages = get_home_languages();
+		let languages = settings::get_selected_languages();
 		let mut components = Vec::new();
 
 		// 1. Top English Picks (carousel, no expand)
@@ -287,13 +287,6 @@ impl WebLoginHandler for DlsiteExplore {
 	}
 }
 
-/// Get language filter codes for home sections from default settings.
-fn get_home_languages() -> Vec<String> {
-	// Home sections use the default language options (JPN, ENG, NM etc.)
-	// We don't filter by language in home sections — show all.
-	Vec::new()
-}
-
 register_source!(DlsiteExplore, ListingProvider, Home, WebLoginHandler);
 
 #[cfg(test)]
@@ -301,6 +294,7 @@ mod tests {
 	use aidoku::alloc::vec;
 	use aidoku_test::aidoku_test;
 	use dlsite_common::explore::*;
+	use dlsite_common::settings::DlsiteLang;
 
 	#[aidoku_test]
 	fn cover_url_rj_product() {
@@ -387,7 +381,7 @@ mod tests {
 
 	#[aidoku_test]
 	fn build_search_url_with_single_language() {
-		let langs = vec!["ENG".into()];
+		let langs = vec![DlsiteLang::ENG];
 		let url = build_search_url("maniax", None, 1, ExploreSort::Newest, &langs, &[], &[], &[]);
 		assert!(url.contains("/language/jp"));
 		assert!(url.contains("/options_and_or/and"));
@@ -396,13 +390,12 @@ mod tests {
 
 	#[aidoku_test]
 	fn build_search_url_with_multiple_languages() {
-		let langs = vec!["JPN".into(), "ENG".into(), "NM".into()];
+		let langs = vec![DlsiteLang::JPN, DlsiteLang::ENG];
 		let url = build_search_url("maniax", None, 1, ExploreSort::Newest, &langs, &[], &[], &[]);
 		assert!(url.contains("/language/jp"));
 		assert!(url.contains("/options_and_or/and"));
 		assert!(url.contains("/options%5B0%5D/JPN"));
 		assert!(url.contains("/options%5B1%5D/ENG"));
-		assert!(url.contains("/options%5B2%5D/NM"));
 	}
 
 	#[aidoku_test]

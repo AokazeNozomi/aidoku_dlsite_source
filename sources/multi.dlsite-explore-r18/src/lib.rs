@@ -84,7 +84,7 @@ impl ListingProvider for DlsiteExploreR18 {
 	fn get_manga_list(&self, listing: Listing, page: i32) -> Result<MangaPageResult> {
 		let site_slug = settings::get_site_slug(SITE_SLUGS[0]);
 		let work_types = settings::get_work_type_setting();
-		let languages = get_home_languages();
+		let languages = settings::get_selected_languages();
 
 		let result = match listing.id.as_str() {
 			"english_picks" => home::fetch_english_picks(site_slug, IS_R18, page),
@@ -116,7 +116,7 @@ impl Home for DlsiteExploreR18 {
 	fn get_home(&self) -> Result<HomeLayout> {
 		let site_slug = settings::get_site_slug(SITE_SLUGS[0]);
 		let work_types = settings::get_work_type_setting();
-		let languages = get_home_languages();
+		let languages = settings::get_selected_languages();
 		let mut components = Vec::new();
 
 		// 1. Top English Picks (carousel, no expand)
@@ -285,11 +285,6 @@ impl WebLoginHandler for DlsiteExploreR18 {
 
 		Ok(has_session)
 	}
-}
-
-/// Get language filter codes for home sections from default settings.
-fn get_home_languages() -> Vec<String> {
-	Vec::new()
 }
 
 register_source!(DlsiteExploreR18, ListingProvider, Home, WebLoginHandler);
