@@ -20,6 +20,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "aidoku-test"
+version = "1.0.0"
+source = "git+https://github.com/Aidoku/aidoku-rs.git#59788187c937bbf960a8f1eb2b4d4e86a5a75a21"
+dependencies = [
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "allocator-api2"
 version = "0.2.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -75,6 +84,7 @@ name = "dlsite-explore-r18"
 version = "0.1.0"
 dependencies = [
  "aidoku",
+ "aidoku-test",
  "dlsite-common",
  "serde",
  "serde_json",
