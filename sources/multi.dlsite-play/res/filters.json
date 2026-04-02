@@ -12,7 +12,7 @@
     ],
     "default": {
       "index": 0,
-      "ascending": false
+      "ascending": true
     }
   },
   {
