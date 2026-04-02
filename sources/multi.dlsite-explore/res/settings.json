@@ -1,6 +1,23 @@
 [
 	{
 		"type": "group",
+		"title": "Account",
+		"footer": "Optional. Log in for personalized recommendations.",
+		"items": [
+			{
+				"type": "login",
+				"method": "web",
+				"key": "login",
+				"title": "Login",
+				"url": "https://login.dlsite.com/login",
+				"refreshes": [
+					"home"
+				]
+			}
+		]
+	},
+	{
+		"type": "group",
 		"title": "Display",
 		"items": [
 			{

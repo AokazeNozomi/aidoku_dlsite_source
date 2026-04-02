@@ -1,13 +1,18 @@
 #![no_std]
 
 use aidoku::{
-	alloc::{String, Vec},
-	register_source, FilterValue, Manga, MangaPageResult, Page, Result, Source,
+	alloc::{format, String, Vec},
+	imports::std::print,
+	prelude::*,
+	register_source, FilterValue, HashMap, Home, HomeComponent, HomeComponentValue,
+	HomeLayout, Link, Listing, ListingKind, ListingProvider, Manga, MangaPageResult,
+	Page, Result, Source, WebLoginHandler,
 };
 
-use dlsite_common::{explore, filters, settings};
+use dlsite_common::{explore, filters, home, settings};
 
 const SITE_SLUGS: &[&str] = &["home", "soft"];
+const IS_R18: bool = false;
 
 struct DlsiteExplore;
 
@@ -75,7 +80,221 @@ impl Source for DlsiteExplore {
 	}
 }
 
-register_source!(DlsiteExplore);
+impl ListingProvider for DlsiteExplore {
+	fn get_manga_list(&self, listing: Listing, page: i32) -> Result<MangaPageResult> {
+		let site_slug = settings::get_site_slug(SITE_SLUGS[0]);
+		let work_types = settings::get_work_type_setting();
+		let languages = get_home_languages();
+
+		let result = match listing.id.as_str() {
+			"english_picks" => home::fetch_english_picks(site_slug, IS_R18, page),
+			"translations" => home::fetch_translations(site_slug, page),
+			"ranking" => home::fetch_ranking(site_slug, &work_types),
+			"recommended" => home::fetch_recommended(site_slug, &work_types),
+			"new_works" => home::fetch_new_works(site_slug, IS_R18, &languages, page),
+			"popular_works" => home::fetch_popular_works(site_slug, IS_R18, &languages, page),
+			_ => {
+				return Ok(MangaPageResult {
+					entries: Vec::new(),
+					has_next_page: false,
+				})
+			}
+		}?;
+
+		Ok(MangaPageResult {
+			entries: result
+				.works
+				.into_iter()
+				.map(|w| w.into_manga(site_slug))
+				.collect(),
+			has_next_page: result.has_next_page,
+		})
+	}
+}
+
+impl Home for DlsiteExplore {
+	fn get_home(&self) -> Result<HomeLayout> {
+		let site_slug = settings::get_site_slug(SITE_SLUGS[0]);
+		let work_types = settings::get_work_type_setting();
+		let languages = get_home_languages();
+		let mut components = Vec::new();
+
+		// 1. Top English Picks (carousel, no expand)
+		if let Ok(result) = home::fetch_english_picks(site_slug, IS_R18, 1) {
+			if !result.works.is_empty() {
+				components.push(HomeComponent {
+					title: Some(String::from("Our Top English Picks")),
+					subtitle: None,
+					value: HomeComponentValue::Scroller {
+						entries: result
+							.works
+							.into_iter()
+							.map(|w| -> Link { w.into_manga(site_slug).into() })
+							.collect(),
+						listing: Some(Listing {
+							id: String::from("english_picks"),
+							name: String::from("Our Top English Picks"),
+							kind: ListingKind::default(),
+						}),
+					},
+				});
+			}
+		}
+
+		// 2. Translators Unite (carousel with expand)
+		if let Ok(result) = home::fetch_translations(site_slug, 1) {
+			if !result.works.is_empty() {
+				components.push(HomeComponent {
+					title: Some(String::from("New Translators Unite Translations")),
+					subtitle: None,
+					value: HomeComponentValue::Scroller {
+						entries: result
+							.works
+							.into_iter()
+							.map(|w| -> Link { w.into_manga(site_slug).into() })
+							.collect(),
+						listing: Some(Listing {
+							id: String::from("translations"),
+							name: String::from("Translators Unite"),
+							kind: ListingKind::default(),
+						}),
+					},
+				});
+			}
+		}
+
+		// 3. Doujin Ranking 7 Days (carousel with expand)
+		if let Ok(result) = home::fetch_ranking(site_slug, &work_types) {
+			if !result.works.is_empty() {
+				components.push(HomeComponent {
+					title: Some(String::from("Doujin Ranking (7 Days)")),
+					subtitle: None,
+					value: HomeComponentValue::Scroller {
+						entries: result
+							.works
+							.into_iter()
+							.map(|w| -> Link { w.into_manga(site_slug).into() })
+							.collect(),
+						listing: Some(Listing {
+							id: String::from("ranking"),
+							name: String::from("Doujin Ranking (7 Days)"),
+							kind: ListingKind::default(),
+						}),
+					},
+				});
+			}
+		}
+
+		// 4. Recommended (carousel with expand, always fetched)
+		if let Ok(result) = home::fetch_recommended(site_slug, &work_types) {
+			if !result.works.is_empty() {
+				components.push(HomeComponent {
+					title: Some(String::from("Recommended doujin products for you")),
+					subtitle: None,
+					value: HomeComponentValue::Scroller {
+						entries: result
+							.works
+							.into_iter()
+							.map(|w| -> Link { w.into_manga(site_slug).into() })
+							.collect(),
+						listing: Some(Listing {
+							id: String::from("recommended"),
+							name: String::from("Recommended"),
+							kind: ListingKind::default(),
+						}),
+					},
+				});
+			}
+		}
+
+		// 5. New Works (carousel with expand)
+		if let Ok(result) = home::fetch_new_works(site_slug, IS_R18, &languages, 1) {
+			if !result.works.is_empty() {
+				components.push(HomeComponent {
+					title: Some(String::from("New doujin works")),
+					subtitle: None,
+					value: HomeComponentValue::Scroller {
+						entries: result
+							.works
+							.into_iter()
+							.map(|w| -> Link { w.into_manga(site_slug).into() })
+							.collect(),
+						listing: Some(Listing {
+							id: String::from("new_works"),
+							name: String::from("New Doujin Works"),
+							kind: ListingKind::default(),
+						}),
+					},
+				});
+			}
+		}
+
+		// 6. Popular Works (carousel with expand)
+		if let Ok(result) = home::fetch_popular_works(site_slug, IS_R18, &languages, 1) {
+			if !result.works.is_empty() {
+				components.push(HomeComponent {
+					title: Some(String::from("Popular doujin works")),
+					subtitle: None,
+					value: HomeComponentValue::Scroller {
+						entries: result
+							.works
+							.into_iter()
+							.map(|w| -> Link { w.into_manga(site_slug).into() })
+							.collect(),
+						listing: Some(Listing {
+							id: String::from("popular_works"),
+							name: String::from("Popular Doujin Works"),
+							kind: ListingKind::default(),
+						}),
+					},
+				});
+			}
+		}
+
+		Ok(HomeLayout { components })
+	}
+}
+
+impl WebLoginHandler for DlsiteExplore {
+	fn handle_web_login(&self, key: String, cookies: HashMap<String, String>) -> Result<bool> {
+		if key != "login" {
+			print(format!(
+				"[dlsite-explore] web login rejected invalid key `{key}`"
+			));
+			bail!("Invalid login key: `{key}`");
+		}
+
+		let mut keys: Vec<&str> = cookies.keys().map(|s| s.as_str()).collect();
+		keys.sort();
+		let mut cookie_pairs: Vec<String> = Vec::new();
+		for name in &keys {
+			if let Some(value) = cookies.get(*name) {
+				cookie_pairs.push(format!("{}={}", name, value));
+			}
+		}
+
+		let has_session = !cookie_pairs.is_empty();
+		settings::set_logged_in(has_session);
+
+		if has_session {
+			let cookie_header = cookie_pairs.join("; ");
+			settings::set_web_cookies(&cookie_header);
+		} else {
+			settings::clear_web_cookies();
+		}
+
+		Ok(has_session)
+	}
+}
+
+/// Get language filter codes for home sections from default settings.
+fn get_home_languages() -> Vec<String> {
+	// Home sections use the default language options (JPN, ENG, NM etc.)
+	// We don't filter by language in home sections — show all.
+	Vec::new()
+}
+
+register_source!(DlsiteExplore, ListingProvider, Home, WebLoginHandler);
 
 #[cfg(test)]
 mod tests {

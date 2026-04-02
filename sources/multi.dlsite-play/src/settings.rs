@@ -104,8 +104,6 @@ impl SortOption {
 const PREFERRED_LANGUAGE_KEY: &str = "preferred_language";
 const SERIES_PREFIX_KEY: &str = "series_prefix";
 const CACHED_WORKNOS_KEY: &str = "cached_worknos";
-const LOGGED_IN_KEY: &str = "logged_in";
-const WEB_COOKIES_KEY: &str = "web_cookies";
 const SALES_FETCHED_AT_KEY: &str = "sales_fetched_at_unix";
 
 pub fn get_preferred_language() -> Language {
@@ -116,13 +114,9 @@ pub fn show_series_prefix() -> bool {
 	defaults_get::<bool>(SERIES_PREFIX_KEY).unwrap_or(false)
 }
 
-pub fn is_logged_in() -> bool {
-	defaults_get::<bool>(LOGGED_IN_KEY).unwrap_or(false)
-}
-
-pub fn set_logged_in(value: bool) {
-	defaults_set(LOGGED_IN_KEY, DefaultValue::Bool(value));
-}
+pub use dlsite_common::settings::{
+	is_logged_in, set_logged_in, get_web_cookies, set_web_cookies, clear_web_cookies,
+};
 
 /// Store the full list of purchased work IDs for pagination.
 pub fn set_cached_worknos(worknos: &[String]) {
@@ -160,22 +154,6 @@ pub fn clear_cached_page() {
 	defaults_set("cached_page", DefaultValue::Null);
 }
 
-/// Full `Cookie` header value for `play.dlsite.com` / `play.dl.dlsite.com` requests.
-/// Populated from web login; Aidoku does not attach WebView cookies to WASM `Request`s.
-pub fn set_web_cookies(header_value: &str) {
-	defaults_set(
-		WEB_COOKIES_KEY,
-		DefaultValue::String(String::from(header_value)),
-	);
-}
-
-pub fn get_web_cookies() -> Option<String> {
-	defaults_get::<String>(WEB_COOKIES_KEY).filter(|s| !s.is_empty())
-}
-
-pub fn clear_web_cookies() {
-	defaults_set(WEB_COOKIES_KEY, DefaultValue::Null);
-}
 
 const CACHED_GENRES_KEY: &str = "cached_genres";
 const CACHED_GENRES_LANG_KEY: &str = "cached_genres_lang";

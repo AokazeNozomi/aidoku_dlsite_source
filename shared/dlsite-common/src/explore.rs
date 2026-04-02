@@ -258,7 +258,7 @@ pub fn parse_age_from_attributes(attrs: &str) -> Option<String> {
 }
 
 /// Parse a single `<li>` product element into an `ExploreWork`.
-fn parse_product_element(li: &aidoku::imports::html::Element) -> Option<ExploreWork> {
+pub fn parse_product_element(li: &aidoku::imports::html::Element) -> Option<ExploreWork> {
 	let workno = li.attr("data-list_item_product_id")?;
 	if workno.is_empty() {
 		return None;
@@ -310,6 +310,31 @@ fn parse_product_element(li: &aidoku::imports::html::Element) -> Option<ExploreW
 // Public search function
 // ---------------------------------------------------------------------------
 
+/// Parse a `/fsr/ajax/=/` JSON response (containing an HTML fragment) into
+/// an `ExploreResult`. Reusable by both search and home sections.
+pub fn parse_fsr_ajax_response(data: &[u8], page: i32) -> Result<ExploreResult> {
+	let ajax: SearchAjaxResponse = serde_json::from_slice(data)?;
+
+	let doc = Html::parse_fragment(&ajax.search_result)?;
+	let items = doc.select("li[data-list_item_product_id]");
+
+	let mut works: Vec<ExploreWork> = Vec::new();
+	if let Some(items) = items {
+		for item in items {
+			if let Some(work) = parse_product_element(&item) {
+				works.push(work);
+			}
+		}
+	}
+
+	let has_next_page = (page as i64) * (EXPLORE_PAGE_SIZE as i64) < ajax.page_info.count;
+
+	Ok(ExploreResult {
+		works,
+		has_next_page,
+	})
+}
+
 /// Search DLsite's public catalog via the `/fsr/ajax/=/` endpoint.
 pub fn search_explore(
 	site_slug: &str,
@@ -355,34 +380,15 @@ pub fn search_explore(
 		});
 	}
 
-	let ajax: SearchAjaxResponse = serde_json::from_slice(&data)?;
-
-	// Parse the HTML fragment
-	let doc = Html::parse_fragment(&ajax.search_result)?;
-	let items = doc.select("li[data-list_item_product_id]");
-
-	let mut works: Vec<ExploreWork> = Vec::new();
-	if let Some(items) = items {
-		for item in items {
-			if let Some(work) = parse_product_element(&item) {
-				works.push(work);
-			}
-		}
-	}
-
-	let has_next_page = (page as i64) * (EXPLORE_PAGE_SIZE as i64) < ajax.page_info.count;
+	let result = parse_fsr_ajax_response(&data, page)?;
 
 	print(format!(
-		"[dlsite-explore] {} works, total={}, has_next={}",
-		works.len(),
-		ajax.page_info.count,
-		has_next_page
+		"[dlsite-explore] {} works, has_next={}",
+		result.works.len(),
+		result.has_next_page
 	));
 
-	Ok(ExploreResult {
-		works,
-		has_next_page,
-	})
+	Ok(result)
 }
 
 #[cfg(test)]

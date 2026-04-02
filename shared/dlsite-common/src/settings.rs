@@ -1,6 +1,6 @@
 use aidoku::{
 	alloc::{String, Vec},
-	imports::defaults::defaults_get,
+	imports::defaults::{DefaultValue, defaults_get, defaults_set},
 };
 
 // ---------------------------------------------------------------------------
@@ -105,6 +105,37 @@ pub fn get_site_slug(default_slug: &str) -> &'static str {
 /// Empty vec means "all" (no filtering).
 pub fn get_default_content_ratings() -> Vec<String> {
 	defaults_get::<Vec<String>>("default_content_rating").unwrap_or_default()
+}
+
+// ---------------------------------------------------------------------------
+// Login / web cookies
+// ---------------------------------------------------------------------------
+
+const LOGGED_IN_KEY: &str = "logged_in";
+const WEB_COOKIES_KEY: &str = "web_cookies";
+
+pub fn is_logged_in() -> bool {
+	defaults_get::<bool>(LOGGED_IN_KEY).unwrap_or(false)
+}
+
+pub fn set_logged_in(value: bool) {
+	defaults_set(LOGGED_IN_KEY, DefaultValue::Bool(value));
+}
+
+/// Full `Cookie` header value populated from web login.
+pub fn set_web_cookies(header_value: &str) {
+	defaults_set(
+		WEB_COOKIES_KEY,
+		DefaultValue::String(String::from(header_value)),
+	);
+}
+
+pub fn get_web_cookies() -> Option<String> {
+	defaults_get::<String>(WEB_COOKIES_KEY).filter(|s| !s.is_empty())
+}
+
+pub fn clear_web_cookies() {
+	defaults_set(WEB_COOKIES_KEY, DefaultValue::Null);
 }
 
 // ---------------------------------------------------------------------------
