@@ -1,7 +1,7 @@
 #![no_std]
 
 use aidoku::{
-	alloc::{collections::BTreeMap, format, string::ToString, String, Vec},
+	alloc::{collections::{BTreeMap, BTreeSet}, format, string::ToString, String, Vec},
 	imports::{canvas::ImageRef, net::{Request, set_rate_limit, TimeUnit}, std::{current_date, print}},
 	prelude::*,
 	register_source, Chapter, FilterValue, HashMap, Home, HomeComponent, HomeComponentValue,
@@ -277,6 +277,33 @@ impl DlsitePlay {
 				.unwrap_or_else(|| title_id.clone());
 			let updated = models::series_manga(&title_id, &sname, &works, &genre_names);
 			manga.copy_from(updated);
+
+			// Collect languages from all member works as a union.
+			let mut seen = BTreeSet::new();
+			let mut tags = manga.tags.take().unwrap_or_default();
+			let mut lang_labels: Vec<String> = Vec::new();
+			for w in &works {
+				if let Some(lang_str) = get_or_fetch_languages(&w.workno) {
+					for part in lang_str.split(',') {
+						if let Some((_code, label)) = part.split_once(':') {
+							if seen.insert(label.to_string()) {
+								let tag = format!("Lang: {}", label);
+								if !tags.contains(&tag) {
+									tags.push(tag);
+								}
+								lang_labels.push(label.to_string());
+							}
+						}
+					}
+				}
+			}
+			manga.tags = Some(tags);
+			if !lang_labels.is_empty() {
+				let mut desc = manga.description.take().unwrap_or_default();
+				desc.push('\n');
+				desc.push_str(&format!("Languages: {}", lang_labels.join(", ")));
+				manga.description = Some(desc);
+			}
 		}
 
 		if needs_chapters {
