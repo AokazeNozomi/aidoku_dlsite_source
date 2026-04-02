@@ -268,6 +268,75 @@ pub fn set_cached_languages(workno: &str, value: &str) {
 	);
 }
 
+// ---------------------------------------------------------------------------
+// Language filter (Source Settings > Languages)
+// ---------------------------------------------------------------------------
+
+/// Map a source.json language code to the DLsite API language code.
+fn source_lang_to_dlsite(code: &str) -> Option<&'static str> {
+	match code {
+		"ja" => Some("JPN"),
+		"en" => Some("ENG"),
+		"zh-Hans" => Some("CHI_HANS"),
+		"zh-Hant" => Some("CHI_HANT"),
+		"ko" => Some("KO_KR"),
+		"es" => Some("SPA"),
+		"de" => Some("GER"),
+		"fr" => Some("FRE"),
+		"id" => Some("IND"),
+		"it" => Some("ITA"),
+		"pt" => Some("POR"),
+		"sv" => Some("SWE"),
+		"th" => Some("THA"),
+		"vi" => Some("VIE"),
+		_ => None,
+	}
+}
+
+/// Read the user's selected languages from Aidoku's Source Settings and
+/// return them as DLsite API codes (e.g. `["JPN", "ENG"]`).
+/// Returns an empty Vec when all languages are selected (no filtering).
+pub fn get_selected_languages() -> Vec<String> {
+	let codes: Vec<String> = defaults_get::<Vec<String>>("languages").unwrap_or_default();
+	if codes.is_empty() {
+		return Vec::new();
+	}
+	// If every defined language is selected, treat it as "no filter".
+	// source.json defines 14 languages.
+	if codes.len() >= 14 {
+		return Vec::new();
+	}
+	codes
+		.iter()
+		.filter_map(|c| source_lang_to_dlsite(c))
+		.map(|s| String::from(s))
+		.collect()
+}
+
+/// Check whether a work's cached language data matches any of the selected
+/// DLsite language codes. Returns `true` if:
+/// - `dlsite_codes` is empty (no filter active), OR
+/// - the work has no cached language data (unknown = keep), OR
+/// - at least one of the work's languages appears in `dlsite_codes`.
+pub fn work_matches_languages(workno: &str, dlsite_codes: &[String]) -> bool {
+	if dlsite_codes.is_empty() {
+		return true;
+	}
+	let cached = match get_cached_languages(workno) {
+		Some(c) => c,
+		None => return true, // unknown language → don't filter out
+	};
+	// Cache format: "JPN:Japanese,ENG:English"
+	for pair in cached.split(',') {
+		if let Some(code) = pair.split(':').next() {
+			if dlsite_codes.iter().any(|c| c == code) {
+				return true;
+			}
+		}
+	}
+	false
+}
+
 pub use dlsite_common::settings::get_work_type_setting;
 
 // ---------------------------------------------------------------------------
