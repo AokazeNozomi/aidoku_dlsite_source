@@ -52,7 +52,7 @@
 				"key": "series_prefix",
 				"title": "Show [SERIES] prefix",
 				"subtitle": "Prepend [SERIES] to series manga titles for easy identification.",
-				"default": "false",
+				"default": false,
 				"refreshes": [
 					"listings",
 					"content"
@@ -83,7 +83,7 @@
 				"key": "update_view_history",
 				"title": "Update View History",
 				"subtitle": "Update DLsite Play's recently opened list when reading.",
-				"default": "false"
+				"default": false
 			}
 		]
 	},
@@ -114,7 +114,7 @@
 				"key": "default_sort_ascending",
 				"title": "Ascending",
 				"subtitle": "Sort in ascending order instead of descending.",
-				"default": "true",
+				"default": true,
 				"refreshes": [
 					"listings",
 					"content"
