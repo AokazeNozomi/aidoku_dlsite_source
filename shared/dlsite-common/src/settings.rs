@@ -159,14 +159,32 @@ pub fn clear_web_cookies() {
 	defaults_set(WEB_COOKIES_KEY, DefaultValue::Null);
 }
 
-/// Build a `Cookie` header value that includes the DLsite locale cookie
-/// (for localized work titles) and any existing web login cookies.
-pub fn get_locale_cookie_header() -> String {
+const CACHED_LOCALE_KEY: &str = "cached_locale";
+
+/// Ensure the DLsite `locale` cookie in HTTPCookieStorage matches the
+/// user's preferred language. Makes a single request with `?locale=…`
+/// which causes DLsite to respond with `Set-Cookie: locale=…`. The
+/// Aidoku runtime automatically stores this in HTTPCookieStorage.
+/// Only fires when the preferred language changes (or on first run).
+pub fn sync_locale_cookie(site_slug: &str) {
+	use aidoku::imports::net::Request;
+
 	let locale = get_preferred_language().locale_cookie_code();
-	match get_web_cookies() {
-		Some(cookies) => format!("locale={}; {}", locale, cookies),
-		None => format!("locale={}", locale),
+	let cached = defaults_get::<String>(CACHED_LOCALE_KEY);
+	if cached.as_deref() == Some(locale) {
+		return;
 	}
+	let url = format!(
+		"https://www.dlsite.com/{}/?locale={}",
+		site_slug, locale
+	);
+	if let Ok(req) = Request::get(&url) {
+		let _ = req.send();
+	}
+	defaults_set(
+		CACHED_LOCALE_KEY,
+		DefaultValue::String(String::from(locale)),
+	);
 }
 
 // ---------------------------------------------------------------------------

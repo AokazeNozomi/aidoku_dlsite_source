@@ -400,14 +400,12 @@ pub fn search_explore(
 	);
 	print(format!("[dlsite-explore] → GET {}", url));
 
-	let cookie_header = crate::settings::get_locale_cookie_header();
 	let resp = Request::get(&url)?
 		.header("Accept", "application/json")
 		.header(
 			"User-Agent",
 			"Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15",
 		)
-		.header("Cookie", &cookie_header)
 		.send()?;
 
 	let status = resp.status_code();

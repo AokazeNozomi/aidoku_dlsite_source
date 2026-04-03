@@ -107,11 +107,9 @@ fn build_home_fsr_url(
 // ---------------------------------------------------------------------------
 
 fn get_request(url: &str) -> Result<Vec<u8>> {
-	let cookie_header = settings::get_locale_cookie_header();
 	let resp = Request::get(url)?
 		.header("Accept", "application/json")
 		.header("User-Agent", USER_AGENT)
-		.header("Cookie", &cookie_header)
 		.send()?;
 
 	let status = resp.status_code();
@@ -124,12 +122,15 @@ fn get_request(url: &str) -> Result<Vec<u8>> {
 }
 
 fn get_html_request(url: &str) -> Result<Vec<u8>> {
-	let cookie_header = settings::get_locale_cookie_header();
 	let mut req = Request::get(url)?;
 	req = req
 		.header("Accept", "text/html")
-		.header("User-Agent", USER_AGENT)
-		.header("Cookie", &cookie_header);
+		.header("User-Agent", USER_AGENT);
+
+	// Attach cookies if available (for personalized recommendations)
+	if let Some(cookies) = settings::get_web_cookies() {
+		req = req.header("Cookie", &cookies);
+	}
 
 	let resp = req.send()?;
 	let status = resp.status_code();

@@ -28,6 +28,7 @@ impl Source for DlsiteExplore {
 		filter_list: Vec<FilterValue>,
 	) -> Result<MangaPageResult> {
 		let site_slug = filters::extract_site_filter(&filter_list, SITE_SLUGS);
+		settings::sync_locale_cookie(site_slug);
 		let sort = filters::extract_sort_filter(&filter_list);
 		let language = filters::extract_language_filter(&filter_list);
 		let work_types = filters::extract_work_type_filter(&filter_list);
@@ -83,6 +84,7 @@ impl Source for DlsiteExplore {
 impl ListingProvider for DlsiteExplore {
 	fn get_manga_list(&self, listing: Listing, page: i32) -> Result<MangaPageResult> {
 		let site_slug = settings::get_site_slug(SITE_SLUGS[0]);
+		settings::sync_locale_cookie(site_slug);
 		let work_types = settings::get_work_type_setting();
 		let languages = settings::get_selected_languages();
 
@@ -117,6 +119,7 @@ impl ListingProvider for DlsiteExplore {
 impl Home for DlsiteExplore {
 	fn get_home(&self) -> Result<HomeLayout> {
 		let site_slug = settings::get_site_slug(SITE_SLUGS[0]);
+		settings::sync_locale_cookie(site_slug);
 		let work_types = settings::get_work_type_setting();
 		let languages = settings::get_selected_languages();
 		let mut components = Vec::new();
