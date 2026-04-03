@@ -1,5 +1,5 @@
 use aidoku::{
-	alloc::{String, Vec},
+	alloc::{format, String, Vec},
 	imports::defaults::{DefaultValue, defaults_get, defaults_set},
 };
 
@@ -61,6 +61,27 @@ impl Language {
 			Self::Vietnamese => "vi_VN",
 			Self::Thai => "th_TH",
 			Self::Swedish => "sv_SE",
+		}
+	}
+
+	/// DLsite locale cookie value (e.g. `"en-us"`), used to localize
+	/// work titles in FSR search/listing responses.
+	pub fn locale_cookie_code(self) -> &'static str {
+		match self {
+			Self::Japanese => "ja-jp",
+			Self::English => "en-us",
+			Self::ChineseSimplified => "zh-cn",
+			Self::ChineseTraditional => "zh-tw",
+			Self::Korean => "ko-kr",
+			Self::Spanish => "es-es",
+			Self::German => "de-de",
+			Self::French => "fr-fr",
+			Self::Indonesian => "id-id",
+			Self::Italian => "it-it",
+			Self::Portuguese => "pt-br",
+			Self::Swedish => "sv-se",
+			Self::Thai => "th-th",
+			Self::Vietnamese => "vi-vn",
 		}
 	}
 }
@@ -136,6 +157,16 @@ pub fn get_web_cookies() -> Option<String> {
 
 pub fn clear_web_cookies() {
 	defaults_set(WEB_COOKIES_KEY, DefaultValue::Null);
+}
+
+/// Build a `Cookie` header value that includes the DLsite locale cookie
+/// (for localized work titles) and any existing web login cookies.
+pub fn get_locale_cookie_header() -> String {
+	let locale = get_preferred_language().locale_cookie_code();
+	match get_web_cookies() {
+		Some(cookies) => format!("locale={}; {}", locale, cookies),
+		None => format!("locale={}", locale),
+	}
 }
 
 // ---------------------------------------------------------------------------
