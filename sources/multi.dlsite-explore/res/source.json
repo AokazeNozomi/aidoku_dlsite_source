@@ -4,7 +4,7 @@
     "name": "DLsite Explore",
     "version": 1,
     "url": "https://www.dlsite.com/home/",
-    "contentRating": 0,
+    "contentRating": 1,
     "languages": [
       "ja",
       "en",
@@ -23,11 +23,29 @@
     ]
   },
   "listings": [
-    { "id": "english_picks", "name": "Our Top English Picks" },
-    { "id": "translations", "name": "Translators Unite" },
-    { "id": "ranking", "name": "Doujin Ranking (7 Days)" },
-    { "id": "recommended", "name": "Recommended" },
-    { "id": "new_works", "name": "New Doujin Works" },
-    { "id": "popular_works", "name": "Popular Doujin Works" }
+    {
+      "id": "english_picks",
+      "name": "Our Top English Picks"
+    },
+    {
+      "id": "translations",
+      "name": "Translators Unite"
+    },
+    {
+      "id": "ranking",
+      "name": "Doujin Ranking (7 Days)"
+    },
+    {
+      "id": "recommended",
+      "name": "Recommended"
+    },
+    {
+      "id": "new_works",
+      "name": "New Doujin Works"
+    },
+    {
+      "id": "popular_works",
+      "name": "Popular Doujin Works"
+    }
   ]
 }
