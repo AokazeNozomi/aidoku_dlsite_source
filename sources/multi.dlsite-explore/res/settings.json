@@ -22,6 +22,21 @@
 		"items": [
 			{
 				"type": "select",
+				"key": "site",
+				"title": "Site",
+				"values": [
+					"Doujin",
+					"PC Games"
+				],
+				"default": "Doujin",
+				"refreshes": [
+					"home",
+					"listings",
+					"content"
+				]
+			},
+			{
+				"type": "select",
 				"key": "preferred_language",
 				"title": "Preferred Language",
 				"values": [

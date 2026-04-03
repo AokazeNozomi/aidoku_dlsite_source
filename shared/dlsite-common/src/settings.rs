@@ -26,25 +26,6 @@ pub enum Language {
 }
 
 impl Language {
-	pub fn from_index(index: i32) -> Self {
-		match index {
-			1 => Self::Japanese,
-			2 => Self::ChineseSimplified,
-			3 => Self::ChineseTraditional,
-			4 => Self::Korean,
-			5 => Self::Spanish,
-			6 => Self::German,
-			7 => Self::French,
-			8 => Self::Italian,
-			9 => Self::Portuguese,
-			10 => Self::Indonesian,
-			11 => Self::Vietnamese,
-			12 => Self::Thai,
-			13 => Self::Swedish,
-			_ => Self::English,
-		}
-	}
-
 	pub fn locale_code(self) -> &'static str {
 		match self {
 			Self::English => "en_US",
@@ -87,34 +68,48 @@ impl Language {
 }
 
 pub fn get_preferred_language() -> Language {
-	// Aidoku stores select settings as integer indices.
-	if let Some(index) = defaults_get::<i32>("preferred_language") {
-		return Language::from_index(index);
+	// Aidoku stores select settings as the display string, not an index.
+	match defaults_get::<String>("preferred_language").as_deref() {
+		Some("Japanese") => Language::Japanese,
+		Some("Chinese (Simplified)") => Language::ChineseSimplified,
+		Some("Chinese (Traditional)") => Language::ChineseTraditional,
+		Some("Korean") => Language::Korean,
+		Some("Spanish") => Language::Spanish,
+		Some("German") => Language::German,
+		Some("French") => Language::French,
+		Some("Italian") => Language::Italian,
+		Some("Portuguese (Brazil)") => Language::Portuguese,
+		Some("Indonesian") => Language::Indonesian,
+		Some("Vietnamese") => Language::Vietnamese,
+		Some("Thai") => Language::Thai,
+		Some("Swedish") => Language::Swedish,
+		_ => Language::English,
 	}
-	Language::English
 }
 
 // ---------------------------------------------------------------------------
 // Site slug
 // ---------------------------------------------------------------------------
 
-/// All-ages site slugs, indexed by the "site" select setting.
-const ALL_AGES_SLUGS: &[&str] = &["home", "soft"];
-
-/// Adult site slugs, indexed by the "site" select setting.
-const ADULT_SLUGS: &[&str] = &["maniax", "pro", "books", "girls", "bl"];
-
 /// Read the selected site from settings and return the URL slug.
 /// Falls back to `default_slug` if no setting is found.
 pub fn get_site_slug(default_slug: &str) -> &'static str {
-	let index = defaults_get::<i32>("site").unwrap_or(0) as usize;
-	// Use the default slug to determine which site list applies.
-	let slugs = if ADULT_SLUGS.contains(&default_slug) {
-		ADULT_SLUGS
-	} else {
-		ALL_AGES_SLUGS
-	};
-	slugs.get(index).copied().unwrap_or(slugs[0])
+	match defaults_get::<String>("site").as_deref() {
+		// All-ages
+		Some("Doujin") => "home",
+		Some("PC Games") => "soft",
+		// R18
+		Some("Adult Doujin") => "maniax",
+		Some("H Games") => "pro",
+		Some("Adult Comics") => "books",
+		Some("Otome") => "girls",
+		Some("BL") => "bl",
+		_ => match default_slug {
+			"home" | "soft" => "home",
+			"maniax" | "pro" | "books" | "girls" | "bl" => "maniax",
+			_ => "home",
+		},
+	}
 }
 
 // ---------------------------------------------------------------------------

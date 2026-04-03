@@ -22,6 +22,24 @@
 		"items": [
 			{
 				"type": "select",
+				"key": "site",
+				"title": "Site",
+				"values": [
+					"Adult Doujin",
+					"H Games",
+					"Adult Comics",
+					"Otome",
+					"BL"
+				],
+				"default": "Adult Doujin",
+				"refreshes": [
+					"home",
+					"listings",
+					"content"
+				]
+			},
+			{
+				"type": "select",
 				"key": "preferred_language",
 				"title": "Preferred Language",
 				"values": [

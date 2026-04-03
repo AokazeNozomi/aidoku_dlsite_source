@@ -26,25 +26,6 @@ pub enum Language {
 }
 
 impl Language {
-	fn from_index(index: i32) -> Self {
-		match index {
-			1 => Self::Japanese,
-			2 => Self::ChineseSimplified,
-			3 => Self::ChineseTraditional,
-			4 => Self::Korean,
-			5 => Self::Spanish,
-			6 => Self::German,
-			7 => Self::French,
-			8 => Self::Italian,
-			9 => Self::Portuguese,
-			10 => Self::Indonesian,
-			11 => Self::Vietnamese,
-			12 => Self::Thai,
-			13 => Self::Swedish,
-			_ => Self::English,
-		}
-	}
-
 	pub fn locale_code(self) -> &'static str {
 		match self {
 			Self::English => "en_US",
@@ -85,15 +66,6 @@ impl SortOption {
 		}
 	}
 
-	fn from_setting(index: i32) -> Self {
-		match index {
-			1 => Self::PurchaseDate,
-			2 => Self::ReleaseDate,
-			3 => Self::WriterCircle,
-			4 => Self::Title,
-			_ => Self::RecentlyOpened,
-		}
-	}
 }
 
 
@@ -107,7 +79,22 @@ const CACHED_WORKNOS_KEY: &str = "cached_worknos";
 const SALES_FETCHED_AT_KEY: &str = "sales_fetched_at_unix";
 
 pub fn get_preferred_language() -> Language {
-	Language::from_index(defaults_get::<i32>(PREFERRED_LANGUAGE_KEY).unwrap_or(0))
+	match defaults_get::<String>(PREFERRED_LANGUAGE_KEY).as_deref() {
+		Some("Japanese") => Language::Japanese,
+		Some("Chinese (Simplified)") => Language::ChineseSimplified,
+		Some("Chinese (Traditional)") => Language::ChineseTraditional,
+		Some("Korean") => Language::Korean,
+		Some("Spanish") => Language::Spanish,
+		Some("German") => Language::German,
+		Some("French") => Language::French,
+		Some("Italian") => Language::Italian,
+		Some("Portuguese (Brazil)") => Language::Portuguese,
+		Some("Indonesian") => Language::Indonesian,
+		Some("Vietnamese") => Language::Vietnamese,
+		Some("Thai") => Language::Thai,
+		Some("Swedish") => Language::Swedish,
+		_ => Language::English,
+	}
 }
 
 pub fn show_series_prefix() -> bool {
@@ -342,12 +329,17 @@ pub fn update_view_history_enabled() -> bool {
 // ---------------------------------------------------------------------------
 
 pub fn get_default_sort() -> SortOption {
-	SortOption::from_setting(defaults_get::<i32>("default_sort").unwrap_or(1))
+	match defaults_get::<String>("default_sort").as_deref() {
+		Some("Recently Opened") => SortOption::RecentlyOpened,
+		Some("Release Date") => SortOption::ReleaseDate,
+		Some("Writer/Circle Name") => SortOption::WriterCircle,
+		Some("Title") => SortOption::Title,
+		_ => SortOption::PurchaseDate,
+	}
 }
 
 pub fn get_default_sort_ascending() -> bool {
-	// 0 = Ascending, 1 = Descending
-	defaults_get::<i32>("default_sort_ascending").unwrap_or(0) == 0
+	defaults_get::<String>("default_sort_ascending").as_deref() != Some("Descending")
 }
 
 pub use dlsite_common::settings::get_default_content_ratings;
