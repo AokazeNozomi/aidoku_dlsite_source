@@ -87,7 +87,7 @@
 					"Ascending",
 					"Descending"
 				],
-				"default": "Ascending",
+				"default": "Descending",
 				"refreshes": [
 					"home",
 					"listings",

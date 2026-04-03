@@ -339,7 +339,7 @@ pub fn get_default_sort() -> SortOption {
 }
 
 pub fn get_default_sort_ascending() -> bool {
-	defaults_get::<String>("default_sort_ascending").as_deref() != Some("Descending")
+	defaults_get::<String>("default_sort_ascending").as_deref() == Some("Ascending")
 }
 
 pub use dlsite_common::settings::get_default_content_ratings;
