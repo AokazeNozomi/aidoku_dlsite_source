@@ -1298,7 +1298,10 @@ fn get_or_fetch_languages(workno: &str) -> Option<String> {
 	}
 	let editions = public::get_language_editions(workno).ok()?;
 	if editions.is_empty() {
-		return None;
+		// Product found but no language editions listed — default to Japanese.
+		let value = String::from("JPN:Japanese");
+		settings::set_cached_languages(workno, &value);
+		return Some(value);
 	}
 	let pairs: Vec<String> = editions
 		.iter()

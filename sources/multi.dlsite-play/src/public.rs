@@ -25,7 +25,7 @@ pub fn get_language_editions(workno: &str) -> Result<Vec<LanguageEdition>> {
 			"[dlsite-play] public API HTTP {} for {}",
 			status, workno
 		));
-		return Ok(Vec::new());
+		return Err(aidoku::AidokuError::message("public API non-2xx"));
 	}
 	let products: Vec<ProductInfo> = serde_json::from_slice(&data).unwrap_or_default();
 	Ok(products
