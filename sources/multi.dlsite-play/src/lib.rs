@@ -171,7 +171,9 @@ impl DlsitePlay {
 				if needs_details {
 					let genre_names = resolve_genre_names(&[&work]);
 					let series_names = build_series_lookup(&series);
-					let updated = work.into_manga(&genre_names, &series_names);
+					let cached_dates = settings::get_cached_sales_dates();
+					let pd = cached_dates.get(&work.workno).map(|s| s.as_str());
+					let updated = work.into_manga_with_date(&genre_names, &series_names, pd);
 					manga.copy_from(updated);
 
 					if let Some(label) = get_work_language(&manga.key) {
@@ -266,7 +268,13 @@ impl DlsitePlay {
 				.cloned()
 				.or_else(|| models::derive_series_name(&works))
 				.unwrap_or_else(|| title_id.clone());
-			let updated = models::series_manga(&title_id, &sname, &works, &genre_names, None);
+			let cached_dates = settings::get_cached_sales_dates();
+			let earliest_purchase: Option<String> = works
+				.iter()
+				.filter_map(|w| cached_dates.get(&w.workno))
+				.min()
+				.cloned();
+			let updated = models::series_manga(&title_id, &sname, &works, &genre_names, earliest_purchase.as_deref());
 			manga.copy_from(updated);
 
 			// Collect languages from all member works (purchased editions only).
@@ -1238,7 +1246,7 @@ fn get_or_fetch_worknos(page: i32) -> Result<(Vec<String>, BTreeMap<String, Stri
 		let cache_fresh = fetched_at
 			.map(|t| now.saturating_sub(t) < SALES_CACHE_MAX_AGE_SEC)
 			.unwrap_or(false);
-		if !cached.is_empty() && cache_fresh {
+		if !cached.is_empty() && !cached_dates.is_empty() && cache_fresh {
 			print(format!(
 				"[dlsite-play] get_or_fetch_worknos page=1 using sales cache age={}s count={}",
 				fetched_at.map(|t| now.saturating_sub(t)).unwrap_or(0),
