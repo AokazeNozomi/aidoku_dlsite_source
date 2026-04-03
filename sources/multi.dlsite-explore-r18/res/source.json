@@ -27,6 +27,8 @@
     { "id": "translations", "name": "Translators Unite" },
     { "id": "ranking", "name": "Doujin Ranking (7 Days)" },
     { "id": "recommended", "name": "Recommended" },
+    { "id": "recommended_en", "name": "Recommended English Works" },
+    { "id": "recommended_discount", "name": "Recommended Discounted Works" },
     { "id": "new_works", "name": "New Doujin Works" },
     { "id": "popular_works", "name": "Popular Doujin Works" }
   ]

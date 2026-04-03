@@ -40,6 +40,14 @@
       "name": "Recommended"
     },
     {
+      "id": "recommended_en",
+      "name": "Recommended English Works"
+    },
+    {
+      "id": "recommended_discount",
+      "name": "Recommended Discounted Works"
+    },
+    {
       "id": "new_works",
       "name": "New Doujin Works"
     },

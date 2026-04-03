@@ -90,7 +90,9 @@ impl ListingProvider for DlsiteExploreR18 {
 			"english_picks" => home::fetch_english_picks(site_slug, IS_R18, page),
 			"translations" => home::fetch_translations(site_slug, page),
 			"ranking" => home::fetch_ranking(site_slug, &work_types),
-			"recommended" => home::fetch_recommended(site_slug),
+			"recommended" => home::fetch_recommended(site_slug, "top"),
+			"recommended_en" => home::fetch_recommended(site_slug, "top_en"),
+			"recommended_discount" => home::fetch_recommended(site_slug, "top_discount"),
 			"new_works" => home::fetch_new_works(site_slug, IS_R18, &languages, page),
 			"popular_works" => home::fetch_popular_works(site_slug, IS_R18, &languages, page),
 			_ => {
@@ -186,10 +188,10 @@ impl Home for DlsiteExploreR18 {
 		}
 
 		// 4. Recommended (carousel with expand, always fetched)
-		if let Ok(result) = home::fetch_recommended(site_slug) {
+		if let Ok(result) = home::fetch_recommended(site_slug, "top") {
 			if !result.works.is_empty() {
 				components.push(HomeComponent {
-					title: Some(String::from("Recommended doujin products for you")),
+					title: Some(String::from("Recommended")),
 					subtitle: None,
 					value: HomeComponentValue::Scroller {
 						entries: result
@@ -200,6 +202,50 @@ impl Home for DlsiteExploreR18 {
 						listing: Some(Listing {
 							id: String::from("recommended"),
 							name: String::from("Recommended"),
+							kind: ListingKind::default(),
+						}),
+					},
+				});
+			}
+		}
+
+		// 4b. Recommended English works
+		if let Ok(result) = home::fetch_recommended(site_slug, "top_en") {
+			if !result.works.is_empty() {
+				components.push(HomeComponent {
+					title: Some(String::from("Recommended English Works")),
+					subtitle: None,
+					value: HomeComponentValue::Scroller {
+						entries: result
+							.works
+							.into_iter()
+							.map(|w| -> Link { w.into_manga(site_slug).into() })
+							.collect(),
+						listing: Some(Listing {
+							id: String::from("recommended_en"),
+							name: String::from("Recommended English Works"),
+							kind: ListingKind::default(),
+						}),
+					},
+				});
+			}
+		}
+
+		// 4c. Recommended discounted works
+		if let Ok(result) = home::fetch_recommended(site_slug, "top_discount") {
+			if !result.works.is_empty() {
+				components.push(HomeComponent {
+					title: Some(String::from("Recommended Discounted Works")),
+					subtitle: None,
+					value: HomeComponentValue::Scroller {
+						entries: result
+							.works
+							.into_iter()
+							.map(|w| -> Link { w.into_manga(site_slug).into() })
+							.collect(),
+						listing: Some(Listing {
+							id: String::from("recommended_discount"),
+							name: String::from("Recommended Discounted Works"),
 							kind: ListingKind::default(),
 						}),
 					},

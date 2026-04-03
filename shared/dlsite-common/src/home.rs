@@ -392,12 +392,12 @@ fn parse_recommend_html(html: &str) -> Vec<ExploreWork> {
 	works
 }
 
-pub fn fetch_recommended(site_slug: &str) -> Result<ExploreResult> {
+pub fn fetch_recommended(site_slug: &str, recommend_type: &str) -> Result<ExploreResult> {
 	let url = format!(
-		"https://www.dlsite.com/{}/load/recommend/parts/=/type/top/id/1",
-		site_slug
+		"https://www.dlsite.com/{}/load/recommend/parts/=/type/{}/id/1",
+		site_slug, recommend_type
 	);
-	print(format!("[dlsite-home] recommended → GET {}", url));
+	print(format!("[dlsite-home] recommended({}) → GET {}", recommend_type, url));
 
 	let data = get_request(&url)?;
 	if data.is_empty() {
@@ -414,7 +414,8 @@ pub fn fetch_recommended(site_slug: &str) -> Result<ExploreResult> {
 	}
 
 	print(format!(
-		"[dlsite-home] recommended: {} works",
+		"[dlsite-home] recommended({}): {} works",
+		recommend_type,
 		works.len()
 	));
 
