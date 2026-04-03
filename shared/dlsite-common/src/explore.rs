@@ -259,6 +259,21 @@ pub fn parse_age_from_attributes(attrs: &str) -> Option<String> {
 	}
 }
 
+/// Extract cover image URL from the `:thumb-candidates` Vue attribute.
+///
+/// Format: `['//img.dlsite.jp/...240x240.webp','//img.dlsite.jp/...240x240.jpg']`
+/// Prefers the `.jpg` entry; normalizes protocol-relative URLs to `https:`.
+fn extract_thumb_url(li: &aidoku::imports::html::Element) -> Option<String> {
+	let thumb = li.select_first("thumb-with-ng-filter-block")?;
+	let candidates = thumb.attr(":thumb-candidates")?;
+	let url = candidates.split('\'').find(|s| s.ends_with(".jpg"))?;
+	Some(if url.starts_with("//") {
+		format!("https:{}", url)
+	} else {
+		String::from(url)
+	})
+}
+
 /// Parse a single `<li>` product element into an `ExploreWork`.
 pub fn parse_product_element(li: &aidoku::imports::html::Element) -> Option<ExploreWork> {
 	let workno = li.attr("data-list_item_product_id")?;
@@ -279,8 +294,9 @@ pub fn parse_product_element(li: &aidoku::imports::html::Element) -> Option<Expl
 		})
 		.unwrap_or_else(|| workno.clone());
 
-	// Cover URL: constructed from product ID
-	let cover_url = cover_url_from_id(&workno);
+	// Cover URL: prefer HTML-embedded URL (handles translations + pre-release),
+	// fall back to constructing from product ID
+	let cover_url = extract_thumb_url(li).or_else(|| cover_url_from_id(&workno));
 
 	// Circle/maker name
 	let maker_name = li
