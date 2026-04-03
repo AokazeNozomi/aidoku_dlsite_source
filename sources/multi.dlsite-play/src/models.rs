@@ -317,6 +317,33 @@ pub(crate) fn days_from_civil(year: i32, month: u32, day: u32) -> Option<i64> {
 	Some(days)
 }
 
+/// Format an ISO-8601 timestamp (e.g. `2024-04-06T09:38:30.000000Z`) as `Apr 6, 2024`.
+fn format_date(iso: &str) -> String {
+	// Parse "YYYY-MM-DDT..."
+	if iso.len() < 10 {
+		return String::from(iso);
+	}
+	let year = &iso[0..4];
+	let month = iso[5..7].parse::<u8>().unwrap_or(0);
+	let day = iso[8..10].parse::<u8>().unwrap_or(0);
+	let month_name = match month {
+		1 => "Jan",
+		2 => "Feb",
+		3 => "Mar",
+		4 => "Apr",
+		5 => "May",
+		6 => "Jun",
+		7 => "Jul",
+		8 => "Aug",
+		9 => "Sep",
+		10 => "Oct",
+		11 => "Nov",
+		12 => "Dec",
+		_ => return String::from(iso),
+	};
+	format!("{} {}, {}", month_name, day, year)
+}
+
 pub(crate) fn format_size(bytes: u64) -> String {
 	if bytes >= 1_073_741_824 {
 		format!("{:.1} GB", bytes as f64 / 1_073_741_824.0)
@@ -331,6 +358,15 @@ impl PurchaseWork {
 		self,
 		genre_names: &BTreeMap<u32, String>,
 		series_names: &BTreeMap<String, String>,
+	) -> Manga {
+		self.into_manga_with_date(genre_names, series_names, None)
+	}
+
+	pub fn into_manga_with_date(
+		self,
+		genre_names: &BTreeMap<u32, String>,
+		series_names: &BTreeMap<String, String>,
+		purchase_date: Option<&str>,
 	) -> Manga {
 		let title = self
 			.name
@@ -461,6 +497,10 @@ impl PurchaseWork {
 				};
 				desc_lines.push(line);
 			}
+		}
+		// Purchase date
+		if let Some(date) = purchase_date {
+			desc_lines.push(format!("Purchased: {}", format_date(date)));
 		}
 		// File size
 		if let Some(size) = self.content_size {
@@ -652,6 +692,7 @@ pub fn series_manga(
 	series_name: &str,
 	works: &[PurchaseWork],
 	genre_names: &BTreeMap<u32, String>,
+	purchase_date: Option<&str>,
 ) -> Manga {
 	let first = works.first();
 
@@ -733,6 +774,9 @@ pub fn series_manga(
 	let mut desc_lines: Vec<String> = Vec::new();
 	if let Some(ref circle) = circle_name {
 		desc_lines.push(format!("Circle: {}", circle));
+	}
+	if let Some(date) = purchase_date {
+		desc_lines.push(format!("Purchased: {}", format_date(date)));
 	}
 	desc_lines.push(format!("Volumes owned: {}", works.len()));
 	for w in works {

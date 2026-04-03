@@ -266,7 +266,7 @@ impl DlsitePlay {
 				.cloned()
 				.or_else(|| models::derive_series_name(&works))
 				.unwrap_or_else(|| title_id.clone());
-			let updated = models::series_manga(&title_id, &sname, &works, &genre_names);
+			let updated = models::series_manga(&title_id, &sname, &works, &genre_names, None);
 			manga.copy_from(updated);
 
 			// Collect languages from all member works (purchased editions only).
@@ -1019,8 +1019,13 @@ fn build_sorted_entries(
 				}
 			}
 			let name = sname.unwrap_or(key.as_str());
+			let earliest_purchase: Option<String> = works
+				.iter()
+				.filter_map(|w| sales_dates.get(&w.workno))
+				.min()
+				.cloned();
 			let sort_key = build_series_sort_key(works, name, sales_dates, &view_history_map);
-			all_entries.push((sort_key, models::series_manga(key, name, works, &genre_names)));
+			all_entries.push((sort_key, models::series_manga(key, name, works, &genre_names, earliest_purchase.as_deref())));
 		} else if let Some(pos) = standalone.iter().position(|(k, _)| k == key) {
 			let (_, w) = &standalone[pos];
 			if has_filter {
@@ -1043,7 +1048,8 @@ fn build_sorted_entries(
 			let sort_key = build_work_sort_key(w, sales_dates, &view_history_map);
 			// Move out of standalone to convert
 			let (_, w) = standalone.remove(pos);
-			all_entries.push((sort_key, w.into_manga(&genre_names, &series_names)));
+			let pd = sales_dates.get(&w.workno).map(|s| s.as_str());
+			all_entries.push((sort_key, w.into_manga_with_date(&genre_names, &series_names, pd)));
 		}
 	}
 
