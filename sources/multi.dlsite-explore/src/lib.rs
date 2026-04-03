@@ -90,7 +90,7 @@ impl ListingProvider for DlsiteExplore {
 			"english_picks" => home::fetch_english_picks(site_slug, IS_R18, page),
 			"translations" => home::fetch_translations(site_slug, page),
 			"ranking" => home::fetch_ranking(site_slug, &work_types),
-			"recommended" => home::fetch_recommended(site_slug, &work_types),
+			"recommended" => home::fetch_recommended(site_slug),
 			"new_works" => home::fetch_new_works(site_slug, IS_R18, &languages, page),
 			"popular_works" => home::fetch_popular_works(site_slug, IS_R18, &languages, page),
 			_ => {
@@ -186,7 +186,7 @@ impl Home for DlsiteExplore {
 		}
 
 		// 4. Recommended (carousel with expand, always fetched)
-		if let Ok(result) = home::fetch_recommended(site_slug, &work_types) {
+		if let Ok(result) = home::fetch_recommended(site_slug) {
 			if !result.works.is_empty() {
 				components.push(HomeComponent {
 					title: Some(String::from("Recommended doujin products for you")),

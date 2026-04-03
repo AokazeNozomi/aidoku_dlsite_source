@@ -328,127 +328,79 @@ pub fn fetch_ranking(
 }
 
 // ---------------------------------------------------------------------------
-// Section 4: Recommended (from homepage)
+// Section 4: Recommended (from /load/recommend/parts API)
 // ---------------------------------------------------------------------------
 
-fn parse_homepage_recommendations(
-	html_bytes: &[u8],
-	_site_slug: &str,
-	work_types: &[String],
-) -> Vec<ExploreWork> {
-	let html_str = match core::str::from_utf8(html_bytes) {
-		Ok(s) => s,
-		Err(_) => return Vec::new(),
-	};
-	let doc = match Html::parse(html_str) {
+#[derive(aidoku::serde::Deserialize)]
+struct RecommendPart {
+	#[serde(default)]
+	html: String,
+}
+
+fn parse_recommend_html(html: &str) -> Vec<ExploreWork> {
+	let doc = match Html::parse_fragment(html) {
 		Ok(d) => d,
 		Err(_) => return Vec::new(),
 	};
 
-	let category_selectors: &[(&str, &[&str])] = &[
-		("div[class*='_recommend_vuog_voice_']", VOICE_WORK_TYPES),
-		("div[class*='_recommend_vuog_comic_']", COMIC_WORK_TYPES),
-		("div[class*='_recommend_vuog_game_']", GAME_WORK_TYPES),
-	];
+	let items = match doc.select("div.recommend_work_item") {
+		Some(i) => i,
+		None => return Vec::new(),
+	};
 
-	let mut all_works = Vec::new();
+	let mut works = Vec::new();
 
-	for (selector, cat_types) in category_selectors {
-		if !category_enabled(work_types, cat_types) {
-			continue;
-		}
-
-		let containers = match doc.select(selector) {
-			Some(c) => c,
+	for item in items {
+		let data_div = item.select_first("div[data-product_id]");
+		let workno = match &data_div {
+			Some(div) => match div.attr("data-product_id") {
+				Some(id) if !id.is_empty() => id,
+				_ => continue,
+			},
 			None => continue,
 		};
 
-		for container in containers {
-			let items = match container.select("div.recommend_work_item") {
-				Some(i) => i,
-				None => continue,
-			};
+		let title = data_div
+			.as_ref()
+			.and_then(|div| div.attr("data-work_name"))
+			.unwrap_or_else(|| workno.clone());
 
-			for item in items {
-				// Product data is in a hidden div with data attributes
-				let data_div = item.select_first("div[data-product_id]");
-				let workno = match &data_div {
-					Some(div) => match div.attr("data-product_id") {
-						Some(id) if !id.is_empty() => id,
-						_ => continue,
-					},
-					None => {
-						// Fallback: extract from link href
-						match item.select_first("a[href*='product_id']") {
-							Some(a) => match a.attr("href") {
-								Some(href) => {
-									if let Some(start) = href.find("product_id/") {
-										let after = &href[start + 11..];
-										if let Some(end) = after.find('.') {
-											String::from(&after[..end])
-										} else {
-											continue;
-										}
-									} else {
-										continue;
-									}
-								}
-								None => continue,
-							},
-							None => continue,
-						}
-					}
-				};
+		let work_type = data_div
+			.as_ref()
+			.and_then(|div| div.attr("data-work_type"));
 
-				let title = data_div
-					.as_ref()
-					.and_then(|div| div.attr("data-work_name"))
-					.unwrap_or_else(|| workno.clone());
+		let cover_url = explore::cover_url_from_id(&workno);
 
-				let work_type = data_div
-					.as_ref()
-					.and_then(|div| div.attr("data-work_type"));
+		let maker_name = item
+			.select_first("div.maker_name a")
+			.and_then(|a| a.text());
 
-				let cover_url = explore::cover_url_from_id(&workno);
+		let age_category = item
+			.select_first("input.__product_attributes")
+			.and_then(|input| input.attr("value"))
+			.and_then(|v| explore::parse_age_from_attributes(&v));
 
-				// Maker name: try extracting from img alt "Title [MakerName]"
-				let maker_name = item
-					.select_first("img[alt]")
-					.and_then(|img| img.attr("alt"))
-					.and_then(|alt| {
-						// Pattern: "Title [MakerName]"
-						let start = alt.rfind('[')?;
-						let end = alt.rfind(']')?;
-						if end > start + 1 {
-							Some(String::from(&alt[start + 1..end]))
-						} else {
-							None
-						}
-					});
-
-				all_works.push(ExploreWork {
-					workno,
-					title,
-					cover_url,
-					maker_name,
-					work_type,
-					age_category: None,
-				});
-			}
-		}
+		works.push(ExploreWork {
+			workno,
+			title,
+			cover_url,
+			maker_name,
+			work_type,
+			age_category,
+		});
 	}
 
-	all_works
+	works
 }
 
-pub fn fetch_recommended(
-	site_slug: &str,
-	work_types: &[String],
-) -> Result<ExploreResult> {
-	let url = format!("https://www.dlsite.com/{}/", site_slug);
+pub fn fetch_recommended(site_slug: &str) -> Result<ExploreResult> {
+	let url = format!(
+		"https://www.dlsite.com/{}/load/recommend/parts/=/type/top/id/1",
+		site_slug
+	);
 	print(format!("[dlsite-home] recommended → GET {}", url));
 
-	let data = get_html_request(&url)?;
+	let data = get_request(&url)?;
 	if data.is_empty() {
 		return Ok(ExploreResult {
 			works: Vec::new(),
@@ -456,7 +408,12 @@ pub fn fetch_recommended(
 		});
 	}
 
-	let works = parse_homepage_recommendations(&data, site_slug, work_types);
+	let parts: Vec<RecommendPart> = serde_json::from_slice(&data).unwrap_or_default();
+	let mut works = Vec::new();
+	for part in &parts {
+		works.extend(parse_recommend_html(&part.html));
+	}
+
 	print(format!(
 		"[dlsite-home] recommended: {} works",
 		works.len()
