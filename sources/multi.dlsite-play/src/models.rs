@@ -620,6 +620,33 @@ pub struct ProductInfo {
 // Series Manga builder
 // ---------------------------------------------------------------------------
 
+/// Returns true if a derived series name is too short or is a common
+/// stop word / particle that does not constitute a meaningful title.
+fn is_degenerate_name(name: &str) -> bool {
+	const STOP_WORDS: &[&str] = &[
+		"a", "an", "the", "in", "on", "of", "to", "at", "by", "or",
+		"and", "for", "but", "not", "its", "my", "is", "it",
+		"this", "that", "with", "from", "some", "than",
+	];
+
+	let lower = name.to_lowercase();
+	if STOP_WORDS.contains(&lower.as_str()) {
+		return true;
+	}
+
+	// CJK characters are more information-dense, so use a lower threshold.
+	let first_char = name.chars().next().unwrap_or(' ');
+	let is_cjk = matches!(
+		first_char,
+		'\u{3000}'..='\u{9FFF}'
+			| '\u{F900}'..='\u{FAFF}'
+			| '\u{FF00}'..='\u{FFEF}'
+	);
+
+	let min_len = if is_cjk { 2 } else { 4 };
+	name.chars().count() < min_len
+}
+
 /// Derive a series name from member work titles by finding the longest common
 /// prefix. Strips trailing whitespace, punctuation, and volume-like suffixes.
 pub fn derive_series_name(works: &[PurchaseWork]) -> Option<String> {
@@ -677,8 +704,8 @@ pub fn derive_series_name(works: &[PurchaseWork]) -> Option<String> {
 		}
 	}
 
-	if trimmed.is_empty() {
-		// No common prefix — fall back to first work's title
+	if trimmed.is_empty() || is_degenerate_name(trimmed) {
+		// No useful common prefix — fall back to first work's title
 		return Some(titles.into_iter().next().unwrap());
 	}
 
@@ -956,6 +983,44 @@ mod tests {
 		let result = derive_series_name(&works);
 		// Falls back to first work's title
 		assert_eq!(result, Some("Alpha".to_string()));
+	}
+
+	#[aidoku_test]
+	fn derive_series_name_rejects_article_prefix() {
+		let works = vec![
+			make_purchase_work("RJ001", Some("The Great Adventure Vol. 1")),
+			make_purchase_work("RJ002", Some("The Beguiling Mystery Vol. 2")),
+		];
+		// "The" is a stop word — falls back to first work's title
+		assert_eq!(
+			derive_series_name(&works),
+			Some("The Great Adventure Vol. 1".to_string())
+		);
+	}
+
+	#[aidoku_test]
+	fn derive_series_name_rejects_short_prefix() {
+		let works = vec![
+			make_purchase_work("RJ001", Some("A Story Part 1")),
+			make_purchase_work("RJ002", Some("A Different Story Part 2")),
+		];
+		// "A" is a stop word — falls back to first work's title
+		assert_eq!(
+			derive_series_name(&works),
+			Some("A Story Part 1".to_string())
+		);
+	}
+
+	#[aidoku_test]
+	fn derive_series_name_accepts_long_prefix() {
+		let works = vec![
+			make_purchase_work("RJ001", Some("Dragon Quest Vol. 1")),
+			make_purchase_work("RJ002", Some("Dragon Quest Vol. 2")),
+		];
+		assert_eq!(
+			derive_series_name(&works),
+			Some("Dragon Quest".to_string())
+		);
 	}
 
 	// -- PurchaseWork helpers --
