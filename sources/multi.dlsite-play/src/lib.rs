@@ -25,8 +25,8 @@ const SALES_CACHE_MAX_AGE_SEC: i64 = 120;
 use settings::SortOption;
 
 struct SortKey {
-	/// Position in the original worknos array (purchase order).
-	original_position: usize,
+	/// `sales_date` from `/content/sales` (ISO-8601 purchase timestamp).
+	purchase_date: String,
 	/// `accessed_at` from view_histories (empty if not in history).
 	recently_opened: String,
 	/// `regist_date` from the work.
@@ -396,7 +396,7 @@ impl Home for DlsitePlay {
 		let work_types = settings::get_work_type_setting();
 		let content_rating_filter = settings_content_rating_to_filter();
 		let lang_filter = settings::get_selected_languages();
-		let worknos = get_or_fetch_worknos(1)?;
+		let (worknos, sales_dates) = get_or_fetch_worknos(1)?;
 
 		if worknos.is_empty() {
 			return Ok(HomeLayout { components: Vec::new() });
@@ -490,7 +490,7 @@ impl Home for DlsitePlay {
 		let sort_option = settings::get_default_sort();
 		let sort_ascending = settings::get_default_sort_ascending();
 		let library_entries = build_sorted_entries(
-			&worknos, resp, None, work_types, Vec::new(), None, Vec::new(),
+			&sales_dates, resp, None, work_types, Vec::new(), None, Vec::new(),
 			Vec::new(), content_rating_filter, lang_filter, sort_option, sort_ascending,
 		);
 		let library_links: Vec<Link> = library_entries
@@ -901,7 +901,7 @@ fn work_passes_filter(
 /// `get_home`. Accepts pre-fetched data so callers can reuse a single API
 /// response for multiple purposes (e.g. carousel + library preview).
 fn build_sorted_entries(
-	worknos: &[String],
+	sales_dates: &BTreeMap<String, String>,
 	resp: models::WorksResponse,
 	query: Option<String>,
 	work_types: Vec<String>,
@@ -1019,7 +1019,7 @@ fn build_sorted_entries(
 				}
 			}
 			let name = sname.unwrap_or(key.as_str());
-			let sort_key = build_series_sort_key(works, name, worknos, &view_history_map);
+			let sort_key = build_series_sort_key(works, name, sales_dates, &view_history_map);
 			all_entries.push((sort_key, models::series_manga(key, name, works, &genre_names)));
 		} else if let Some(pos) = standalone.iter().position(|(k, _)| k == key) {
 			let (_, w) = &standalone[pos];
@@ -1040,7 +1040,7 @@ fn build_sorted_entries(
 					continue;
 				}
 			}
-			let sort_key = build_work_sort_key(w, worknos, &view_history_map);
+			let sort_key = build_work_sort_key(w, sales_dates, &view_history_map);
 			// Move out of standalone to convert
 			let (_, w) = standalone.remove(pos);
 			all_entries.push((sort_key, w.into_manga(&genre_names, &series_names)));
@@ -1070,7 +1070,7 @@ fn get_manga_list_inner(
 	sort_option: SortOption,
 	sort_ascending: bool,
 ) -> Result<MangaPageResult> {
-	let worknos = get_or_fetch_worknos(page)?;
+	let (worknos, sales_dates) = get_or_fetch_worknos(page)?;
 
 	if worknos.is_empty() {
 		return Ok(MangaPageResult {
@@ -1081,7 +1081,7 @@ fn get_manga_list_inner(
 
 	let resp = play::get_works(&worknos)?;
 	let all_entries = build_sorted_entries(
-		&worknos, resp, query, work_types, work_type_exclude, translation_filter,
+		&sales_dates, resp, query, work_types, work_type_exclude, translation_filter,
 		genre_filter, genre_exclude, content_rating_filter, language_filter,
 		sort_option, sort_ascending,
 	);
@@ -1115,11 +1115,11 @@ fn get_manga_list_inner(
 /// Build a `SortKey` for a standalone work.
 fn build_work_sort_key(
 	w: &models::PurchaseWork,
-	worknos: &[String],
+	sales_dates: &BTreeMap<String, String>,
 	view_history: &BTreeMap<String, String>,
 ) -> SortKey {
 	SortKey {
-		original_position: worknos.iter().position(|id| id == &w.workno).unwrap_or(usize::MAX),
+		purchase_date: sales_dates.get(&w.workno).cloned().unwrap_or_default(),
 		recently_opened: view_history.get(&w.workno).cloned().unwrap_or_default(),
 		release_date: w.regist_date.clone().unwrap_or_default(),
 		writer_name: w
@@ -1140,15 +1140,16 @@ fn build_work_sort_key(
 fn build_series_sort_key(
 	works: &[models::PurchaseWork],
 	series_name: &str,
-	worknos: &[String],
+	sales_dates: &BTreeMap<String, String>,
 	view_history: &BTreeMap<String, String>,
 ) -> SortKey {
 	SortKey {
-		original_position: works
+		purchase_date: works
 			.iter()
-			.filter_map(|w| worknos.iter().position(|id| id == &w.workno))
+			.filter_map(|w| sales_dates.get(&w.workno).map(|s| s.as_str()))
 			.min()
-			.unwrap_or(usize::MAX),
+			.unwrap_or("")
+			.into(),
 		recently_opened: works
 			.iter()
 			.filter_map(|w| view_history.get(&w.workno))
@@ -1177,17 +1178,15 @@ fn apply_sort(entries: &mut Vec<(SortKey, Manga)>, sort_option: SortOption, asce
 		let ord = match sort_option {
 			SortOption::RecentlyOpened => {
 				// Works with view history sort by accessed_at.
-				// Works without fall back to purchase order (lower position = older).
+				// Works without fall back to purchase date.
 				match (a.recently_opened.is_empty(), b.recently_opened.is_empty()) {
 					(false, false) => a.recently_opened.cmp(&b.recently_opened),
 					(false, true) => core::cmp::Ordering::Greater,
 					(true, false) => core::cmp::Ordering::Less,
-					(true, true) => a.original_position.cmp(&b.original_position),
+					(true, true) => a.purchase_date.cmp(&b.purchase_date),
 				}
 			}
-			// worknos is sorted by purchase date ascending (oldest = 0),
-			// so lower position = older. Natural comparison for ascending order.
-			SortOption::PurchaseDate => a.original_position.cmp(&b.original_position),
+			SortOption::PurchaseDate => a.purchase_date.cmp(&b.purchase_date),
 			SortOption::ReleaseDate => a.release_date.cmp(&b.release_date),
 			SortOption::WriterCircle => a.writer_name.cmp(&b.writer_name),
 			SortOption::Title => a.title.cmp(&b.title),
@@ -1196,8 +1195,24 @@ fn apply_sort(entries: &mut Vec<(SortKey, Manga)>, sort_option: SortOption, asce
 	});
 }
 
-/// Fetch (or use cached) full purchase work ID list, refreshing on page 1.
-fn get_or_fetch_worknos(page: i32) -> Result<Vec<String>> {
+/// Convert sales entries into worknos list and sales date map.
+fn sales_to_worknos_and_dates(
+	sales: Vec<models::SalesEntry>,
+) -> (Vec<String>, BTreeMap<String, String>) {
+	let mut worknos = Vec::with_capacity(sales.len());
+	let mut dates = BTreeMap::new();
+	for s in sales {
+		if let Some(d) = s.sales_date {
+			dates.insert(s.workno.clone(), d);
+		}
+		worknos.push(s.workno);
+	}
+	(worknos, dates)
+}
+
+/// Fetch (or use cached) full purchase work ID list and sales dates,
+/// refreshing on page 1.
+fn get_or_fetch_worknos(page: i32) -> Result<(Vec<String>, BTreeMap<String, String>)> {
 	print(format!(
 		"[dlsite-play] get_or_fetch_worknos page={} logged_in={}",
 		page,
@@ -1207,11 +1222,12 @@ fn get_or_fetch_worknos(page: i32) -> Result<Vec<String>> {
 		print(format!(
 			"[dlsite-play] get_or_fetch_worknos skip: not logged in (Account → Login)"
 		));
-		return Ok(Vec::new());
+		return Ok((Vec::new(), BTreeMap::new()));
 	}
 	if page == 1 {
 		let now = current_date();
 		let cached = settings::get_cached_worknos();
+		let cached_dates = settings::get_cached_sales_dates();
 		let fetched_at = settings::get_sales_fetched_at();
 		let cache_fresh = fetched_at
 			.map(|t| now.saturating_sub(t) < SALES_CACHE_MAX_AGE_SEC)
@@ -1222,37 +1238,40 @@ fn get_or_fetch_worknos(page: i32) -> Result<Vec<String>> {
 				fetched_at.map(|t| now.saturating_sub(t)).unwrap_or(0),
 				cached.len()
 			));
-			return Ok(cached);
+			return Ok((cached, cached_dates));
 		}
 
 		let sales = play::get_sales()?;
-		let worknos: Vec<String> = sales.into_iter().map(|s| s.workno).collect();
+		let (worknos, dates) = sales_to_worknos_and_dates(sales);
 		print(format!(
 			"[dlsite-play] refreshed sales list count={}",
 			worknos.len()
 		));
 		settings::set_cached_worknos(&worknos);
+		settings::set_cached_sales_dates(&dates);
 		settings::set_sales_fetched_at(now);
-		Ok(worknos)
+		Ok((worknos, dates))
 	} else {
 		let cached = settings::get_cached_worknos();
 		if cached.is_empty() {
 			print("[dlsite-play] cache empty, fetching sales");
 			let sales = play::get_sales()?;
-			let worknos: Vec<String> = sales.into_iter().map(|s| s.workno).collect();
+			let (worknos, dates) = sales_to_worknos_and_dates(sales);
 			print(format!(
 				"[dlsite-play] sales list count={} (was empty cache)",
 				worknos.len()
 			));
 			settings::set_cached_worknos(&worknos);
+			settings::set_cached_sales_dates(&dates);
 			settings::set_sales_fetched_at(current_date());
-			Ok(worknos)
+			Ok((worknos, dates))
 		} else {
+			let cached_dates = settings::get_cached_sales_dates();
 			print(format!(
 				"[dlsite-play] using cached worknos count={}",
 				cached.len()
 			));
-			Ok(cached)
+			Ok((cached, cached_dates))
 		}
 	}
 }

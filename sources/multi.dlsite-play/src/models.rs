@@ -529,7 +529,6 @@ pub struct ViewHistoryEntry {
 pub struct SalesEntry {
 	pub workno: String,
 	#[serde(default)]
-	#[allow(dead_code)]
 	pub sales_date: Option<String>,
 }
 

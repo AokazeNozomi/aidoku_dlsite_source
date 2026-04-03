@@ -1,5 +1,5 @@
 use aidoku::{
-	alloc::{format, String, Vec},
+	alloc::{collections::BTreeMap, format, String, Vec},
 	imports::defaults::{DefaultValue, defaults_get, defaults_set},
 };
 
@@ -134,8 +134,38 @@ pub fn get_cached_worknos() -> Vec<String> {
 
 pub fn clear_cached_worknos() {
 	defaults_set(CACHED_WORKNOS_KEY, DefaultValue::Null);
+	defaults_set(CACHED_SALES_DATES_KEY, DefaultValue::Null);
 	defaults_set(SALES_FETCHED_AT_KEY, DefaultValue::Null);
 	clear_cached_series_maps();
+}
+
+const CACHED_SALES_DATES_KEY: &str = "cached_sales_dates";
+
+/// Store sales dates as `"workno=date,workno=date,..."`.
+pub fn set_cached_sales_dates(dates: &BTreeMap<String, String>) {
+	let joined: String = dates
+		.iter()
+		.map(|(k, v)| format!("{}={}", k, v))
+		.collect::<Vec<_>>()
+		.join(",");
+	defaults_set(CACHED_SALES_DATES_KEY, DefaultValue::String(joined));
+}
+
+/// Retrieve cached sales dates as workno → sales_date map.
+pub fn get_cached_sales_dates() -> BTreeMap<String, String> {
+	defaults_get::<String>(CACHED_SALES_DATES_KEY)
+		.filter(|s| !s.is_empty())
+		.map(|s| {
+			s.split(',')
+				.filter_map(|pair| {
+					let mut parts = pair.splitn(2, '=');
+					let k = parts.next()?;
+					let v = parts.next()?;
+					Some((String::from(k), String::from(v)))
+				})
+				.collect()
+		})
+		.unwrap_or_default()
 }
 
 /// Unix time when `/content/sales` last succeeded and populated [Self::get_cached_worknos].
