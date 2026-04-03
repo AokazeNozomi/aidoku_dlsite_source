@@ -1299,7 +1299,7 @@ fn get_or_fetch_languages(workno: &str) -> Option<String> {
 	let editions = public::get_language_editions(workno).ok()?;
 	if editions.is_empty() {
 		// Product found but no language editions listed — default to Japanese.
-		let value = String::from("JPN:Japanese");
+		let value = format!("{}|JPN:Japanese", workno);
 		settings::set_cached_languages(workno, &value);
 		return Some(value);
 	}
@@ -1308,7 +1308,7 @@ fn get_or_fetch_languages(workno: &str) -> Option<String> {
 		.map(|e| {
 			let name = lang_english_name(&e.lang);
 			let name = if name == "Other" { &e.label } else { name };
-			format!("{}:{}", e.lang, name)
+			format!("{}|{}:{}", e.workno, e.lang, name)
 		})
 		.collect();
 	let value = pairs.join(",");
@@ -1317,42 +1317,33 @@ fn get_or_fetch_languages(workno: &str) -> Option<String> {
 }
 
 /// Resolve the specific language of a purchased work by matching its workno
-/// against the language editions list. Falls back to all edition labels when
-/// the workno doesn't appear in the editions (e.g. mono-language works).
+/// against the cached language editions. Uses `get_or_fetch_languages()` so
+/// results are cached and works with no editions default to Japanese.
 fn get_work_language(workno: &str) -> Option<String> {
-	let editions = public::get_language_editions(workno).ok()?;
+	let raw = get_or_fetch_languages(workno)?;
+	let editions: Vec<(&str, &str)> = raw
+		.split(',')
+		.filter_map(|entry| {
+			let (wno, rest) = entry.split_once('|')?;
+			let (_code, label) = rest.split_once(':')?;
+			Some((wno, label))
+		})
+		.collect();
+
 	if editions.is_empty() {
 		return None;
 	}
 	// If the queried workno matches one of the editions, that's the language
 	// of the copy the user owns.
-	if let Some(ed) = editions.iter().find(|e| e.workno == workno) {
-		let name = lang_english_name(&ed.lang);
-		return Some(if name == "Other" {
-			ed.label.clone()
-		} else {
-			name.to_string()
-		});
+	if let Some((_, label)) = editions.iter().find(|(wno, _)| *wno == workno) {
+		return Some(label.to_string());
 	}
 	// Mono-language works only have one edition — use it directly.
 	if editions.len() == 1 {
-		let ed = &editions[0];
-		let name = lang_english_name(&ed.lang);
-		return Some(if name == "Other" {
-			ed.label.clone()
-		} else {
-			name.to_string()
-		});
+		return Some(editions[0].1.to_string());
 	}
 	// Multiple editions but no workno match — list them all.
-	let labels: Vec<&str> = editions
-		.iter()
-		.map(|e| {
-			let name = lang_english_name(&e.lang);
-			if name == "Other" { e.label.as_str() } else { name }
-		})
-		.collect();
-	Some(labels.join(", "))
+	Some(editions.iter().map(|(_, l)| *l).collect::<Vec<_>>().join(", "))
 }
 
 fn lang_english_name(code: &str) -> &'static str {
