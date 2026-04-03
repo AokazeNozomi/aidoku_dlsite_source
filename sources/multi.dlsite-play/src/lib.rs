@@ -1292,6 +1292,10 @@ fn get_or_fetch_worknos(page: i32) -> Result<(Vec<String>, BTreeMap<String, Stri
 
 /// Fetch language editions from cache or public API. Empty results are not
 /// cached so region-locked lookups can be retried later (e.g. via VPN).
+///
+/// Cache format: `"WORKNO|CODE:Label,WORKNO|CODE:Label,..."`.
+/// Each entry includes the edition's workno so `get_work_language()` can
+/// match the user's purchased copy.
 fn get_or_fetch_languages(workno: &str) -> Option<String> {
 	if let Some(cached) = settings::get_cached_languages(workno) {
 		return Some(cached);
@@ -1302,6 +1306,12 @@ fn get_or_fetch_languages(workno: &str) -> Option<String> {
 		let value = format!("{}|JPN:Japanese", workno);
 		settings::set_cached_languages(workno, &value);
 		return Some(value);
+	}
+	for e in &editions {
+		print(format!(
+			"[dlsite-play] language edition: workno={} lang={} label={}",
+			e.workno, e.lang, e.label
+		));
 	}
 	let pairs: Vec<String> = editions
 		.iter()
@@ -1321,6 +1331,7 @@ fn get_or_fetch_languages(workno: &str) -> Option<String> {
 /// results are cached and works with no editions default to Japanese.
 fn get_work_language(workno: &str) -> Option<String> {
 	let raw = get_or_fetch_languages(workno)?;
+	// Cache format: "WORKNO|CODE:Label,WORKNO|CODE:Label,..."
 	let editions: Vec<(&str, &str)> = raw
 		.split(',')
 		.filter_map(|entry| {

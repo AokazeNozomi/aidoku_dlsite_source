@@ -290,8 +290,13 @@ pub fn work_matches_languages(workno: &str, dlsite_codes: &[String]) -> bool {
 		Some(c) => c,
 		None => return true, // unknown language → don't filter out
 	};
-	// Cache format: "JPN:Japanese,ENG:English"
-	for pair in cached.split(',') {
+	// Cache format: "WORKNO|CODE:Label,WORKNO|CODE:Label,..."
+	for entry in cached.split(',') {
+		// Strip optional "WORKNO|" prefix to get "CODE:Label".
+		let pair = entry
+			.split_once('|')
+			.map(|(_, rest)| rest)
+			.unwrap_or(entry);
 		if let Some(code) = pair.split(':').next() {
 			if dlsite_codes.iter().any(|c| c == code) {
 				return true;
