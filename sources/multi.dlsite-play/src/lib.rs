@@ -1177,17 +1177,17 @@ fn apply_sort(entries: &mut Vec<(SortKey, Manga)>, sort_option: SortOption, asce
 		let ord = match sort_option {
 			SortOption::RecentlyOpened => {
 				// Works with view history sort by accessed_at.
-				// Works without fall back to purchase order (lower position = newer).
+				// Works without fall back to purchase order (lower position = older).
 				match (a.recently_opened.is_empty(), b.recently_opened.is_empty()) {
 					(false, false) => a.recently_opened.cmp(&b.recently_opened),
 					(false, true) => core::cmp::Ordering::Greater,
 					(true, false) => core::cmp::Ordering::Less,
-					(true, true) => b.original_position.cmp(&a.original_position),
+					(true, true) => a.original_position.cmp(&b.original_position),
 				}
 			}
-			// worknos is sorted by purchase date descending (newest = 0),
-			// so lower position = newer. Reverse comparison for ascending order.
-			SortOption::PurchaseDate => b.original_position.cmp(&a.original_position),
+			// worknos is sorted by purchase date ascending (oldest = 0),
+			// so lower position = older. Natural comparison for ascending order.
+			SortOption::PurchaseDate => a.original_position.cmp(&b.original_position),
 			SortOption::ReleaseDate => a.release_date.cmp(&b.release_date),
 			SortOption::WriterCircle => a.writer_name.cmp(&b.writer_name),
 			SortOption::Title => a.title.cmp(&b.title),
