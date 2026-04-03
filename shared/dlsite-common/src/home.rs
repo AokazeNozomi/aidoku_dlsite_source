@@ -225,16 +225,16 @@ fn parse_ranking_page(html_bytes: &[u8], _site_slug: &str) -> Vec<ExploreWork> {
 
 	let mut works = Vec::new();
 	for row in rows {
-		// Extract product ID from link href
+		// Extract product ID and URL from link href
 		let product_link = row.select_first("dt.work_name a");
-		let workno = match &product_link {
+		let (workno, url) = match &product_link {
 			Some(a) => match a.attr("href") {
 				Some(href) => {
 					// Extract RJ/VJ/BJ ID from URL
 					if let Some(start) = href.find("product_id/") {
 						let after = &href[start + 11..];
 						if let Some(end) = after.find('.') {
-							String::from(&after[..end])
+							(String::from(&after[..end]), Some(href))
 						} else {
 							continue;
 						}
@@ -252,7 +252,8 @@ fn parse_ranking_page(html_bytes: &[u8], _site_slug: &str) -> Vec<ExploreWork> {
 			.and_then(|a| a.text())
 			.unwrap_or_else(|| workno.clone());
 
-		let cover_url = explore::cover_url_from_id(&workno);
+		let cover_url =
+			explore::extract_thumb_url(&row).or_else(|| explore::cover_url_from_id(&workno));
 
 		let maker_name = row
 			.select_first("dd.maker_name a")
@@ -277,6 +278,7 @@ fn parse_ranking_page(html_bytes: &[u8], _site_slug: &str) -> Vec<ExploreWork> {
 			workno,
 			title,
 			cover_url,
+			url,
 			maker_name,
 			work_type,
 			age_category,
@@ -368,7 +370,12 @@ fn parse_recommend_html(html: &str) -> Vec<ExploreWork> {
 			.as_ref()
 			.and_then(|div| div.attr("data-work_type"));
 
-		let cover_url = explore::cover_url_from_id(&workno);
+		let cover_url =
+			explore::extract_thumb_url(&item).or_else(|| explore::cover_url_from_id(&workno));
+
+		let url = item
+			.select_first("a.work_thumb")
+			.and_then(|a| a.attr("href"));
 
 		let maker_name = item
 			.select_first("div.maker_name a")
@@ -383,6 +390,7 @@ fn parse_recommend_html(html: &str) -> Vec<ExploreWork> {
 			workno,
 			title,
 			cover_url,
+			url,
 			maker_name,
 			work_type,
 			age_category,

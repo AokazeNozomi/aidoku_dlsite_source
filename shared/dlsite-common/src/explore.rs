@@ -47,6 +47,10 @@ pub struct ExploreWork {
 	pub workno: String,
 	pub title: String,
 	pub cover_url: Option<String>,
+	/// Full URL to the work page, extracted from HTML. When present, preferred
+	/// over the default `/work/=/product_id/` URL (e.g. for pre-release works
+	/// whose pages live under `/announce/=`).
+	pub url: Option<String>,
 	pub maker_name: Option<String>,
 	pub work_type: Option<String>,
 	/// Raw age string from `__product_attributes`: `"adl"`, `"r15"`, or absent.
@@ -97,10 +101,12 @@ impl ExploreWork {
 
 		let description = self.maker_name.as_ref().map(|m| format!("Circle: {}", m));
 
-		let url = Some(format!(
-			"https://www.dlsite.com/{}/work/=/product_id/{}.html",
-			site_slug, self.workno
-		));
+		let url = self.url.or_else(|| {
+			Some(format!(
+				"https://www.dlsite.com/{}/work/=/product_id/{}.html",
+				site_slug, self.workno
+			))
+		});
 
 		Manga {
 			key: format!("{}/{}", site_slug, self.workno),
@@ -259,13 +265,25 @@ pub fn parse_age_from_attributes(attrs: &str) -> Option<String> {
 	}
 }
 
-/// Extract cover image URL from the `:thumb-candidates` Vue attribute.
+/// Extract cover image URL from Vue image component attributes.
 ///
-/// Format: `['//img.dlsite.jp/...240x240.webp','//img.dlsite.jp/...240x240.jpg']`
+/// Checks two component types used across DLsite pages:
+/// - `thumb-with-ng-filter-block` with `:thumb-candidates` (FSR search results)
+/// - `img-with-fallback` with `:candidates` (recommended section HTML)
+///
+/// Both use the same array format:
+/// `['//img.dlsite.jp/...240x240.webp','//img.dlsite.jp/...240x240.jpg']`
+///
 /// Prefers the `.jpg` entry; normalizes protocol-relative URLs to `https:`.
-fn extract_thumb_url(li: &aidoku::imports::html::Element) -> Option<String> {
-	let thumb = li.select_first("thumb-with-ng-filter-block")?;
-	let candidates = thumb.attr(":thumb-candidates")?;
+pub fn extract_thumb_url(element: &aidoku::imports::html::Element) -> Option<String> {
+	let candidates = element
+		.select_first("thumb-with-ng-filter-block")
+		.and_then(|el| el.attr(":thumb-candidates"))
+		.or_else(|| {
+			element
+				.select_first("img-with-fallback")
+				.and_then(|el| el.attr(":candidates"))
+		})?;
 	let url = candidates.split('\'').find(|s| s.ends_with(".jpg"))?;
 	Some(if url.starts_with("//") {
 		format!("https:{}", url)
@@ -308,6 +326,11 @@ pub fn parse_product_element(li: &aidoku::imports::html::Element) -> Option<Expl
 		.select_first("span[data-worktype]")
 		.and_then(|span| span.attr("data-worktype"));
 
+	// URL from the thumb link (handles announce/pre-release pages correctly)
+	let url = li
+		.select_first("thumb-with-ng-filter-block")
+		.and_then(|el| el.attr("link"));
+
 	// Age category from hidden __product_attributes input
 	let age_category = li
 		.select_first("input.__product_attributes")
@@ -318,6 +341,7 @@ pub fn parse_product_element(li: &aidoku::imports::html::Element) -> Option<Expl
 		workno,
 		title,
 		cover_url,
+		url,
 		maker_name,
 		work_type,
 		age_category,
