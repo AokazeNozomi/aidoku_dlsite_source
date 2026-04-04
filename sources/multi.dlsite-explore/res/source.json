@@ -2,7 +2,7 @@
   "info": {
     "id": "multi.dlsite-explore",
     "name": "DLsite Explore",
-    "version": 4,
+    "version": 5,
     "url": "https://www.dlsite.com/home/",
     "contentRating": 1,
     "languages": [
@@ -19,7 +19,8 @@
       "pt",
       "sv",
       "th",
-      "vi"
+      "vi",
+      "nm"
     ]
   },
   "listings": [

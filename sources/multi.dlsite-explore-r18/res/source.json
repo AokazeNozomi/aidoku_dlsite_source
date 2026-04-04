@@ -2,7 +2,7 @@
   "info": {
     "id": "multi.dlsite-explore-adult",
     "name": "DLsite Explore Adult",
-    "version": 4,
+    "version": 5,
     "url": "https://www.dlsite.com/maniax/",
     "contentRating": 2,
     "languages": [
@@ -19,7 +19,8 @@
       "pt",
       "sv",
       "th",
-      "vi"
+      "vi",
+      "nm"
     ]
   },
   "listings": [
