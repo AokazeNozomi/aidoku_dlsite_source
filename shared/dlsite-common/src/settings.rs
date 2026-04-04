@@ -275,7 +275,6 @@ impl DlsiteLang {
 			"sv" => Some(Self::SWE),
 			"th" => Some(Self::THA),
 			"vi" => Some(Self::VIE),
-			"nm" => Some(Self::NM),
 			_ => None,
 		}
 	}
@@ -315,8 +314,8 @@ pub fn get_selected_languages() -> Vec<DlsiteLang> {
 		return Vec::new();
 	}
 	// If every defined language is selected, treat it as "no filter".
-	// source.json defines 15 languages.
-	if codes.len() >= 15 {
+	// source.json defines 14 languages.
+	if codes.len() >= 14 {
 		return Vec::new();
 	}
 	codes
