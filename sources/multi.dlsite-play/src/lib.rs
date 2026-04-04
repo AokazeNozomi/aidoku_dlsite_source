@@ -2,7 +2,7 @@
 
 use aidoku::{
 	alloc::{collections::{BTreeMap, BTreeSet}, format, string::ToString, String, Vec},
-	imports::{canvas::ImageRef, net::{Request, set_rate_limit, TimeUnit}, std::{current_date, print}},
+	imports::{canvas::ImageRef, net::{Request, set_rate_limit, TimeUnit}, std::current_date},
 	prelude::*,
 	register_source, Chapter, FilterValue, HashMap, Home, HomeComponent, HomeComponentValue,
 	HomeLayout, ImageRequestProvider, ImageResponse, Link, Listing, ListingKind, ListingProvider,
@@ -14,6 +14,8 @@ mod models;
 mod play;
 mod public;
 mod settings;
+
+use dlsite_common::debug_print;
 
 /// DLsite sub-site slug used for public API calls.
 const DLSITE_SITE_SLUG: &str = "maniax";
@@ -248,10 +250,10 @@ impl DlsitePlay {
 
 		let member_worknos = settings::get_cached_series_map(&title_id);
 		if member_worknos.is_empty() {
-			print(format!(
+			debug_print!(
 				"[dlsite-play] series {} has no cached members",
 				title_id
-			));
+			);
 			return Ok(());
 		}
 
@@ -555,9 +557,9 @@ impl Home for DlsitePlay {
 impl WebLoginHandler for DlsitePlay {
 	fn handle_web_login(&self, key: String, cookies: HashMap<String, String>) -> Result<bool> {
 		if key != "login" {
-			print(format!(
+			debug_print!(
 				"[dlsite-play] web login rejected invalid key `{key}`"
-			));
+			);
 			bail!("Invalid login key: `{key}`");
 		}
 
@@ -574,10 +576,10 @@ impl WebLoginHandler for DlsitePlay {
 		// when the cookie changes.
 		if let Some(ps) = play_session {
 			if ps.starts_with("eyJ") {
-				print(format!(
+				debug_print!(
 					"[dlsite-play] web login: play_session still encrypted ({} chars), waiting for SPA to authorize",
 					ps.len()
-				));
+				);
 				return Ok(false);
 			}
 		}
@@ -592,22 +594,22 @@ impl WebLoginHandler for DlsitePlay {
 		}
 
 		let has_session = play_session.is_some();
-		print(format!(
+		debug_print!(
 			"[dlsite-play] web login summary count={} has_play_session={} session_len={}",
 			cookies.len(),
 			has_session,
 			play_session.map(|s| s.len()).unwrap_or(0),
-		));
+		);
 
 		settings::set_logged_in(has_session);
 
 		if has_session {
 			let cookie_header = cookie_pairs.join("; ");
 			settings::set_web_cookies(&cookie_header);
-			print(format!(
+			debug_print!(
 				"[dlsite-play] web login stored Cookie header ({} chars)",
 				cookie_header.len()
-			));
+			);
 			settings::clear_cached_worknos();
 			settings::clear_cached_page();
 		} else {
@@ -926,10 +928,10 @@ fn build_sorted_entries(
 	let genre_names = resolve_genre_names(&work_refs);
 	let series_names = build_series_lookup(&resp.series);
 
-	print(format!(
+	debug_print!(
 		"[dlsite-play] build_sorted_entries sort={} ascending={}",
 		sort_option as i32, sort_ascending
-	));
+	);
 
 	// Fetch view histories for "recently opened" sort.
 	let view_history_map: BTreeMap<String, String> = if sort_option == SortOption::RecentlyOpened {
@@ -1227,15 +1229,15 @@ fn sales_to_worknos_and_dates(
 /// Fetch (or use cached) full purchase work ID list and sales dates,
 /// refreshing on page 1.
 fn get_or_fetch_worknos(page: i32) -> Result<(Vec<String>, BTreeMap<String, String>)> {
-	print(format!(
+	debug_print!(
 		"[dlsite-play] get_or_fetch_worknos page={} logged_in={}",
 		page,
 		settings::is_logged_in()
-	));
+	);
 	if !settings::is_logged_in() {
-		print(format!(
+		debug_print!(
 			"[dlsite-play] get_or_fetch_worknos skip: not logged in (Account → Login)"
-		));
+		);
 		return Ok((Vec::new(), BTreeMap::new()));
 	}
 	if page == 1 {
@@ -1247,20 +1249,20 @@ fn get_or_fetch_worknos(page: i32) -> Result<(Vec<String>, BTreeMap<String, Stri
 			.map(|t| now.saturating_sub(t) < SALES_CACHE_MAX_AGE_SEC)
 			.unwrap_or(false);
 		if !cached.is_empty() && !cached_dates.is_empty() && cache_fresh {
-			print(format!(
+			debug_print!(
 				"[dlsite-play] get_or_fetch_worknos page=1 using sales cache age={}s count={}",
 				fetched_at.map(|t| now.saturating_sub(t)).unwrap_or(0),
 				cached.len()
-			));
+			);
 			return Ok((cached, cached_dates));
 		}
 
 		let sales = play::get_sales()?;
 		let (worknos, dates) = sales_to_worknos_and_dates(sales);
-		print(format!(
+		debug_print!(
 			"[dlsite-play] refreshed sales list count={}",
 			worknos.len()
-		));
+		);
 		settings::set_cached_worknos(&worknos);
 		settings::set_cached_sales_dates(&dates);
 		settings::set_sales_fetched_at(now);
@@ -1268,23 +1270,23 @@ fn get_or_fetch_worknos(page: i32) -> Result<(Vec<String>, BTreeMap<String, Stri
 	} else {
 		let cached = settings::get_cached_worknos();
 		if cached.is_empty() {
-			print("[dlsite-play] cache empty, fetching sales");
+			debug_print!("[dlsite-play] cache empty, fetching sales");
 			let sales = play::get_sales()?;
 			let (worknos, dates) = sales_to_worknos_and_dates(sales);
-			print(format!(
+			debug_print!(
 				"[dlsite-play] sales list count={} (was empty cache)",
 				worknos.len()
-			));
+			);
 			settings::set_cached_worknos(&worknos);
 			settings::set_cached_sales_dates(&dates);
 			settings::set_sales_fetched_at(current_date());
 			Ok((worknos, dates))
 		} else {
 			let cached_dates = settings::get_cached_sales_dates();
-			print(format!(
+			debug_print!(
 				"[dlsite-play] using cached worknos count={}",
 				cached.len()
-			));
+			);
 			Ok((cached, cached_dates))
 		}
 	}
@@ -1355,19 +1357,19 @@ fn fetch_all_languages() {
 
 	let total = worknos.len();
 	for (i, workno) in worknos.iter().enumerate() {
-		print(format!(
+		debug_print!(
 			"[dlsite-play] Fetching languages ({}/{}): {}",
 			i + 1,
 			total,
 			workno
-		));
+		);
 		let _ = get_or_fetch_languages(workno);
 	}
 
-	print(format!(
+	debug_print!(
 		"[dlsite-play] Language fetch complete ({} works processed)",
 		total
-	));
+	);
 }
 
 fn extract_translation_filter(filters: &[FilterValue]) -> Option<String> {

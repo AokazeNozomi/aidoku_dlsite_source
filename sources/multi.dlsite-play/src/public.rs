@@ -1,9 +1,10 @@
 use crate::models::{LanguageEdition, ProductInfo};
 use aidoku::{
 	alloc::{format, string::String, Vec},
-	imports::{net::Request, std::print},
+	imports::net::Request,
 	Result,
 };
+use dlsite_common::debug_print;
 
 pub use dlsite_common::api::get_public_work_details;
 
@@ -21,17 +22,17 @@ pub fn get_language_editions(workno: &str) -> Result<LanguageResult> {
 		"https://www.dlsite.com/{}/api/=/product.json?workno={}",
 		crate::DLSITE_SITE_SLUG, workno
 	);
-	print(format!("[dlsite-play] → GET {} (public API)", url));
+	debug_print!("[dlsite-play] → GET {} (public API)", url);
 	let resp = Request::get(&url)?
 		.header("Accept", "application/json")
 		.send()?;
 	let status = resp.status_code();
 	let data = resp.get_data()?;
 	if !(200..300).contains(&status) {
-		print(format!(
+		debug_print!(
 			"[dlsite-play] public API HTTP {} for {}",
 			status, workno
-		));
+		);
 		return Err(aidoku::AidokuError::message("public API non-2xx"));
 	}
 	let products: Vec<ProductInfo> = serde_json::from_slice(&data).unwrap_or_default();

@@ -1,7 +1,8 @@
+use crate::debug_print;
 use crate::models::PublicWork;
 use aidoku::{
 	alloc::{format, Vec},
-	imports::{net::Request, std::print},
+	imports::net::Request,
 	Result,
 };
 
@@ -23,7 +24,7 @@ pub fn get_public_work_details(
 			base, workno
 		),
 	};
-	print(format!("[dlsite] public detail → GET {}", url));
+	debug_print!("[dlsite] public detail → GET {}", url);
 
 	let resp = Request::get(&url)?
 		.header("Accept", "application/json")
@@ -32,10 +33,7 @@ pub fn get_public_work_details(
 	let status = resp.status_code();
 	let data = resp.get_data()?;
 	if !(200..300).contains(&status) {
-		print(format!(
-			"[dlsite] public detail HTTP {} for {}",
-			status, workno
-		));
+		debug_print!("[dlsite] public detail HTTP {} for {}", status, workno);
 		return Ok(None);
 	}
 

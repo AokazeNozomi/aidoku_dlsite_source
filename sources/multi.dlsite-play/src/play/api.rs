@@ -8,10 +8,10 @@ use crate::models::{
 };
 use aidoku::{
 	alloc::{format, String, Vec},
-	imports::std::print,
 	prelude::*,
 	Result,
 };
+use dlsite_common::debug_print;
 
 /// Fetch the list of purchased work IDs (sorted by sales date, newest first).
 pub fn get_sales() -> Result<Vec<SalesEntry>> {
@@ -21,13 +21,13 @@ pub fn get_sales() -> Result<Vec<SalesEntry>> {
 	let data = resp.get_data()?;
 	ensure_ok("get_sales", status, &data)?;
 	let entries: Vec<SalesEntry> = serde_json::from_slice(&data).map_err(|e| {
-		print(format!(
+		debug_print!(
 			"[dlsite-play] get_sales parse error: {} status={} {} bytes preview: {}",
 			e,
 			status,
 			data.len(),
 			body_preview(&data)
-		));
+		);
 		error!(
 			"Failed to parse sales response: {} ({} bytes). Body: {}",
 			e,
@@ -54,14 +54,14 @@ pub fn get_works(worknos: &[String]) -> Result<WorksResponse> {
 		let op = format!("get_works chunk {}", chunk_idx);
 		ensure_ok(&op, status, &data)?;
 		let parsed: WorksResponse = serde_json::from_slice(&data).map_err(|e| {
-			print(format!(
+			debug_print!(
 				"[dlsite-play] get_works parse error chunk={} {} status={} {} bytes preview: {}",
 				chunk_idx,
 				e,
 				status,
 				data.len(),
 				body_preview(&data)
-			));
+			);
 			error!(
 				"Failed to parse works response: {} ({} bytes). Body: {}",
 				e,
@@ -95,13 +95,13 @@ pub fn get_genres(ids: &[u32]) -> Result<Vec<GenreInfo>> {
 		let op = format!("get_genres chunk {}", chunk_idx);
 		ensure_ok(&op, status, &data)?;
 		let parsed: GenresResponse = serde_json::from_slice(&data).map_err(|e| {
-			print(format!(
+			debug_print!(
 				"[dlsite-play] get_genres parse error chunk={} {} status={} preview: {}",
 				chunk_idx,
 				e,
 				status,
 				body_preview(&data)
-			));
+			);
 			error!(
 				"Failed to parse genres response: {} ({} bytes)",
 				e,
@@ -128,13 +128,13 @@ pub fn download_token(workno: &str) -> Result<DownloadToken> {
 	let data = resp.get_data()?;
 	ensure_ok("download_token", status, &data)?;
 	let token: DownloadToken = serde_json::from_slice(&data).map_err(|e| {
-		print(format!(
+		debug_print!(
 			"[dlsite-play] download_token parse error workno={} {} status={} preview: {}",
 			workno,
 			e,
 			status,
 			body_preview(&data)
-		));
+		);
 		error!(
 			"Failed to parse download token: {} ({} bytes). Body: {}",
 			e,
@@ -153,12 +153,12 @@ pub fn fetch_ziptree(token: &DownloadToken) -> Result<ZipTree> {
 	let data = resp.get_data()?;
 	ensure_ok("fetch_ziptree", status, &data)?;
 	let raw: RawZipTree = serde_json::from_slice(&data).map_err(|e| {
-		print(format!(
+		debug_print!(
 			"[dlsite-play] fetch_ziptree parse error {} status={} preview: {}",
 			e,
 			status,
 			body_preview(&data)
-		));
+		);
 		error!(
 			"Failed to parse ziptree: {} ({} bytes). Body: {}",
 			e,
@@ -178,12 +178,12 @@ pub fn get_view_histories() -> Result<Vec<ViewHistoryEntry>> {
 	let data = resp.get_data()?;
 	ensure_ok("get_view_histories", status, &data)?;
 	let entries: Vec<ViewHistoryEntry> = serde_json::from_slice(&data).map_err(|e| {
-		print(format!(
+		debug_print!(
 			"[dlsite-play] get_view_histories parse error: {} status={} preview: {}",
 			e,
 			status,
 			body_preview(&data)
-		));
+		);
 		error!(
 			"Failed to parse view histories: {} ({} bytes)",
 			e,

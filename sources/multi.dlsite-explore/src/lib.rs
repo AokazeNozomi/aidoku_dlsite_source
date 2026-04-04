@@ -2,7 +2,6 @@
 
 use aidoku::{
 	alloc::{format, String, Vec},
-	imports::std::print,
 	prelude::*,
 	register_source, FilterValue, HashMap, Home, HomeComponent, HomeComponentValue,
 	HomeLayout, Link, Listing, ListingKind, ListingProvider, Manga, MangaPageResult,
@@ -307,9 +306,7 @@ impl Home for DlsiteExplore {
 impl WebLoginHandler for DlsiteExplore {
 	fn handle_web_login(&self, key: String, cookies: HashMap<String, String>) -> Result<bool> {
 		if key != "login" {
-			print(format!(
-				"[dlsite-explore] web login rejected invalid key `{key}`"
-			));
+			dlsite_common::debug_print!("[dlsite-explore] web login rejected invalid key `{key}`");
 			bail!("Invalid login key: `{key}`");
 		}
 

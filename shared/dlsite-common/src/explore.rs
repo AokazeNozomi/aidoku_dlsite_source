@@ -1,9 +1,10 @@
 use aidoku::{
 	alloc::{format, String, Vec},
-	imports::{html::Html, net::Request, std::print},
+	imports::{html::Html, net::Request},
 	ContentRating, Manga, Result,
 };
 
+use crate::debug_print;
 use crate::settings::DlsiteLang;
 
 // ---------------------------------------------------------------------------
@@ -398,7 +399,7 @@ pub fn search_explore(
 		content_ratings,
 		genres,
 	);
-	print(format!("[dlsite-explore] → GET {}", url));
+	debug_print!("[dlsite-explore] → GET {}", url);
 
 	let resp = Request::get(&url)?
 		.header("Accept", "application/json")
@@ -411,11 +412,7 @@ pub fn search_explore(
 	let status = resp.status_code();
 	let data = resp.get_data()?;
 	if !(200..300).contains(&status) {
-		print(format!(
-			"[dlsite-explore] HTTP {} ({} bytes)",
-			status,
-			data.len()
-		));
+		debug_print!("[dlsite-explore] HTTP {} ({} bytes)", status, data.len());
 		return Ok(ExploreResult {
 			works: Vec::new(),
 			has_next_page: false,
@@ -424,11 +421,11 @@ pub fn search_explore(
 
 	let result = parse_fsr_ajax_response(&data, page)?;
 
-	print(format!(
+	debug_print!(
 		"[dlsite-explore] {} works, has_next={}",
 		result.works.len(),
 		result.has_next_page
-	));
+	);
 
 	Ok(result)
 }

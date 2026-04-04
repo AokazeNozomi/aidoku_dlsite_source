@@ -1,9 +1,10 @@
 use aidoku::{
 	alloc::{format, String, Vec},
-	imports::{html::Html, net::Request, std::print},
+	imports::{html::Html, net::Request},
 	Result,
 };
 
+use crate::debug_print;
 use crate::explore::{self, ExploreResult, ExploreSort, ExploreWork};
 use crate::settings::{self, DlsiteLang};
 
@@ -115,7 +116,7 @@ fn get_request(url: &str) -> Result<Vec<u8>> {
 	let status = resp.status_code();
 	let data = resp.get_data()?;
 	if !(200..300).contains(&status) {
-		print(format!("[dlsite-home] HTTP {} for {}", status, url));
+		debug_print!("[dlsite-home] HTTP {} for {}", status, url);
 		return Ok(Vec::new());
 	}
 	Ok(data)
@@ -136,7 +137,7 @@ fn get_html_request(url: &str) -> Result<Vec<u8>> {
 	let status = resp.status_code();
 	let data = resp.get_data()?;
 	if !(200..300).contains(&status) {
-		print(format!("[dlsite-home] HTTP {} for {}", status, url));
+		debug_print!("[dlsite-home] HTTP {} for {}", status, url);
 		return Ok(Vec::new());
 	}
 	Ok(data)
@@ -158,7 +159,7 @@ pub fn fetch_english_picks(site_slug: &str, is_r18: bool, page: i32) -> Result<E
 		age,
 		&[DlsiteLang::ENG],
 	);
-	print(format!("[dlsite-home] english_picks → GET {}", url));
+	debug_print!("[dlsite-home] english_picks → GET {}", url);
 
 	let data = get_request(&url)?;
 	if data.is_empty() {
@@ -169,11 +170,11 @@ pub fn fetch_english_picks(site_slug: &str, is_r18: bool, page: i32) -> Result<E
 	}
 
 	let result = explore::parse_fsr_ajax_response(&data, page)?;
-	print(format!(
+	debug_print!(
 		"[dlsite-home] english_picks: {} works, has_next={}",
 		result.works.len(),
 		result.has_next_page
-	));
+	);
 	Ok(result)
 }
 
@@ -186,7 +187,7 @@ pub fn fetch_translations(site_slug: &str, page: i32) -> Result<ExploreResult> {
 		"https://www.dlsite.com/{}/works/translation/ajax?page={}",
 		site_slug, page
 	);
-	print(format!("[dlsite-home] translations → GET {}", url));
+	debug_print!("[dlsite-home] translations → GET {}", url);
 
 	let data = get_request(&url)?;
 	if data.is_empty() {
@@ -197,11 +198,11 @@ pub fn fetch_translations(site_slug: &str, page: i32) -> Result<ExploreResult> {
 	}
 
 	let result = explore::parse_fsr_ajax_response(&data, page)?;
-	print(format!(
+	debug_print!(
 		"[dlsite-home] translations: {} works, has_next={}",
 		result.works.len(),
 		result.has_next_page
-	));
+	);
 	Ok(result)
 }
 
@@ -307,7 +308,7 @@ pub fn fetch_ranking(
 			"https://www.dlsite.com/{}/ranking/week?category={}",
 			site_slug, cat
 		);
-		print(format!("[dlsite-home] ranking({}) → GET {}", cat, url));
+		debug_print!("[dlsite-home] ranking({}) → GET {}", cat, url);
 
 		let data = get_html_request(&url)?;
 		if data.is_empty() {
@@ -315,11 +316,11 @@ pub fn fetch_ranking(
 		}
 
 		let works = parse_ranking_page(&data, site_slug);
-		print(format!(
+		debug_print!(
 			"[dlsite-home] ranking({}): {} works",
 			cat,
 			works.len()
-		));
+		);
 		all_works.extend(works);
 	}
 
@@ -406,7 +407,7 @@ pub fn fetch_recommended(site_slug: &str, recommend_type: &str) -> Result<Explor
 		"https://www.dlsite.com/{}/load/recommend/parts/=/type/{}/id/1",
 		site_slug, recommend_type
 	);
-	print(format!("[dlsite-home] recommended({}) → GET {}", recommend_type, url));
+	debug_print!("[dlsite-home] recommended({}) → GET {}", recommend_type, url);
 
 	let data = get_request(&url)?;
 	if data.is_empty() {
@@ -422,11 +423,11 @@ pub fn fetch_recommended(site_slug: &str, recommend_type: &str) -> Result<Explor
 		works.extend(parse_recommend_html(&part.html));
 	}
 
-	print(format!(
+	debug_print!(
 		"[dlsite-home] recommended({}): {} works",
 		recommend_type,
 		works.len()
-	));
+	);
 
 	Ok(ExploreResult {
 		works,
@@ -456,7 +457,7 @@ pub fn fetch_new_works(
 		age,
 		languages,
 	);
-	print(format!("[dlsite-home] new_works → GET {}", url));
+	debug_print!("[dlsite-home] new_works → GET {}", url);
 
 	let data = get_request(&url)?;
 	if data.is_empty() {
@@ -467,11 +468,11 @@ pub fn fetch_new_works(
 	}
 
 	let result = explore::parse_fsr_ajax_response(&data, page)?;
-	print(format!(
+	debug_print!(
 		"[dlsite-home] new_works: {} works, has_next={}",
 		result.works.len(),
 		result.has_next_page
-	));
+	);
 	Ok(result)
 }
 
@@ -497,7 +498,7 @@ pub fn fetch_popular_works(
 		age,
 		languages,
 	);
-	print(format!("[dlsite-home] popular_works → GET {}", url));
+	debug_print!("[dlsite-home] popular_works → GET {}", url);
 
 	let data = get_request(&url)?;
 	if data.is_empty() {
@@ -508,10 +509,10 @@ pub fn fetch_popular_works(
 	}
 
 	let result = explore::parse_fsr_ajax_response(&data, page)?;
-	print(format!(
+	debug_print!(
 		"[dlsite-home] popular_works: {} works, has_next={}",
 		result.works.len(),
 		result.has_next_page
-	));
+	);
 	Ok(result)
 }

@@ -2,10 +2,10 @@ use crate::settings;
 use aidoku::{
 	alloc::{format, String, Vec},
 	imports::net::Request,
-	imports::std::print,
 	prelude::*,
 	Result,
 };
+use dlsite_common::debug_print;
 use core::str;
 
 pub(super) const PLAY_REFERER: &str = "https://play.dlsite.com/";
@@ -76,7 +76,7 @@ fn accept_for_url(url: &str) -> &'static str {
 fn play_api_get(url: &str) -> Result<Request> {
 	let accept = accept_for_url(url);
 	let referer = url.contains("play.dl.dlsite.com").then_some(PLAY_REFERER);
-	print(format!("[dlsite-play] → GET {}", url));
+	debug_print!("[dlsite-play] → GET {}", url);
 	let mut req = Request::get(url)?
 		.header("User-Agent", PLAY_AIOHTTP_USER_AGENT)
 		.header("Accept", accept);
@@ -93,7 +93,7 @@ pub(super) fn play_authenticated_get(url: &str) -> Result<Request> {
 
 /// Optimized page images: browser UA + `Referer` (not aiohttp).
 pub(crate) fn play_image_get(url: &str) -> Result<Request> {
-	print(format!("[dlsite-play] → GET {} (image)", url));
+	debug_print!("[dlsite-play] → GET {} (image)", url);
 	let req = Request::get(url)?
 		.header("User-Agent", PLAY_IMAGE_USER_AGENT)
 		.header("Referer", PLAY_REFERER)
@@ -109,7 +109,7 @@ pub(super) fn play_post_json(url: &str, body: &[u8]) -> Result<Request> {
 		.as_deref()
 		.and_then(xsrf_token_for_header);
 	let referer = url.contains("play.dl.dlsite.com").then_some(PLAY_REFERER);
-	print(format!("[dlsite-play] → POST {}", url));
+	debug_print!("[dlsite-play] → POST {}", url);
 	let mut req = Request::post(url)?
 		.header("User-Agent", PLAY_AIOHTTP_USER_AGENT)
 		.header("Accept", "application/json")
@@ -139,13 +139,13 @@ pub(super) fn body_preview(data: &[u8]) -> String {
 }
 
 fn log_http_failure(op: &str, status: i32, data: &[u8]) {
-	print(format!(
+	debug_print!(
 		"[dlsite-play] {} HTTP {} ({} bytes) {}",
 		op,
 		status,
 		data.len(),
 		body_preview(data)
-	));
+	);
 }
 
 pub(super) fn ensure_ok(op: &str, status: i32, data: &[u8]) -> Result<()> {

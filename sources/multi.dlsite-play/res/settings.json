@@ -149,6 +149,19 @@
 	},
 	{
 		"type": "group",
+		"title": "Advanced",
+		"items": [
+			{
+				"type": "switch",
+				"key": "debug_logging",
+				"title": "Debug Logging",
+				"subtitle": "Log HTTP requests and other debug info to the Aidoku console.",
+				"default": false
+			}
+		]
+	},
+	{
+		"type": "group",
 		"title": "Work Types",
 		"items": [
 			{
