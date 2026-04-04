@@ -604,16 +604,23 @@ pub struct WorksResponse {
 
 #[derive(Deserialize, Clone)]
 pub struct LanguageEdition {
-	#[allow(dead_code)]
 	pub workno: String,
 	pub lang: String,
+	#[allow(dead_code)]
 	pub label: String,
+}
+
+#[derive(Deserialize, Clone)]
+pub struct TranslationInfo {
+	pub lang: Option<String>,
 }
 
 #[derive(Deserialize, Clone)]
 pub struct ProductInfo {
 	#[serde(default)]
 	pub language_editions: Vec<LanguageEdition>,
+	#[serde(default)]
+	pub translation_info: Option<TranslationInfo>,
 }
 
 // ---------------------------------------------------------------------------

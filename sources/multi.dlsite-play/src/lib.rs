@@ -1290,71 +1290,48 @@ fn get_or_fetch_worknos(page: i32) -> Result<(Vec<String>, BTreeMap<String, Stri
 	}
 }
 
-/// Fetch language editions from cache or public API. Empty results are not
-/// cached so region-locked lookups can be retried later (e.g. via VPN).
+/// Resolve the language of a single work and cache the result.
+/// Empty API results are not cached so region-locked lookups can be retried.
 ///
-/// Cache format: `"WORKNO|CODE:Label,WORKNO|CODE:Label,..."`.
-/// Each entry includes the edition's workno so `get_work_language()` can
-/// match the user's purchased copy.
+/// Cache format: `"CODE:Label"` (e.g. `"JPN:Japanese"`).
+///
+/// Resolution priority:
+/// 1. `translation_info.lang` — authoritative for translations
+/// 2. Workno match in `language_editions` — works for originals
+/// 3. Single edition — use it
+/// 4. No editions — default to Japanese
 fn get_or_fetch_languages(workno: &str) -> Option<String> {
 	if let Some(cached) = settings::get_cached_languages(workno) {
 		return Some(cached);
 	}
-	let editions = public::get_language_editions(workno).ok()?;
-	if editions.is_empty() {
-		// Product found but no language editions listed — default to Japanese.
-		let value = format!("{}|JPN:Japanese", workno);
-		settings::set_cached_languages(workno, &value);
-		return Some(value);
+	let result = public::get_language_editions(workno).ok()?;
+
+	let resolved_code;
+	if let Some(ref own_lang) = result.own_lang {
+		// translation_info.lang is authoritative for translations.
+		resolved_code = own_lang.clone();
+	} else if let Some(ed) = result.editions.iter().find(|e| e.workno == workno) {
+		// Original work — its workno appears in editions.
+		resolved_code = ed.lang.clone();
+	} else if result.editions.len() == 1 {
+		resolved_code = result.editions[0].lang.clone();
+	} else {
+		// No editions or ambiguous — default to Japanese.
+		resolved_code = String::from("JPN");
 	}
-	for e in &editions {
-		print(format!(
-			"[dlsite-play] language edition: workno={} lang={} label={}",
-			e.workno, e.lang, e.label
-		));
-	}
-	let pairs: Vec<String> = editions
-		.iter()
-		.map(|e| {
-			let name = lang_english_name(&e.lang);
-			let name = if name == "Other" { &e.label } else { name };
-			format!("{}|{}:{}", e.workno, e.lang, name)
-		})
-		.collect();
-	let value = pairs.join(",");
+
+	let name = lang_english_name(&resolved_code);
+	let value = format!("{}:{}", resolved_code, name);
 	settings::set_cached_languages(workno, &value);
 	Some(value)
 }
 
-/// Resolve the specific language of a purchased work by matching its workno
-/// against the cached language editions. Uses `get_or_fetch_languages()` so
-/// results are cached and works with no editions default to Japanese.
+/// Resolve the specific language of a purchased work.
+/// Returns the human-readable label (e.g. "Japanese", "English").
 fn get_work_language(workno: &str) -> Option<String> {
 	let raw = get_or_fetch_languages(workno)?;
-	// Cache format: "WORKNO|CODE:Label,WORKNO|CODE:Label,..."
-	let editions: Vec<(&str, &str)> = raw
-		.split(',')
-		.filter_map(|entry| {
-			let (wno, rest) = entry.split_once('|')?;
-			let (_code, label) = rest.split_once(':')?;
-			Some((wno, label))
-		})
-		.collect();
-
-	if editions.is_empty() {
-		return None;
-	}
-	// If the queried workno matches one of the editions, that's the language
-	// of the copy the user owns.
-	if let Some((_, label)) = editions.iter().find(|(wno, _)| *wno == workno) {
-		return Some(label.to_string());
-	}
-	// Mono-language works only have one edition — use it directly.
-	if editions.len() == 1 {
-		return Some(editions[0].1.to_string());
-	}
-	// Multiple editions but no workno match — list them all.
-	Some(editions.iter().map(|(_, l)| *l).collect::<Vec<_>>().join(", "))
+	// Cache format: "CODE:Label"
+	raw.split_once(':').map(|(_, label)| label.into())
 }
 
 fn lang_english_name(code: &str) -> &'static str {
