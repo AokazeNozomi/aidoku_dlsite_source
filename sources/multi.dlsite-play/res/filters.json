@@ -86,6 +86,46 @@
     "ids": ["all", "translated", "original"]
   },
   {
+    "id": "language",
+    "title": "Language",
+    "type": "multi-select",
+    "usesTagStyle": true,
+    "options": [
+      "Japanese",
+      "English",
+      "Chinese (Simplified)",
+      "Chinese (Traditional)",
+      "Korean",
+      "Spanish",
+      "German",
+      "French",
+      "Indonesian",
+      "Italian",
+      "Portuguese",
+      "Swedish",
+      "Thai",
+      "Vietnamese",
+      "Alingual"
+    ],
+    "ids": [
+      "JPN",
+      "ENG",
+      "CHI_HANS",
+      "CHI_HANT",
+      "KO_KR",
+      "SPA",
+      "GER",
+      "FRE",
+      "IND",
+      "ITA",
+      "POR",
+      "SWE",
+      "THA",
+      "VIE",
+      "NM"
+    ]
+  },
+  {
     "id": "content_rating",
     "title": "Content Rating",
     "type": "multi-select",

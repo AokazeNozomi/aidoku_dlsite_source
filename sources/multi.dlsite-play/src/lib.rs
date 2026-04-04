@@ -57,7 +57,12 @@ impl Source for DlsitePlay {
 		let (genre_filter, genre_exclude) = extract_genre_filter(&filters);
 		let content_rating_filter = extract_content_rating_filter(&filters);
 		let (sort_option, sort_ascending) = extract_sort_filter(&filters);
-		let language_filter = settings::get_selected_languages();
+		let language_filter = extract_language_filter(&filters);
+		let language_filter = if language_filter.is_empty() {
+			settings::get_selected_languages()
+		} else {
+			language_filter
+		};
 		get_manga_list_inner(query, page, work_types, work_type_exclude, translation_filter, genre_filter, genre_exclude, content_rating_filter, language_filter, sort_option, sort_ascending)
 	}
 
@@ -1370,6 +1375,17 @@ fn fetch_all_languages() {
 		"[dlsite-play] Language fetch complete ({} works processed)",
 		total
 	);
+}
+
+fn extract_language_filter(filters: &[FilterValue]) -> Vec<String> {
+	for f in filters {
+		if let FilterValue::MultiSelect { id, included, .. } = f {
+			if id == "language" && !included.is_empty() {
+				return included.clone();
+			}
+		}
+	}
+	Vec::new()
 }
 
 fn extract_translation_filter(filters: &[FilterValue]) -> Option<String> {

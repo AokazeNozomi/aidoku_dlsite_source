@@ -211,6 +211,7 @@ pub enum DlsiteLang {
 	SWE,
 	THA,
 	VIE,
+	NM,
 }
 
 impl DlsiteLang {
@@ -231,6 +232,7 @@ impl DlsiteLang {
 			Self::SWE => "SWE",
 			Self::THA => "THA",
 			Self::VIE => "VIE",
+			Self::NM => "NM",
 		}
 	}
 
@@ -251,6 +253,7 @@ impl DlsiteLang {
 			"SWE" => Some(Self::SWE),
 			"THA" => Some(Self::THA),
 			"VIE" => Some(Self::VIE),
+			"NM" => Some(Self::NM),
 			_ => None,
 		}
 	}
@@ -272,6 +275,7 @@ impl DlsiteLang {
 			"sv" => Some(Self::SWE),
 			"th" => Some(Self::THA),
 			"vi" => Some(Self::VIE),
+			"nm" => Some(Self::NM),
 			_ => None,
 		}
 	}
@@ -293,6 +297,7 @@ impl DlsiteLang {
 			Self::SWE => "Swedish",
 			Self::THA => "Thai",
 			Self::VIE => "Vietnamese",
+			Self::NM => "Alingual",
 		}
 	}
 }
@@ -310,8 +315,8 @@ pub fn get_selected_languages() -> Vec<DlsiteLang> {
 		return Vec::new();
 	}
 	// If every defined language is selected, treat it as "no filter".
-	// source.json defines 14 languages.
-	if codes.len() >= 14 {
+	// source.json defines 15 languages.
+	if codes.len() >= 15 {
 		return Vec::new();
 	}
 	codes
