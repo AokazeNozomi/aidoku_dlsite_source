@@ -76,14 +76,14 @@ jobs:
           commit-message: Update source list
           single-commit: true
       - name: Uploading packages as artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: packages
           path: public/sources/*.aix
           if-no-files-found: ignore
       - name: Uploading gh-pages deployment as artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: gh-pages
