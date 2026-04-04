@@ -2,7 +2,7 @@
   "info": {
     "id": "multi.dlsite-play",
     "name": "DLsite Play",
-    "version": 7,
+    "version": 8,
     "url": "https://play.dlsite.com/login/",
     "contentRating": 2,
     "languages": [
@@ -23,6 +23,9 @@
     ]
   },
   "listings": [
-    { "id": "library", "name": "Library" }
+    {
+      "id": "library",
+      "name": "Library"
+    }
   ]
 }
