@@ -1306,7 +1306,8 @@ fn get_or_fetch_worknos(page: i32) -> Result<(Vec<String>, BTreeMap<String, Stri
 /// 1. `translation_info.lang` — authoritative for translations
 /// 2. Workno match in `language_editions` — works for originals
 /// 3. Single edition — use it
-/// 4. No editions — default to Japanese
+/// 4. No editions — return None (not cached, retryable)
+/// 5. Ambiguous editions — default to Japanese
 fn get_or_fetch_languages(workno: &str) -> Option<String> {
 	if let Some(cached) = settings::get_cached_languages(workno) {
 		return Some(cached);
@@ -1322,8 +1323,12 @@ fn get_or_fetch_languages(workno: &str) -> Option<String> {
 		resolved_code = ed.lang.clone();
 	} else if result.editions.len() == 1 {
 		resolved_code = result.editions[0].lang.clone();
+	} else if result.editions.is_empty() {
+		// No editions found — product may be region-locked or unavailable.
+		// Don't cache so the lookup can be retried later.
+		return None;
 	} else {
-		// No editions or ambiguous — default to Japanese.
+		// Ambiguous (multiple editions, no exact match) — default to Japanese.
 		resolved_code = String::from("JPN");
 	}
 
