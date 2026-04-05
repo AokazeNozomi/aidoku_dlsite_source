@@ -1,0 +1,80 @@
+{
+  "name": "Aidoku DLsite Play Source",
+  "sources": [
+    {
+      "id": "multi.dlsite-explore",
+      "name": "DLsite Explore",
+      "version": 1,
+      "iconURL": "icons/multi.dlsite-explore-v1.png",
+      "downloadURL": "sources/multi.dlsite-explore-v1.aix",
+      "languages": [
+        "ja",
+        "en",
+        "zh-Hans",
+        "zh-Hant",
+        "ko",
+        "es",
+        "de",
+        "fr",
+        "id",
+        "it",
+        "pt",
+        "sv",
+        "th",
+        "vi"
+      ],
+      "contentRating": 1,
+      "baseURL": "https://www.dlsite.com/home/"
+    },
+    {
+      "id": "multi.dlsite-explore-adult",
+      "name": "DLsite Explore Adult",
+      "version": 1,
+      "iconURL": "icons/multi.dlsite-explore-adult-v1.png",
+      "downloadURL": "sources/multi.dlsite-explore-adult-v1.aix",
+      "languages": [
+        "ja",
+        "en",
+        "zh-Hans",
+        "zh-Hant",
+        "ko",
+        "es",
+        "de",
+        "fr",
+        "id",
+        "it",
+        "pt",
+        "sv",
+        "th",
+        "vi"
+      ],
+      "contentRating": 2,
+      "baseURL": "https://www.dlsite.com/maniax/"
+    },
+    {
+      "id": "multi.dlsite-play",
+      "name": "DLsite Play",
+      "version": 1,
+      "iconURL": "icons/multi.dlsite-play-v1.png",
+      "downloadURL": "sources/multi.dlsite-play-v1.aix",
+      "languages": [
+        "ja",
+        "en",
+        "zh-Hans",
+        "zh-Hant",
+        "ko",
+        "es",
+        "de",
+        "fr",
+        "id",
+        "it",
+        "pt",
+        "sv",
+        "th",
+        "vi"
+      ],
+      "contentRating": 2,
+      "baseURL": "https://play.dlsite.com/login/"
+    }
+  ]
+}
