@@ -1,0 +1,301 @@
+[
+	{
+		"type": "group",
+		"title": "Account",
+		"footer": "Log in with your DLsite account to access purchased works.",
+		"items": [
+			{
+				"type": "login",
+				"method": "web",
+				"key": "login",
+				"title": "Login",
+				"url": "https://play.dlsite.com/login",
+				"refreshes": [
+					"home",
+					"listings",
+					"content"
+				]
+			}
+		]
+	},
+	{
+		"type": "group",
+		"title": "Display",
+		"items": [
+			{
+				"type": "select",
+				"key": "preferred_language",
+				"title": "Preferred Title and Genre Language",
+				"values": [
+					"English",
+					"Japanese",
+					"Chinese (Simplified)",
+					"Chinese (Traditional)",
+					"Korean",
+					"Spanish",
+					"German",
+					"French",
+					"Italian",
+					"Portuguese (Brazil)",
+					"Indonesian",
+					"Vietnamese",
+					"Thai",
+					"Swedish"
+				],
+				"default": "English",
+				"refreshes": [
+					"home",
+					"listings",
+					"content"
+				]
+			},
+			{
+				"type": "switch",
+				"key": "series_prefix",
+				"title": "Show [SERIES] prefix",
+				"subtitle": "Prepend [SERIES] to series manga titles for easy identification.",
+				"default": false,
+				"refreshes": [
+					"home",
+					"listings",
+					"content"
+				]
+			},
+			{
+				"type": "select",
+				"key": "default_sort",
+				"title": "Library Sort",
+				"values": [
+					"Recently Opened",
+					"Purchase Date",
+					"Release Date",
+					"Writer/Circle Name",
+					"Title"
+				],
+				"default": "Purchase Date",
+				"refreshes": [
+					"home",
+					"listings",
+					"content"
+				]
+			},
+			{
+				"type": "select",
+				"key": "default_sort_ascending",
+				"title": "Sort Direction",
+				"values": [
+					"Ascending",
+					"Descending"
+				],
+				"default": "Descending",
+				"refreshes": [
+					"home",
+					"listings",
+					"content"
+				]
+			},
+			{
+				"type": "multi-select",
+				"key": "default_content_rating",
+				"title": "Content Rating Filter",
+				"values": [
+					"safe",
+					"r15",
+					"r18"
+				],
+				"titles": [
+					"Safe",
+					"R-15",
+					"R-18"
+				],
+				"default": [
+					"safe",
+					"r15"
+				],
+				"refreshes": [
+					"home",
+					"listings",
+					"content"
+				]
+			}
+		]
+	},
+	{
+		"type": "group",
+		"title": "Languages",
+		"footer": "Language info comes from DLsite's public API, which is region-locked. Use a VPN to Japan to fetch languages for region-locked works.",
+		"items": [
+			{
+				"type": "button",
+				"title": "Fetch All Languages",
+				"notification": "fetch_languages",
+				"confirmTitle": "Fetch Languages?",
+				"confirmText": "This will fetch language information for all works in your library. Use a Japanese VPN to include region-locked titles. Already-fetched works are skipped. This may take a while for large libraries."
+			}
+		]
+	},
+	{
+		"type": "group",
+		"title": "View History",
+		"items": [
+			{
+				"type": "switch",
+				"key": "update_view_history",
+				"title": "Update View History",
+				"subtitle": "Update DLsite Play's recently opened list when reading.",
+				"default": false
+			}
+		]
+	},
+	{
+		"type": "group",
+		"title": "Advanced",
+		"items": [
+			{
+				"type": "switch",
+				"key": "debug_logging",
+				"title": "Debug Logging",
+				"subtitle": "Log HTTP requests and other debug info to the Aidoku console.",
+				"default": false
+			}
+		]
+	},
+	{
+		"type": "group",
+		"title": "Work Types",
+		"items": [
+			{
+				"type": "multi-select",
+				"key": "wt_images",
+				"title": "Images",
+				"values": [
+					"MNG",
+					"SCM",
+					"WBT",
+					"ICG",
+					"NRE",
+					"DNV"
+				],
+				"titles": [
+					"Manga",
+					"Gekiga",
+					"Webtoon",
+					"CG / Illustrations",
+					"Novel",
+					"Digital Novel"
+				],
+				"default": [
+					"MNG",
+					"SCM",
+					"WBT",
+					"ICG"
+				],
+				"refreshes": [
+					"home",
+					"listings",
+					"content"
+				]
+			},
+			{
+				"type": "multi-select",
+				"key": "wt_av",
+				"title": "Audio / Video",
+				"values": [
+					"MOV",
+					"SOU",
+					"MUS"
+				],
+				"titles": [
+					"Video",
+					"Voice / ASMR",
+					"Music"
+				],
+				"default": [],
+				"refreshes": [
+					"home",
+					"listings",
+					"content"
+				]
+			},
+			{
+				"type": "multi-select",
+				"key": "wt_game",
+				"title": "Game",
+				"values": [
+					"ACN",
+					"QIZ",
+					"ADV",
+					"RPG",
+					"TBL",
+					"SLN",
+					"TYP",
+					"STG",
+					"PZL",
+					"ETC"
+				],
+				"titles": [
+					"Action",
+					"Quiz",
+					"Adventure",
+					"Role-playing",
+					"Table",
+					"Simulation",
+					"Typing",
+					"Shooting",
+					"Puzzle",
+					"Miscellaneous"
+				],
+				"default": [],
+				"refreshes": [
+					"home",
+					"listings",
+					"content"
+				]
+			},
+			{
+				"type": "multi-select",
+				"key": "wt_tools",
+				"title": "Tools / Accessories",
+				"values": [
+					"TOL",
+					"IMT",
+					"AMT"
+				],
+				"titles": [
+					"Tools / Accessories",
+					"Illustration Materials",
+					"Music Materials"
+				],
+				"default": [
+					"IMT"
+				],
+				"refreshes": [
+					"home",
+					"listings",
+					"content"
+				]
+			},
+			{
+				"type": "multi-select",
+				"key": "wt_misc",
+				"title": "Miscellaneous",
+				"values": [
+					"ET3",
+					"VCM",
+					"PBC"
+				],
+				"titles": [
+					"Miscellaneous",
+					"Voiced Comic",
+					"Publication"
+				],
+				"default": [],
+				"refreshes": [
+					"home",
+					"listings",
+					"content"
+				]
+			}
+		]
+	}
+]

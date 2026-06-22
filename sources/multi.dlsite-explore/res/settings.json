@@ -1,0 +1,80 @@
+[
+	{
+		"type": "group",
+		"title": "Account",
+		"footer": "Optional. Log in for personalized recommendations.",
+		"items": [
+			{
+				"type": "login",
+				"method": "web",
+				"key": "login",
+				"title": "Login",
+				"url": "https://login.dlsite.com/login",
+				"refreshes": [
+					"home"
+				]
+			}
+		]
+	},
+	{
+		"type": "group",
+		"title": "Display",
+		"items": [
+			{
+				"type": "select",
+				"key": "site",
+				"title": "Site",
+				"values": [
+					"Doujin",
+					"PC Games"
+				],
+				"default": "Doujin",
+				"refreshes": [
+					"home",
+					"listings",
+					"content"
+				]
+			},
+			{
+				"type": "select",
+				"key": "preferred_language",
+				"title": "Preferred Language",
+				"values": [
+					"English",
+					"Japanese",
+					"Chinese (Simplified)",
+					"Chinese (Traditional)",
+					"Korean",
+					"Spanish",
+					"German",
+					"French",
+					"Italian",
+					"Portuguese (Brazil)",
+					"Indonesian",
+					"Vietnamese",
+					"Thai",
+					"Swedish"
+				],
+				"default": "English",
+				"refreshes": [
+					"home",
+					"listings",
+					"content"
+				]
+			}
+		]
+	},
+	{
+		"type": "group",
+		"title": "Advanced",
+		"items": [
+			{
+				"type": "switch",
+				"key": "debug_logging",
+				"title": "Debug Logging",
+				"subtitle": "Log HTTP requests and other debug info to the Aidoku console.",
+				"default": false
+			}
+		]
+	}
+]

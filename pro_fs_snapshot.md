@@ -1,0 +1,558 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - paragraph [ref=e8]: Choose DLsite for Manga and Comics
+          - generic [ref=e9]:
+            - list [ref=e10]:
+              - listitem [ref=e11]:
+                - link "Points10,830pt" [ref=e12] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/books/mypage/point
+              - listitem [ref=e13]:
+                - link "Coupon17" [ref=e14] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/books/mypage/coupon/list
+            - generic [ref=e15]:
+              - generic [ref=e16] [cursor=pointer]:
+                - text: 
+                - generic [ref=e17]: English-USD
+              - option "日本語"
+              - option "English" [selected]
+              - option "简体中文"
+              - option "繁體中文"
+              - option "한국어"
+              - option "Español"
+              - option "Deutsch"
+              - option "Français"
+              - option "Bahasa Indonesia"
+              - option "Italiano"
+              - option "Português"
+              - option "Svenska"
+              - option "ภาษาไทย"
+              - option "Tiếng Việt"
+              - option "JPY - Japanese Yen"
+              - option "USD - US Dollar" [selected]
+              - option "RMB - Chinese Yuan"
+              - option "TWD - New Taiwan Dollar"
+              - option "KRW - Korean Won"
+              - option "AUD - Australian Dollar"
+              - option "BRL - Brazilian Real"
+              - option "CAD - Canadian Dollar"
+              - option "EUR - Euro"
+              - option "GBP - British Pound"
+              - option "HKD - Hong Kong Dollar"
+              - option "IDR - Indonesian Rupiah"
+              - option "INR - Indian Rupee"
+              - option "MXN - Mexican Peso"
+              - option "MYR - Malaysian Ringgit"
+              - option "NZD - New Zealand Dollar"
+              - option "PHP - Philippine Peso"
+              - option "SEK - Swedish Krona"
+              - option "SGD - Singapore Dollar"
+              - option "THB - Thai Baht"
+              - option "VND - Vietnamese Dong"
+            - generic [ref=e19] [cursor=pointer]: Related Services
+        - generic [ref=e20]:
+          - link "DLsite R18" [ref=e21] [cursor=pointer]:
+            - /url: https://www.dlsite.com/books/
+            - img "DLsite R18" [ref=e22]
+          - generic [ref=e24]:
+            - generic [ref=e25]:
+              - generic [ref=e27] [cursor=pointer]: Adult Comics
+              - combobox [ref=e28] [cursor=pointer]:
+                - option "All"
+                - option "Doujin"
+                - option "Adult Comics" [selected]
+                - option "H Games"
+                - option "Smartphone Games"
+                - option "AI-generated"
+            - searchbox "Search by keywords (product name, circle name, etc)" [ref=e30]
+            - button " Search" [ref=e31] [cursor=pointer]:
+              - text: 
+              - generic [ref=e32]: Search
+          - link "Advanced Search" [ref=e34] [cursor=pointer]:
+            - /url: https://www.dlsite.com/books/fs
+          - list [ref=e35]:
+            - listitem [ref=e36]:
+              - link "Favorites" [ref=e37] [cursor=pointer]:
+                - /url: https://www.dlsite.com/books/mypage/wishlist/=/discount/1/order/cstart_d
+                - generic [ref=e38]: Favorites
+              - link "Discounts Detected!" [ref=e39] [cursor=pointer]:
+                - /url: https://www.dlsite.com/books/mypage/wishlist/=/discount/1/order/cstart_d
+            - listitem [ref=e40]:
+              - link "Cart" [ref=e41] [cursor=pointer]:
+                - /url: https://www.dlsite.com/books/cart
+                - generic [ref=e42]: Cart
+            - listitem [ref=e43]:
+              - link "My Items" [ref=e44] [cursor=pointer]:
+                - /url: https://play.dlsite.com/
+                - generic [ref=e45]: My Items
+            - listitem [ref=e46]:
+              - generic [ref=e48]: Account
+              - generic [ref=e49]: "1"
+            - listitem [ref=e50]:
+              - link "Guide" [ref=e51] [cursor=pointer]:
+                - /url: "#"
+                - generic [ref=e52]: Guide
+        - generic [ref=e54]:
+          - generic [ref=e55]:
+            - navigation [ref=e56]:
+              - listitem [ref=e57]:
+                - link "Doujin" [ref=e58] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/maniax/
+              - listitem [ref=e59]:
+                - link "Adult Comics" [ref=e60] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/books/
+              - listitem [ref=e61]:
+                - link "H Games" [ref=e62] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/pro/
+              - listitem [ref=e63]:
+                - link "Smartphone Games" [ref=e64] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/appx/
+              - listitem [ref=e65]:
+                - link "Creator Assets" [ref=e66] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/maniax/tool
+              - listitem [ref=e67]:
+                - link "Online Games" [ref=e68] [cursor=pointer]:
+                  - /url: https://www.nijiyome.jp?en=dlsite&em=tab&et=books
+            - generic [ref=e69]:
+              - link "To Comics (comipo)" [ref=e71] [cursor=pointer]:
+                - /url: https://www.comipo.app/
+              - link "Otome/BL All Ages" [ref=e73] [cursor=pointer]:
+                - /url: https://www.dlsite.com/garumani/
+              - link "TL/BL" [ref=e75] [cursor=pointer]:
+                - /url: https://www.dlsite.com/girls-pro/
+          - list [ref=e78]:
+            - listitem [ref=e79]:
+              - link "TOP" [ref=e80] [cursor=pointer]:
+                - /url: https://www.dlsite.com/books/
+            - listitem [ref=e81]:
+              - link " Book" [ref=e82] [cursor=pointer]:
+                - /url: https://www.dlsite.com/books/works/comic
+            - listitem [ref=e83]:
+              - link " Magazine" [ref=e84] [cursor=pointer]:
+                - /url: https://www.dlsite.com/books/works/magazine
+            - listitem [ref=e85]:
+              - link " One-off / Short story" [ref=e86] [cursor=pointer]:
+                - /url: https://www.dlsite.com/books/works/oneshot
+            - listitem [ref=e87]:
+              - link " Webtoon" [ref=e88] [cursor=pointer]:
+                - /url: https://www.dlsite.com/books/promo/works/=/key/adult-webtoon
+            - listitem [ref=e89]:
+              - link " Ranking" [ref=e90] [cursor=pointer]:
+                - /url: https://www.dlsite.com/books/ranking?date=30d
+            - listitem [ref=e91]:
+              - link " Release Calendar" [ref=e92] [cursor=pointer]:
+                - /url: https://www.dlsite.com/books/new
+    - list [ref=e94]:
+      - listitem [ref=e95]:
+        - link "Adult Comics" [ref=e96] [cursor=pointer]:
+          - /url: https://www.dlsite.com/books/
+      - listitem [ref=e97]:
+        - generic: Advanced Search
+    - generic [ref=e100]:
+      - heading "Advanced Search" [level=1] [ref=e102]
+      - generic [ref=e104]:
+        - generic [ref=e105]:
+          - generic [ref=e106]:
+            - generic [ref=e107]:
+              - generic [ref=e108]: Keywords
+              - searchbox "Title, Publisher, Creator" [ref=e110]
+              - paragraph [ref=e112]:  About Keyword Searches
+            - generic [ref=e113]:
+              - generic [ref=e114]: Product format
+              - link "Select product format" [ref=e116] [cursor=pointer]:
+                - /url: "#"
+            - generic [ref=e117]:
+              - generic [ref=e118]: Genre
+              - link "Genre Selection" [ref=e120] [cursor=pointer]:
+                - /url: "#"
+            - generic [ref=e121]:
+              - generic [ref=e122]: Terms of Discount
+              - generic [ref=e123]:
+                - list [ref=e124]:
+                  - listitem [ref=e125]:
+                    - generic [ref=e126] [cursor=pointer]: Discount Rate - Not specified
+                  - listitem [ref=e127]:
+                    - generic [ref=e128] [cursor=pointer]: Discounted Works
+                  - listitem [ref=e129]:
+                    - generic [ref=e130] [cursor=pointer]: 1% - 29% OFF
+                  - listitem [ref=e131]:
+                    - generic [ref=e132] [cursor=pointer]: 30% off and up
+                  - listitem [ref=e133]:
+                    - generic [ref=e134] [cursor=pointer]: 50% off and up
+                  - listitem [ref=e135]:
+                    - generic [ref=e136] [cursor=pointer]: 80% off and up
+                - list [ref=e137]:
+                  - listitem [ref=e138]:  Discount ends in 24 hours
+            - generic [ref=e139]:
+              - generic [ref=e140]: Price range
+              - generic [ref=e141]:
+                - combobox [ref=e142]:
+                  - option "Unspecified" [selected]
+                  - option "0-300 JPY"
+                  - option "301-500 JPY"
+                  - option "501-800 JPY"
+                  - option "801-1000 JPY"
+                  - option "1001-1200 JPY"
+                  - option "1201-1500 JPY"
+                  - option "1501-2000 JPY"
+                  - option "2001-3000 JPY"
+                  - option "3001-5000 JPY"
+                  - option "Over 5000 JPY"
+                - text: 
+            - generic [ref=e143]:
+              - generic [ref=e144]: Type
+              - list [ref=e146]:
+                - listitem [ref=e147]:  Doujin works
+                - listitem [ref=e148]:  H Games
+                - listitem [ref=e149]:  Adult Comics
+                - listitem [ref=e150]:  Smartphone Games
+                - listitem [ref=e151]:  AI-generated
+            - generic [ref=e152]:
+              - generic [ref=e153]: Age
+              - list [ref=e155]:
+                - listitem [ref=e156]:  All Ages
+                - listitem [ref=e157]:  R15
+                - listitem [ref=e158]:  R18
+            - generic [ref=e159]:
+              - generic [ref=e160]: AI-Generated
+              - list [ref=e162]:
+                - listitem [ref=e163]:  Exclude AI-generated works
+                - listitem [ref=e164]:  Exclude partially AI-generated works
+            - generic [ref=e165]:
+              - generic [ref=e166]: Release date
+              - generic [ref=e167]:
+                - combobox [ref=e168]:
+                  - option "Unspecified" [selected]
+                  - option "Last 7 days"
+                  - option "Last 30 days"
+                  - option "Last 12 months"
+                  - option "Older"
+                - text: 
+            - generic [ref=e169]:
+              - generic [ref=e170]: Sale status
+              - generic [ref=e171]:
+                - combobox [ref=e172]:
+                  - option "Works available for sale"
+                  - option "Upcoming works"
+                  - option "Works available for preorder"
+                  - option "Unspecified" [selected]
+                - text: 
+            - generic [ref=e173]:
+              - generic [ref=e174]: Options
+              - link "Select options" [ref=e176] [cursor=pointer]:
+                - /url: "#"
+            - generic [ref=e177]:
+              - generic [ref=e178]: Additional Terms
+              - list [ref=e180]:
+                - listitem [ref=e181]:  Exclusives
+                - listitem [ref=e182]:  Advance Products
+                - listitem [ref=e183]:  Bonus Point Products
+                - listitem [ref=e184]:  Free
+            - generic [ref=e185]:
+              - generic [ref=e186]: Supported languages
+              - generic [ref=e187]:
+                - list [ref=e188]:
+                  - listitem [ref=e189]:  Japanese
+                  - listitem [ref=e190]:  English
+                  - listitem [ref=e191]:  Simplified Chinese
+                  - listitem [ref=e192]:  Traditional Chinese
+                  - listitem [ref=e193]:  Korean
+                  - listitem [ref=e194]:  Spanish
+                  - listitem [ref=e195]:  Arabic
+                  - listitem [ref=e196]:  German
+                  - listitem [ref=e197]:  French
+                  - listitem [ref=e198]:  Indonesian
+                  - listitem [ref=e199]:  Italian
+                  - listitem [ref=e200]:  Portuguese
+                  - listitem [ref=e201]:  Swedish
+                  - listitem [ref=e202]:  Thai
+                  - listitem [ref=e203]:  Vietnamese
+                  - listitem [ref=e204]:  Other Languages
+                  - listitem [ref=e205]:  Alingual
+                  - listitem [ref=e206]:  DLsite Official Translation
+                - paragraph [ref=e207]: "*\"Alingual\" works do not require knowledge of any particular language to understand."
+            - generic [ref=e208]:
+              - generic [ref=e209]: Sort by
+              - generic [ref=e210]:
+                - combobox [ref=e211]:
+                  - option "Sort by popularity" [selected]
+                  - option "Recommended"
+                  - option "Release date - New to Old"
+                  - option "Release date - Old to New"
+                  - option "Best Selling"
+                  - option "Price - Low to High"
+                  - option "Price - High to Low"
+                  - option "Rating - High to Low"
+                  - option "Reviews - High to Low"
+                - text: 
+            - generic [ref=e212]:
+              - generic [ref=e213]: Display
+              - list [ref=e215]:
+                - listitem [ref=e216]:
+                  - generic [ref=e218] [cursor=pointer]: 
+                - listitem [ref=e219]:
+                  - generic [ref=e220] [cursor=pointer]:
+                    - generic [ref=e221]: 
+                    - text: Tile Display
+            - generic [ref=e222]:
+              - generic [ref=e223]: Items per page
+              - generic [ref=e224]:
+                - combobox [ref=e225]:
+                  - option "30" [selected]
+                  - option "50"
+                  - option "100"
+                - text: 
+          - generic [ref=e226]:
+            - button "Reset" [ref=e227] [cursor=pointer]
+            - button "Search" [ref=e228] [cursor=pointer]
+        - text:                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+    - generic [ref=e230]:
+      - heading "Search adult comics" [level=3] [ref=e231]
+      - generic [ref=e232]:
+        - list [ref=e234]:
+          - listitem [ref=e235]:
+            - link " Under 500 Yen Hot!" [ref=e236] [cursor=pointer]:
+              - /url: https://www.dlsite.com/books/works/lowprice?order=trend
+              - text:  Under 500 Yen
+              - generic [ref=e237]: Hot!
+          - listitem [ref=e238]:
+            - link "￥0 Free" [ref=e239] [cursor=pointer]:
+              - /url: https://www.dlsite.com/books/fsr/=/is_free/1/work_category/books/order/release_d/per_page/100/set_locale_options/en_US
+          - listitem [ref=e240]:
+            - link " Discounts Hot!" [ref=e241] [cursor=pointer]:
+              - /url: https://www.dlsite.com/books/works/discount
+              - text:  Discounts
+              - generic [ref=e242]: Hot!
+          - listitem [ref=e243]:
+            - link " New Reviews" [ref=e244] [cursor=pointer]:
+              - /url: https://www.dlsite.com/books/new/review
+          - listitem [ref=e245]:
+            - link " Webtoon" [ref=e246] [cursor=pointer]:
+              - /url: https://www.dlsite.com/books/promo/works/=/key/adult-webtoon
+          - listitem [ref=e247]:
+            - link " Translators Unite" [ref=e248] [cursor=pointer]:
+              - /url: https://www.dlsite.com/books/works/translation
+        - heading "Genre" [level=4] [ref=e250]:
+          - generic [ref=e251]: Genre
+        - generic [ref=e252]:
+          - list [ref=e253]:
+            - listitem [ref=e254]:
+              - link "Cuckoldry (Netorare) (10466)" [ref=e255] [cursor=pointer]:
+                - /url: https://www.dlsite.com/books/works/genre/=/genre/048
+                - text: Cuckoldry (Netorare)
+                - generic [ref=e256]: (10466)
+            - listitem [ref=e257]:
+              - link "Pregnancy / Impregnation (3918)" [ref=e258] [cursor=pointer]:
+                - /url: https://www.dlsite.com/books/works/genre/=/genre/129
+                - text: Pregnancy / Impregnation
+                - generic [ref=e259]: (3918)
+            - listitem [ref=e260]:
+              - link "Married Woman (26503)" [ref=e261] [cursor=pointer]:
+                - /url: https://www.dlsite.com/books/works/genre/=/genre/219
+                - text: Married Woman
+                - generic [ref=e262]: (26503)
+            - listitem [ref=e263]:
+              - link "Lesbian (4624)" [ref=e264] [cursor=pointer]:
+                - /url: https://www.dlsite.com/books/works/genre/=/genre/118
+                - text: Lesbian
+                - generic [ref=e265]: (4624)
+            - listitem [ref=e266]:
+              - link "Sex Change / Transsexual (2058)" [ref=e267] [cursor=pointer]:
+                - /url: https://www.dlsite.com/books/works/genre/=/genre/245
+                - text: Sex Change / Transsexual
+                - generic [ref=e268]: (2058)
+            - listitem [ref=e269]:
+              - link "Otoko no ko (3341)" [ref=e270] [cursor=pointer]:
+                - /url: https://www.dlsite.com/books/works/genre/=/genre/303
+                - text: Otoko no ko
+                - generic [ref=e271]: (3341)
+            - listitem [ref=e272]:
+              - link "Futanari / Hermaphrodite (2997)" [ref=e273] [cursor=pointer]:
+                - /url: https://www.dlsite.com/books/works/genre/=/genre/190
+                - text: Futanari / Hermaphrodite
+                - generic [ref=e274]: (2997)
+            - listitem [ref=e275]:
+              - link "Tentacle (4718)" [ref=e276] [cursor=pointer]:
+                - /url: https://www.dlsite.com/books/works/genre/=/genre/162
+                - text: Tentacle
+                - generic [ref=e277]: (4718)
+          - link "See more..." [ref=e279] [cursor=pointer]:
+            - /url: https://www.dlsite.com/books/genre/list
+        - generic [ref=e280]:
+          - heading "Other retail sections" [level=4] [ref=e282]
+          - list [ref=e283]:
+            - listitem [ref=e284]:
+              - link "To All Ages products" [ref=e285] [cursor=pointer]:
+                - /url: https://www.comipo.app/
+            - listitem [ref=e286]:
+              - link "To Products for Women" [ref=e287] [cursor=pointer]:
+                - /url: https://www.dlsite.com/girls-pro/
+    - generic [ref=e288]:
+      - paragraph [ref=e290]:
+        - link "Back to Top" [ref=e291] [cursor=pointer]:
+          - /url: "#header"
+      - list [ref=e293]:
+        - listitem [ref=e294]:
+          - link "ALL top" [ref=e295] [cursor=pointer]:
+            - /url: https://www.dlsite.com
+        - listitem [ref=e296]:
+          - link "Doujin" [ref=e297] [cursor=pointer]:
+            - /url: https://www.dlsite.com/maniax/
+        - listitem [ref=e298]:
+          - link "Adult Comics" [ref=e299] [cursor=pointer]:
+            - /url: https://www.dlsite.com/books/
+        - listitem [ref=e300]:
+          - link "H Games" [ref=e301] [cursor=pointer]:
+            - /url: https://www.dlsite.com/pro/
+        - listitem [ref=e302]:
+          - link "Smartphone Games" [ref=e303] [cursor=pointer]:
+            - /url: https://www.dlsite.com/appx/
+        - listitem [ref=e304]:
+          - link "Change to the mobile site" [ref=e305] [cursor=pointer]:
+            - /url: https://www.dlsite.com/books-touch/fs
+      - generic [ref=e306]:
+        - generic [ref=e308]:
+          - generic [ref=e309]:
+            - generic [ref=e310]: About DLsite
+            - list [ref=e311]:
+              - listitem [ref=e312]:
+                - link "Company Overview" [ref=e313] [cursor=pointer]:
+                  - /url: https://www.eisys.co.jp/company/information_en
+              - listitem [ref=e314]:
+                - link "Recruitment Guide" [ref=e315] [cursor=pointer]:
+                  - /url: https://www.eisys.co.jp/recruit
+              - listitem [ref=e316]:
+                - link "User Agreement" [ref=e317] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/books/user/regulations
+              - listitem [ref=e318]:
+                - link "Legal Statement based on Act on Specified Commercial Transactions" [ref=e319] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/books/guide/law
+              - listitem [ref=e320]:
+                - link "Payment Services Act" [ref=e321] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/books/guide/settlement
+              - listitem [ref=e322]:
+                - link "Privacy Policy" [ref=e323] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/books/guide/privacy
+              - listitem [ref=e324]:
+                - link "外部送信規律に関する公表" [ref=e325] [cursor=pointer]:
+                  - /url: https://www.eisys.co.jp/cookie/policy
+              - listitem [ref=e326]:
+                - link "Compliance Policy" [ref=e327] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/books/mosaic
+              - listitem [ref=e328]:
+                - link "Copyright" [ref=e329] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/books/guide/copy
+              - listitem [ref=e330]:
+                - link "Customer Harassment Response Policy" [ref=e331] [cursor=pointer]:
+                  - /url: https://www.geonet.co.jp/english/csr/social/customer-harassment/
+              - listitem [ref=e332]:
+                - link "About Links" [ref=e333] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/books/banners
+              - listitem [ref=e334]:
+                - link "Site Map" [ref=e335] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/books/sitemap
+              - listitem [ref=e336]:
+                - link "Other Information" [ref=e337] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/books/otherinformation
+          - generic [ref=e338]:
+            - generic [ref=e339]: Help&guide
+            - list [ref=e340]:
+              - listitem [ref=e341]:
+                - link "For First-time Visitors" [ref=e342] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/books/welcome
+              - listitem [ref=e343]:
+                - link "FAQ" [ref=e344] [cursor=pointer]:
+                  - /url: https://cs.dlsite.com/hc/en-us
+              - listitem [ref=e345]:
+                - link "Product Request" [ref=e346] [cursor=pointer]:
+                  - /url: https://cs.dlsite.com/hc/en-us/requests/new?ticket_form_id=1500000429921
+          - generic [ref=e347]:
+            - generic [ref=e348]: DLsite services
+            - list [ref=e349]:
+              - listitem [ref=e350]:
+                - link "To sell your works" [ref=e351] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/books/circle/invite
+              - listitem [ref=e352]:
+                - link "Translators Unite" [ref=e353] [cursor=pointer]:
+                  - /url: https://min-hon.net/en/
+              - listitem [ref=e354]:
+                - link "Affiliate" [ref=e355] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/books/guide/affiliate
+              - listitem [ref=e356]:
+                - link "Newsletters" [ref=e357] [cursor=pointer]:
+                  - /url: /books/mypage/setting/mail
+              - listitem [ref=e358]:
+                - link "Web Viewer - DLsite Play" [ref=e359] [cursor=pointer]:
+                  - /url: https://play.dlsite.com/ja
+              - listitem [ref=e360]:
+                - link "PC Client DLsite Nest" [ref=e361] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/books/guide/dlnest
+        - generic [ref=e362]:
+          - generic [ref=e363]: Payments/Points
+          - generic [ref=e364]:
+            - list [ref=e365]:
+              - listitem [ref=e366]:
+                - link "Payment Method" [ref=e367] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/books/guide/payment
+              - listitem [ref=e368]:
+                - link "About Points" [ref=e369] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/books/mypage/aboutpoint
+              - listitem [ref=e370]:
+                - link "How to buy points" [ref=e371] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/books/guide/payment#link_point
+            - link "Credit Cards JCB Convenience Store / Online Banking Lawson Familymart Pay-easy Electronic money Rakuten Edy BitCash FamiPay WebMoney PayPay Delayed Payment paidy atone" [ref=e372] [cursor=pointer]:
+              - /url: https://www.dlsite.com/books/guide/payment
+              - generic [ref=e373]:
+                - generic [ref=e374]:
+                  - paragraph [ref=e375]: Credit Cards
+                  - img "JCB" [ref=e377]
+                - generic [ref=e378]:
+                  - paragraph [ref=e379]: Convenience Store / Online Banking
+                  - generic [ref=e380]:
+                    - img "Lawson" [ref=e381]
+                    - img "Familymart" [ref=e382]
+                    - img "Pay-easy" [ref=e383]
+                - generic [ref=e384]:
+                  - paragraph [ref=e385]: Electronic money
+                  - generic [ref=e386]:
+                    - img "Rakuten Edy" [ref=e387]
+                    - img "BitCash" [ref=e388]
+                    - img "FamiPay" [ref=e389]
+                  - generic [ref=e390]:
+                    - img "WebMoney" [ref=e391]
+                    - img "PayPay" [ref=e392]
+                - generic [ref=e393]:
+                  - paragraph [ref=e394]: Delayed Payment
+                  - generic [ref=e395]:
+                    - img "paidy" [ref=e396]
+                    - img "atone" [ref=e397]
+        - generic [ref=e399]:
+          - generic [ref=e400]:
+            - generic [ref=e401]: X(Twitter)
+            - list [ref=e402]:
+              - listitem [ref=e403]:
+                - link "ALL" [ref=e404] [cursor=pointer]:
+                  - /url: https://x.com/DLsiteGlobal
+              - listitem [ref=e405]:
+                - link "R18" [ref=e406] [cursor=pointer]:
+                  - /url: https://x.com/DLsiteEnglish
+              - listitem [ref=e407]:
+                - link "Hentai Expo" [ref=e408] [cursor=pointer]:
+                  - /url: https://x.com/Hentai_Expo
+          - generic [ref=e409]:
+            - generic [ref=e410]: Discord
+            - list [ref=e411]:
+              - listitem [ref=e412]:
+                - link "DISCORD" [ref=e413] [cursor=pointer]:
+                  - /url: https://discord.com/invite/QkbHCJAAXC
+        - generic [ref=e414]:
+          - generic [ref=e415]: Career Information（Recruitment for Group Companies）
+          - list
+          - link "To Recruitment Page" [ref=e416] [cursor=pointer]:
+            - /url: https://www.eisys.co.jp/recruit
+      - generic [ref=e418]:
+        - generic [ref=e419]: "Recommended Browsers: Latest version of Microsoft Edge, Safari, Chrome, Firefox (JavaScript/Cookies enabled)"
+        - paragraph [ref=e420]: © 1996 DLsite
+  - iframe

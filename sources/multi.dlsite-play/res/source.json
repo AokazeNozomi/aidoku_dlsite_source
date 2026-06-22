@@ -1,0 +1,31 @@
+{
+  "info": {
+    "id": "multi.dlsite-play",
+    "name": "DLsite Play",
+    "version": 4,
+    "url": "https://play.dlsite.com/login/",
+    "contentRating": 2,
+    "languages": [
+      "ja",
+      "en",
+      "zh-Hans",
+      "zh-Hant",
+      "ko",
+      "es",
+      "de",
+      "fr",
+      "id",
+      "it",
+      "pt",
+      "sv",
+      "th",
+      "vi"
+    ]
+  },
+  "listings": [
+    {
+      "id": "library",
+      "name": "Library"
+    }
+  ]
+}

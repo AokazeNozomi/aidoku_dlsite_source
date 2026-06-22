@@ -1,0 +1,8 @@
+{
+    "rust-analyzer.linkedProjects": [
+        "./sources/multi.dlsite-explore-r18/Cargo.toml",
+        "./sources/multi.dlsite-play/Cargo.toml",
+        "./sources/multi.dlsite-explore/Cargo.toml",
+        "./shared/dlsite-common/Cargo.toml"
+    ]
+}

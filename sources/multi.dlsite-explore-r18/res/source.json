@@ -1,0 +1,35 @@
+{
+  "info": {
+    "id": "multi.dlsite-explore-adult",
+    "name": "DLsite Explore Adult",
+    "version": 3,
+    "url": "https://www.dlsite.com/maniax/",
+    "contentRating": 2,
+    "languages": [
+      "ja",
+      "en",
+      "zh-Hans",
+      "zh-Hant",
+      "ko",
+      "es",
+      "de",
+      "fr",
+      "id",
+      "it",
+      "pt",
+      "sv",
+      "th",
+      "vi"
+    ]
+  },
+  "listings": [
+    { "id": "english_picks", "name": "Our Top English Picks" },
+    { "id": "translations", "name": "Translators Unite" },
+    { "id": "ranking", "name": "Doujin Ranking (7 Days)" },
+    { "id": "recommended", "name": "Recommended" },
+    { "id": "recommended_en", "name": "Recommended English Works" },
+    { "id": "recommended_discount", "name": "Recommended Discounted Works" },
+    { "id": "new_works", "name": "New Doujin Works" },
+    { "id": "popular_works", "name": "Popular Doujin Works" }
+  ]
+}

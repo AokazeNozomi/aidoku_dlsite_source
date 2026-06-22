@@ -1,0 +1,579 @@
+- generic [active] [ref=e1]:
+  - list [ref=e4]:
+    - listitem [ref=e5]:
+      - link "~ May 13, 13:59 同人・スマホゲーム スプリングセール【bl】" [ref=e6] [cursor=pointer]:
+        - /url: https://www.dlsite.com/bl/campaign/sale?key=sale2026spring&show_type=g&group2%5B0%5D=ENG&group3%5B0%5D=bl&ai%5B0%5D=AIP
+        - generic [ref=e7]:
+          - generic [ref=e9]:
+            - generic [ref=e10]: ~ May 13,
+            - generic [ref=e11]: 13:59
+          - img "同人・スマホゲーム スプリングセール【bl】" [ref=e13]
+  - generic [ref=e14]:
+    - banner [ref=e16]:
+      - generic [ref=e17]:
+        - generic [ref=e18]:
+          - paragraph [ref=e20]: Choose DLsite Garumani for BL Doujin/Manga/Audio
+          - generic [ref=e21]:
+            - list [ref=e22]:
+              - listitem [ref=e23]:
+                - link "Points10,830pt" [ref=e24] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/bl/mypage/point
+              - listitem [ref=e25]:
+                - link "Coupon17" [ref=e26] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/bl/mypage/coupon/list
+            - generic [ref=e27]:
+              - generic [ref=e28] [cursor=pointer]:
+                - text: 
+                - generic [ref=e29]: English-USD
+              - option "日本語"
+              - option "English" [selected]
+              - option "简体中文"
+              - option "繁體中文"
+              - option "한국어"
+              - option "Español"
+              - option "Deutsch"
+              - option "Français"
+              - option "Bahasa Indonesia"
+              - option "Italiano"
+              - option "Português"
+              - option "Svenska"
+              - option "ภาษาไทย"
+              - option "Tiếng Việt"
+              - option "JPY - Japanese Yen"
+              - option "USD - US Dollar" [selected]
+              - option "RMB - Chinese Yuan"
+              - option "TWD - New Taiwan Dollar"
+              - option "KRW - Korean Won"
+              - option "AUD - Australian Dollar"
+              - option "BRL - Brazilian Real"
+              - option "CAD - Canadian Dollar"
+              - option "EUR - Euro"
+              - option "GBP - British Pound"
+              - option "HKD - Hong Kong Dollar"
+              - option "IDR - Indonesian Rupiah"
+              - option "INR - Indian Rupee"
+              - option "MXN - Mexican Peso"
+              - option "MYR - Malaysian Ringgit"
+              - option "NZD - New Zealand Dollar"
+              - option "PHP - Philippine Peso"
+              - option "SEK - Swedish Krona"
+              - option "SGD - Singapore Dollar"
+              - option "THB - Thai Baht"
+              - option "VND - Vietnamese Dong"
+            - generic [ref=e31] [cursor=pointer]: Related Services
+        - generic [ref=e32]:
+          - link "DLsite garumani" [ref=e34] [cursor=pointer]:
+            - /url: https://www.dlsite.com/bl/
+            - img "DLsite garumani" [ref=e35]
+          - generic [ref=e37]:
+            - generic [ref=e38]:
+              - generic [ref=e40] [cursor=pointer]: All
+              - combobox [ref=e41] [cursor=pointer]:
+                - option "All" [selected]
+                - option "Otome Doujin"
+                - option "TL Comics"
+                - option "Otome Drama CDs"
+                - option "BL Doujin"
+                - option "BL Comics"
+                - option "BL Drama CDs"
+            - searchbox "Search by keywords (product name, circle name, etc)" [ref=e43]
+            - button " Search" [ref=e44] [cursor=pointer]:
+              - text: 
+              - generic [ref=e45]: Search
+          - link "Advanced Search" [ref=e47] [cursor=pointer]:
+            - /url: https://www.dlsite.com/bl/fs
+          - list [ref=e48]:
+            - listitem [ref=e49]:
+              - link "Favorites" [ref=e50] [cursor=pointer]:
+                - /url: https://www.dlsite.com/bl/mypage/wishlist/=/discount/1/order/cstart_d
+                - generic [ref=e51]: Favorites
+              - link "Discounts Detected!" [ref=e52] [cursor=pointer]:
+                - /url: https://www.dlsite.com/bl/mypage/wishlist/=/discount/1/order/cstart_d
+            - listitem [ref=e53]:
+              - link "Cart" [ref=e54] [cursor=pointer]:
+                - /url: https://www.dlsite.com/bl/cart
+                - generic [ref=e55]: Cart
+            - listitem [ref=e56]:
+              - link "My Items" [ref=e57] [cursor=pointer]:
+                - /url: https://play.dlsite.com/
+                - generic [ref=e58]: My Items
+            - listitem [ref=e59]:
+              - link "Guide" [ref=e60] [cursor=pointer]:
+                - /url: "#"
+                - generic [ref=e61]: Guide
+        - generic [ref=e63]:
+          - generic [ref=e64]:
+            - navigation [ref=e65]:
+              - listitem [ref=e66]:
+                - link "Otome / TL" [ref=e67] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/girls/
+              - listitem [ref=e68]:
+                - link "BL" [ref=e69] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/bl/
+            - generic [ref=e70]:
+              - link "All-ages" [ref=e72] [cursor=pointer]:
+                - /url: https://www.dlsite.com/home/
+              - link "R18 (HENTAI)" [ref=e74] [cursor=pointer]:
+                - /url: https://www.dlsite.com/maniax/
+              - link "Otome/BL All Ages" [ref=e76] [cursor=pointer]:
+                - /url: https://www.dlsite.com/garumani/
+          - list [ref=e79]:
+            - listitem [ref=e80]:
+              - link " Doujin" [ref=e81] [cursor=pointer]:
+                - /url: https://www.dlsite.com/bl/
+            - listitem [ref=e82]:
+              - link " Comics" [ref=e83] [cursor=pointer]:
+                - /url: https://www.dlsite.com/bl-pro/
+            - listitem [ref=e84]:
+              - link " Drama CD" [ref=e85] [cursor=pointer]:
+                - /url: https://www.dlsite.com/bl-drama/
+            - listitem [ref=e86]:
+              - link " Videos & Games" [ref=e87] [cursor=pointer]:
+                - /url: https://www.dlsite.com/bl-pro/girlsgame
+            - listitem [ref=e88]:
+              - link " Webtoon" [ref=e89] [cursor=pointer]:
+                - /url: https://www.dlsite.com/bl-pro/promo/works/=/key/bl-webtoon
+            - listitem [ref=e90]:
+              - link " Ranking" [ref=e91] [cursor=pointer]:
+                - /url: "                                  https://www.dlsite.com/bl/global-ranking                              "
+            - listitem [ref=e92]:
+              - link " Upcoming Works" [ref=e93] [cursor=pointer]:
+                - /url: https://www.dlsite.com/bl/announce/list/day
+            - listitem [ref=e94]:
+              - link " Release Calendar" [ref=e95] [cursor=pointer]:
+                - /url: https://www.dlsite.com/bl/new
+            - listitem [ref=e96]:
+              - link " English Works" [ref=e97] [cursor=pointer]:
+                - /url: https://www.dlsite.com/bl/fsr/=/work_category%5B0%5D/doujin/work_category%5B1%5D/drama/work_category%5B2%5D/books/work_category%5B3%5D/pc/options/ENG/is_bl/1/is_gay/1
+    - list [ref=e99]:
+      - listitem [ref=e100]:
+        - link "BL Doujin" [ref=e101] [cursor=pointer]:
+          - /url: https://www.dlsite.com/bl/
+      - listitem [ref=e102]:
+        - generic: Advanced Search
+    - generic [ref=e105]:
+      - heading "Advanced Search" [level=1] [ref=e107]
+      - generic [ref=e109]:
+        - generic [ref=e110]:
+          - generic [ref=e111]:
+            - generic [ref=e112]:
+              - generic [ref=e113]: Keywords
+              - searchbox "Name of Work, Circle Name, Creator Name" [ref=e115]
+              - paragraph [ref=e117]:  About Keyword Searches
+            - generic [ref=e118]:
+              - generic [ref=e119]: Product format
+              - link "Select product format" [ref=e121] [cursor=pointer]:
+                - /url: "#"
+            - generic [ref=e122]:
+              - generic [ref=e123]: Genre
+              - link "Genre Selection" [ref=e125] [cursor=pointer]:
+                - /url: "#"
+            - generic [ref=e126]:
+              - generic [ref=e127]: Terms of Discount
+              - generic [ref=e128]:
+                - list [ref=e129]:
+                  - listitem [ref=e130]:
+                    - generic [ref=e131] [cursor=pointer]: Discount Rate - Not specified
+                  - listitem [ref=e132]:
+                    - generic [ref=e133] [cursor=pointer]: Discounted Works
+                  - listitem [ref=e134]:
+                    - generic [ref=e135] [cursor=pointer]: 1% - 29% OFF
+                  - listitem [ref=e136]:
+                    - generic [ref=e137] [cursor=pointer]: 30% off and up
+                  - listitem [ref=e138]:
+                    - generic [ref=e139] [cursor=pointer]: 50% off and up
+                  - listitem [ref=e140]:
+                    - generic [ref=e141] [cursor=pointer]: 80% off and up
+                - list [ref=e142]:
+                  - listitem [ref=e143]:  Discount ends in 24 hours
+            - generic [ref=e144]:
+              - generic [ref=e145]: Price range
+              - generic [ref=e146]:
+                - combobox [ref=e147]:
+                  - option "Unspecified" [selected]
+                  - option "0-300 JPY"
+                  - option "301-500 JPY"
+                  - option "501-800 JPY"
+                  - option "801-1000 JPY"
+                  - option "1001-1200 JPY"
+                  - option "1201-1500 JPY"
+                  - option "1501-2000 JPY"
+                  - option "2001-3000 JPY"
+                  - option "3001-5000 JPY"
+                  - option "Over 5000 JPY"
+                - text: 
+            - generic [ref=e148]:
+              - generic [ref=e149]: Product Category
+              - list [ref=e151]:
+                - listitem [ref=e152]:  Otome / TL
+                - listitem [ref=e153]:  BL
+                - listitem [ref=e154]:  Gay
+            - generic [ref=e155]:
+              - generic [ref=e156]: Type
+              - list [ref=e158]:
+                - listitem [ref=e159]:  Doujin
+                - listitem [ref=e160]:  Comics
+                - listitem [ref=e161]:  Drama CD
+                - listitem [ref=e162]:  Game
+            - generic [ref=e163]:
+              - generic [ref=e164]: Age
+              - list [ref=e166]:
+                - listitem [ref=e167]:  All Ages
+                - listitem [ref=e168]:  R15
+                - listitem [ref=e169]:  R18
+            - generic [ref=e170]:
+              - generic [ref=e171]: AI-Generated
+              - list [ref=e173]:
+                - listitem [ref=e174]:  Exclude AI-generated works
+                - listitem [ref=e175]:  Exclude partially AI-generated works
+            - generic [ref=e176]:
+              - generic [ref=e177]: Release date
+              - generic [ref=e178]:
+                - combobox [ref=e179]:
+                  - option "Unspecified" [selected]
+                  - option "Last 7 days"
+                  - option "Last 30 days"
+                  - option "Last 12 months"
+                  - option "Older"
+                - text: 
+            - generic [ref=e180]:
+              - generic [ref=e181]: Sale status
+              - generic [ref=e182]:
+                - combobox [ref=e183]:
+                  - option "Works available for sale"
+                  - option "Upcoming works"
+                  - option "Works available for preorder"
+                  - option "Unspecified" [selected]
+                - text: 
+            - generic [ref=e184]:
+              - generic [ref=e185]: Options
+              - link "Select options" [ref=e187] [cursor=pointer]:
+                - /url: "#"
+            - generic [ref=e188]:
+              - generic [ref=e189]: Additional Terms
+              - list [ref=e191]:
+                - listitem [ref=e192]:  Exclusives
+                - listitem [ref=e193]:  Advance Products
+                - listitem [ref=e194]:  Bonus Point Products
+                - listitem [ref=e195]:  Free
+            - generic [ref=e196]:
+              - generic [ref=e197]: Supported languages
+              - generic [ref=e198]:
+                - list [ref=e199]:
+                  - listitem [ref=e200]:  Japanese
+                  - listitem [ref=e201]:  English
+                  - listitem [ref=e202]:  Simplified Chinese
+                  - listitem [ref=e203]:  Traditional Chinese
+                  - listitem [ref=e204]:  Korean
+                  - listitem [ref=e205]:  Spanish
+                  - listitem [ref=e206]:  Arabic
+                  - listitem [ref=e207]:  German
+                  - listitem [ref=e208]:  French
+                  - listitem [ref=e209]:  Indonesian
+                  - listitem [ref=e210]:  Italian
+                  - listitem [ref=e211]:  Portuguese
+                  - listitem [ref=e212]:  Swedish
+                  - listitem [ref=e213]:  Thai
+                  - listitem [ref=e214]:  Vietnamese
+                  - listitem [ref=e215]:  Other Languages
+                  - listitem [ref=e216]:  Alingual
+                  - listitem [ref=e217]:  DLsite Official Translation
+                - paragraph [ref=e218]: "*\"Alingual\" works do not require knowledge of any particular language to understand."
+            - generic [ref=e219]:
+              - generic [ref=e220]: Sort by
+              - generic [ref=e221]:
+                - combobox [ref=e222]:
+                  - option "Sort by popularity" [selected]
+                  - option "Release date - New to Old"
+                  - option "Release date - Old to New"
+                  - option "Best Selling"
+                  - option "Price - Low to High"
+                  - option "Price - High to Low"
+                  - option "Rating - High to Low"
+                  - option "Reviews - High to Low"
+                - text: 
+            - generic [ref=e223]:
+              - generic [ref=e224]: Display
+              - list [ref=e226]:
+                - listitem [ref=e227]:
+                  - generic [ref=e229] [cursor=pointer]: 
+                - listitem [ref=e230]:
+                  - generic [ref=e231] [cursor=pointer]:
+                    - generic [ref=e232]: 
+                    - text: Tile Display
+            - generic [ref=e233]:
+              - generic [ref=e234]: Items per page
+              - generic [ref=e235]:
+                - combobox [ref=e236]:
+                  - option "30" [selected]
+                  - option "50"
+                  - option "100"
+                - text: 
+          - generic [ref=e237]:
+            - button "Reset" [ref=e238] [cursor=pointer]
+            - button "Search" [ref=e239] [cursor=pointer]
+        - text:                                                                                                                                                                                                                                                                                                                                                                                       
+    - generic [ref=e240]:
+      - generic [ref=e241]:
+        - heading "Search products" [level=3] [ref=e242]
+        - generic [ref=e243]:
+          - list [ref=e245]:
+            - listitem [ref=e246]:
+              - link "￥0 Free Hot!" [ref=e247] [cursor=pointer]:
+                - /url: https://www.dlsite.com/bl/fsr/=/options%5B0%5D/JPN/options%5B1%5D/ENG/options%5B2%5D/NM/work_category/doujin/is_free/1/exclude_work_type/vcm/order/trend
+                - text: ￥0 Free
+                - generic [ref=e248]: Hot!
+            - listitem [ref=e249]:
+              - link " English Works" [ref=e250] [cursor=pointer]:
+                - /url: https://www.dlsite.com/bl/fsr/=/work_category/doujin/options/ENG
+            - listitem [ref=e251]:
+              - link " Translators Unite" [ref=e252] [cursor=pointer]:
+                - /url: https://www.dlsite.com/bl/works/translation
+          - heading "Product format" [level=4] [ref=e254]:
+            - generic [ref=e255]: Product format
+          - generic [ref=e256]:
+            - list [ref=e257]:
+              - listitem [ref=e258]:
+                - link "Manga" [ref=e259] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/bl/fsr/=/work_type_category/comic/work_category/doujin/from/left_pain.work_type
+              - listitem [ref=e260]:
+                - link "Voice / ASMR" [ref=e261] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/bl/fsr/=/work_type/SOU/work_category/doujin/from/left_pain.work_type
+              - listitem [ref=e262]:
+                - link "Game" [ref=e263] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/bl/fsr/=/work_type_category/game/work_category/doujin/from/left_pain.work_type
+              - listitem [ref=e264]:
+                - link "Novel" [ref=e265] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/bl/fsr/=/work_type_category/novel/work_category/doujin/from/left_pain.work_type
+            - link "See more..." [ref=e267] [cursor=pointer]:
+              - /url: https://www.dlsite.com/bl/worktype/list
+          - heading "Genre" [level=4] [ref=e269]:
+            - generic [ref=e270]: Genre
+          - generic [ref=e271]:
+            - list [ref=e272]:
+              - listitem [ref=e273]:
+                - link "Shota (4296)" [ref=e274] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/bl/works/genre/=/genre/211
+                  - text: Shota
+                  - generic [ref=e275]: (4296)
+              - listitem [ref=e276]:
+                - link "Internal Cumshot (7518)" [ref=e277] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/bl/works/genre/=/genre/128
+                  - text: Internal Cumshot
+                  - generic [ref=e278]: (7518)
+              - listitem [ref=e279]:
+                - link "Orgy Sex (2114)" [ref=e280] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/bl/works/genre/=/genre/116
+                  - text: Orgy Sex
+                  - generic [ref=e281]: (2114)
+              - listitem [ref=e282]:
+                - link "Tentacle (1376)" [ref=e283] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/bl/works/genre/=/genre/162
+                  - text: Tentacle
+                  - generic [ref=e284]: (1376)
+              - listitem [ref=e285]:
+                - link "Kemo / Animalization / Transfur (722)" [ref=e286] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/bl/works/genre/=/genre/251
+                  - text: Kemo / Animalization / Transfur
+                  - generic [ref=e287]: (722)
+              - listitem [ref=e288]:
+                - link "Muscular (4716)" [ref=e289] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/bl/works/genre/=/genre/181
+                  - text: Muscular
+                  - generic [ref=e290]: (4716)
+            - link "See more..." [ref=e292] [cursor=pointer]:
+              - /url: https://www.dlsite.com/bl/genre/list
+          - heading "Event" [level=4] [ref=e294]:
+            - generic [ref=e295]: Event
+          - list [ref=e297]:
+            - listitem [ref=e298]:
+              - link "コミックマーケット107" [ref=e299] [cursor=pointer]:
+                - /url: https://www.dlsite.com/bl/fsr/=/ana_flg/all/options/C107/from/icon.work
+            - listitem [ref=e300]:
+              - link "J.GARDEN" [ref=e301] [cursor=pointer]:
+                - /url: https://www.dlsite.com/bl/fsr/=/ana_flg/all/options/JGD/from/icon.work
+          - generic [ref=e302]:
+            - heading "Other retail sections" [level=4] [ref=e304]
+            - list [ref=e305]:
+              - listitem [ref=e306]:
+                - link "To All Ages products" [ref=e307] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/home/
+              - listitem [ref=e308]:
+                - link "To Products for Adult Men" [ref=e309] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/maniax/
+      - link "Gay works" [ref=e312] [cursor=pointer]:
+        - /url: https://www.dlsite.com/bl/fsr/=/order/trend/is_gay/1
+        - img "Gay works" [ref=e313]
+    - generic [ref=e314]:
+      - paragraph [ref=e316]:
+        - link "PAGE TOP" [ref=e317] [cursor=pointer]:
+          - /url: "#header"
+      - list [ref=e319]:
+        - listitem [ref=e320]:
+          - link "ALL top" [ref=e321] [cursor=pointer]:
+            - /url: https://www.dlsite.com
+        - listitem [ref=e322]:
+          - link "Doujin" [ref=e323] [cursor=pointer]:
+            - /url: https://www.dlsite.com/bl/
+        - listitem [ref=e324]:
+          - link "Comics" [ref=e325] [cursor=pointer]:
+            - /url: https://www.dlsite.com/bl-pro/
+        - listitem [ref=e326]:
+          - link "Drama CD" [ref=e327] [cursor=pointer]:
+            - /url: https://www.dlsite.com/bl-drama/
+        - listitem [ref=e328]:
+          - link "PC Games" [ref=e329] [cursor=pointer]:
+            - /url: https://www.dlsite.com/bl-pro/girlsgame
+        - listitem [ref=e330]:
+          - link "Change to the mobile site" [ref=e331] [cursor=pointer]:
+            - /url: https://www.dlsite.com/bl-touch/fs
+      - generic [ref=e332]:
+        - generic [ref=e334]:
+          - generic [ref=e335]:
+            - generic [ref=e336]: About DLsite
+            - list [ref=e337]:
+              - listitem [ref=e338]:
+                - link "Company Overview" [ref=e339] [cursor=pointer]:
+                  - /url: https://www.eisys.co.jp/company/information_en
+              - listitem [ref=e340]:
+                - link "Recruitment Guide" [ref=e341] [cursor=pointer]:
+                  - /url: https://www.eisys.co.jp/recruit
+              - listitem [ref=e342]:
+                - link "User Agreement" [ref=e343] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/bl/user/regulations
+              - listitem [ref=e344]:
+                - link "Legal Statement based on Act on Specified Commercial Transactions" [ref=e345] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/bl/guide/law
+              - listitem [ref=e346]:
+                - link "Payment Services Act" [ref=e347] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/bl/guide/settlement
+              - listitem [ref=e348]:
+                - link "Privacy Policy" [ref=e349] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/bl/guide/privacy
+              - listitem [ref=e350]:
+                - link "外部送信規律に関する公表" [ref=e351] [cursor=pointer]:
+                  - /url: https://www.eisys.co.jp/cookie/policy
+              - listitem [ref=e352]:
+                - link "Compliance Policy" [ref=e353] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/bl/mosaic
+              - listitem [ref=e354]:
+                - link "Copyright" [ref=e355] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/bl/guide/copy
+              - listitem [ref=e356]:
+                - link "Customer Harassment Response Policy" [ref=e357] [cursor=pointer]:
+                  - /url: https://www.geonet.co.jp/english/csr/social/customer-harassment/
+              - listitem [ref=e358]:
+                - link "About Links" [ref=e359] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/bl/banners
+              - listitem [ref=e360]:
+                - link "Site Map" [ref=e361] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/bl/sitemap
+              - listitem [ref=e362]:
+                - link "Other Information" [ref=e363] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/bl/otherinformation
+          - generic [ref=e364]:
+            - generic [ref=e365]: Help&guide
+            - list [ref=e366]:
+              - listitem [ref=e367]:
+                - link "For First-time Visitors" [ref=e368] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/bl/welcome
+              - listitem [ref=e369]:
+                - link "FAQ" [ref=e370] [cursor=pointer]:
+                  - /url: https://cs.dlsite.com/hc/en-us
+              - listitem [ref=e371]:
+                - link "Product Request" [ref=e372] [cursor=pointer]:
+                  - /url: https://cs.dlsite.com/hc/en-us/requests/new?ticket_form_id=1500000429921
+          - generic [ref=e373]:
+            - generic [ref=e374]: DLsite services
+            - list [ref=e375]:
+              - listitem [ref=e376]:
+                - link "To sell your works" [ref=e377] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/bl/circle/invite
+              - listitem [ref=e378]:
+                - link "Translators Unite" [ref=e379] [cursor=pointer]:
+                  - /url: https://min-hon.net/en/
+              - listitem [ref=e380]:
+                - link "Affiliate" [ref=e381] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/bl/guide/affiliate
+              - listitem [ref=e382]:
+                - link "Newsletters" [ref=e383] [cursor=pointer]:
+                  - /url: /bl/mypage/setting/mail
+              - listitem [ref=e384]:
+                - link "Web Viewer - DLsite Play" [ref=e385] [cursor=pointer]:
+                  - /url: https://play.dlsite.com/ja
+              - listitem [ref=e386]:
+                - link "PC Client DLsite Nest" [ref=e387] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/bl/guide/dlnest
+        - generic [ref=e388]:
+          - generic [ref=e389]: Payments/Points
+          - generic [ref=e390]:
+            - list [ref=e391]:
+              - listitem [ref=e392]:
+                - link "Payment Method" [ref=e393] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/bl/guide/payment
+              - listitem [ref=e394]:
+                - link "About Points" [ref=e395] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/bl/mypage/aboutpoint
+              - listitem [ref=e396]:
+                - link "How to buy points" [ref=e397] [cursor=pointer]:
+                  - /url: https://www.dlsite.com/bl/guide/payment#link_point
+            - link "Credit Cards JCB Convenience Store / Online Banking Lawson Familymart Pay-easy Electronic money Rakuten Edy BitCash FamiPay WebMoney PayPay Delayed Payment paidy atone" [ref=e398] [cursor=pointer]:
+              - /url: https://www.dlsite.com/bl/guide/payment
+              - generic [ref=e399]:
+                - generic [ref=e400]:
+                  - paragraph [ref=e401]: Credit Cards
+                  - img "JCB" [ref=e403]
+                - generic [ref=e404]:
+                  - paragraph [ref=e405]: Convenience Store / Online Banking
+                  - generic [ref=e406]:
+                    - img "Lawson" [ref=e407]
+                    - img "Familymart" [ref=e408]
+                    - img "Pay-easy" [ref=e409]
+                - generic [ref=e410]:
+                  - paragraph [ref=e411]: Electronic money
+                  - generic [ref=e412]:
+                    - img "Rakuten Edy" [ref=e413]
+                    - img "BitCash" [ref=e414]
+                    - img "FamiPay" [ref=e415]
+                  - generic [ref=e416]:
+                    - img "WebMoney" [ref=e417]
+                    - img "PayPay" [ref=e418]
+                - generic [ref=e419]:
+                  - paragraph [ref=e420]: Delayed Payment
+                  - generic [ref=e421]:
+                    - img "paidy" [ref=e422]
+                    - img "atone" [ref=e423]
+        - generic [ref=e425]:
+          - generic [ref=e426]:
+            - generic [ref=e427]: X(Twitter)
+            - list [ref=e428]:
+              - listitem [ref=e429]:
+                - link "ALL" [ref=e430] [cursor=pointer]:
+                  - /url: https://x.com/DLsiteGlobal
+              - listitem [ref=e431]:
+                - link "Otome" [ref=e432] [cursor=pointer]:
+                  - /url: https://x.com/garumani_otome
+              - listitem [ref=e433]:
+                - link "BL" [ref=e434] [cursor=pointer]:
+                  - /url: https://x.com/garumaniax_BL
+          - generic [ref=e435]:
+            - generic [ref=e436]: Instagram
+            - list [ref=e437]:
+              - listitem [ref=e438]:
+                - link "Otome & BL" [ref=e439] [cursor=pointer]:
+                  - /url: https://www.instagram.com/dlsite_garumani/
+          - generic [ref=e440]:
+            - generic [ref=e441]: Discord
+            - list [ref=e442]:
+              - listitem [ref=e443]:
+                - link "DISCORD" [ref=e444] [cursor=pointer]:
+                  - /url: https://discord.com/invite/QkbHCJAAXC
+        - generic [ref=e445]:
+          - generic [ref=e446]: Career Information（Recruitment for Group Companies）
+          - list
+          - link "To Recruitment Page" [ref=e447] [cursor=pointer]:
+            - /url: https://www.eisys.co.jp/recruit
+      - generic [ref=e449]:
+        - generic [ref=e450]: "Recommended Browsers: Latest version of Microsoft Edge, Safari, Chrome, Firefox (JavaScript/Cookies enabled)"
+        - paragraph [ref=e451]: © 1996 DLsite
+  - iframe
