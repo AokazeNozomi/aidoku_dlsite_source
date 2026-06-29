@@ -25,7 +25,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Cache rust stuff
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry/index
@@ -37,7 +37,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo3-
       - name: sccache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.cache/sccache
           key: ${{ runner.os }}-sccache-${{ github.sha }}
